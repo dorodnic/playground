@@ -3,6 +3,7 @@ project (Playground)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_BUILD_TYPE Debug)
 
 find_package(glfw3 3.2 REQUIRED)
 
