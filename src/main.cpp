@@ -117,7 +117,7 @@ class MouseClickHandler : public virtual IVisualElement
 {
 public:
     MouseClickHandler()
-        : _on_double_click([](){})
+        : _on_double_click([this](){ _on_click[MouseButton::left](); })
     {
         _state[MouseButton::left] = _state[MouseButton::right] = 
         _state[MouseButton::middle] = MouseState::up;
@@ -148,8 +148,8 @@ public:
                     ms = std::chrono::duration_cast<std::chrono::milliseconds>
                          (now - _last_click[button]).count();
                     _last_click[button] = now;
-                    
-                    if (ms < CLICK_TIME_MS / 2 && button == MouseButton::left) {
+
+                    if (ms < CLICK_TIME_MS && button == MouseButton::left) {
                         _on_double_click();
                     } else {
                         _on_click[button]();
@@ -398,7 +398,7 @@ int main(int argc, char * argv[]) try
     b->set_on_click([&](){
         c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, bluish )));
     });
-    b2->set_on_click([&](){
+    b2->set_on_double_click([&](){
         c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
     });
     
