@@ -4,11 +4,21 @@
 #include <unordered_map>
 #include <chrono>
 #include <map>
+#include <fstream>
+#include <streambuf>
+#include <sstream>
+#include <algorithm>
+
+#include "../rapidxml/rapidxml.hpp"
+#include "../easyloggingpp/easylogging++.h"
+
+INITIALIZE_EASYLOGGINGPP
 
 #define GLFW_INCLUDE_GLU
 #include <GLFW/glfw3.h>
 
 using namespace std;
+using namespace rapidxml;
 
 template<typename T>
 T clamp(T val, T from, T to) { return std::max(from, std::min(to, val)); }
@@ -82,7 +92,7 @@ struct Margin
 
     Margin(int v) : left(v), right(v), top(v), bottom(v) {}
     Margin(int x, int y) : left(x), right(x), top(y), bottom(y) {}
-    Margin(int left, int right, int top, int bottom)
+    Margin(int left, int top, int right, int bottom)
         : left(left), right(right), top(top), bottom(bottom) {}
 
     Margin operator-()
@@ -596,16 +606,16 @@ public:
         
         auto result = maps[sender];
         
-        auto index = 0;
+        auto _index = 0;
         for (auto& kvp : result)
         {
             auto max = 0;
             for (auto j = 0; j < grid.size(); j++)
             {
-                max = std::max(grid[j][index], max);
+                max = std::max(grid[j][_index], max);
             }
             kvp.second.first = max;
-            index++;
+            _index++;
         }
         
         return result;
@@ -616,46 +626,326 @@ private:
     std::vector<std::shared_ptr<Container>> _lines;
 };
 
+std::string to_lower(std::string data)
+{
+    std::transform(data.begin(), data.end(), data.begin(), ::tolower);
+    return data;
+}
+
+class MinimalParser
+{
+public:
+    MinimalParser(const std::string& line) : _line(line) {}
+    
+    std::string to_string() const
+    {
+        return "Parsing \"" + _line.substr(0, _index - 1) 
+                + "|>>>" + _line.substr(_index - 1) + "\"";
+    }
+    
+    bool eof() const { return _index >= _line.size(); }
+    char get() { return _line[_index++]; }
+    char peek() const { return _line[_index]; }
+    void req(char c) 
+    {
+        if (get() != c)
+        {
+            std::stringstream ss; 
+            ss << "'" << c << "' is expected! " << to_string();
+            throw std::runtime_error(ss.str());
+        }
+    }
+    void req_eof() 
+    {
+        if (!eof())
+        {
+            std::stringstream ss; 
+            ss << "Expected end of line! " << to_string();
+            throw std::runtime_error(ss.str());
+        }
+    }
+    
+    static bool is_digit(char c) { return c >= '0' && c <= '9'; }
+    static bool is_letter(char c) 
+    { 
+        return (c >= 'a' && c <= 'z') ||
+               (c >= 'A' && c <= 'Z') || (c == '_');
+    }
+    
+    std::string get_id() 
+    {
+        auto d = get();
+        if (!is_letter(d)) {
+            std::stringstream ss; 
+            ss << "Expected a letter! " << to_string();
+            throw std::runtime_error(ss.str());
+        }
+        std::string result = &d;
+        while (is_letter(peek()) || is_digit(peek()))
+        {
+            d = get();
+            result += d;
+        }
+        return result;
+    }
+    
+    int get_int() 
+    {
+        auto d = get();
+        if (!is_digit(d)) {
+            std::stringstream ss; 
+            ss << "Expected a digit! " << to_string();
+            throw std::runtime_error(ss.str());
+        }
+        int num = (d - '0');
+        while (is_digit(peek()))
+        {
+            d = get();
+            num = num * 10 + (d - '0');
+        }
+        return num;
+    }
+    
+    template<typename T>
+    T get_const_ids(std::map<std::string, T> map)
+    {
+        auto id = to_lower(get_id());
+        
+        auto it = map.find(id);
+        if (it != map.end())
+        {
+            return it->second;   
+        }
+
+        std::stringstream ss; 
+        ss << "Unknown Identifier '" << id << "'! " << to_string();
+        throw std::runtime_error(ss.str());
+    }
+    
+    Size get_size() 
+    {
+        if (peek() == '*')
+        {
+            get();
+            return 1.0f;
+        }
+    
+        if (is_letter(peek()))
+        {
+            return get_const_ids<Size>({ { "auto", 0 } });
+        }
+    
+        auto x = get_int();
+        if (peek() == '%')
+        {
+            get();
+            return x / 100.0f;
+        }
+        else
+        {
+            return x;
+        }
+    }
+    
+    Size2 get_size2()
+    {
+        if (eof()) return { 0, 0 };
+        
+        if (is_letter(peek()))
+        {
+            return get_const_ids<Size2>({ { "auto", { 0, 0 } } });
+        }
+        
+        auto first = peek();
+        
+        auto x = get_size();
+        
+        if (eof() && first == '*') return { 1.0f, 1.0f };
+        
+        req(',');
+        auto y = get_size();
+        req_eof();
+        return { x, y };
+    }
+    
+    Color3 get_color()
+    {
+        if (is_letter(peek()))
+        {
+            return get_const_ids<Color3>({ 
+                    { "red",    { 1.0f, 0.0f, 0.0f } },
+                    { "green",  { 0.0f, 1.0f, 0.0f } },
+                    { "blue",   { 0.0f, 0.0f, 1.0f } },
+                    { "white",  { 1.0f, 1.0f, 1.0f } },
+                    { "black",  { 0.0f, 0.0f, 0.0f } },
+                    { "gray",   { 0.5f, 0.5f, 0.5f } },
+                    { "pink",   { 1.0f, 0.3f, 0.5f } },
+                    { "yellow", { 1.0f, 1.0f, 0.0f } },
+                    { "violet", { 0.7f, 0.0f, 1.0f } },
+                });
+        }
+    
+        if (eof()) return { 0.6f, 0.6f, 0.6f };
+        auto r = get_int();
+        req(',');
+        auto g = get_int();
+        req(',');
+        auto b = get_int();
+        req_eof();
+        
+        return { clamp(r / 255.0f, 0.0f, 1.0f),
+                 clamp(g / 255.0f, 0.0f, 1.0f),
+                 clamp(b / 255.0f, 0.0f, 1.0f) };
+    }
+    
+    Margin get_margin()
+    {
+        if (eof()) return { 0 };
+        auto left = get_int();
+        if (eof()) return { left }; 
+        req(',');
+        auto top = get_int();
+        if (eof()) return { left, top };
+        req(',');
+        auto right = get_int();
+        req(',');
+        auto bottom = get_int();
+        req_eof();
+        
+        return { left, top, right, bottom };
+    }
+    
+private:
+    std::string _line;
+    int _index = 0;
+};
+
+class Serializer
+{
+public:
+    Serializer(const char* filename)
+    {
+        std::ifstream theFile(filename);
+        _buffer = vector<char>((istreambuf_iterator<char>(theFile)), 
+                               istreambuf_iterator<char>());
+	    _buffer.push_back('\0');
+	    _doc.parse<0>(_buffer.data());
+    }
+    
+    std::shared_ptr<IVisualElement> deserialize()
+    {
+        return deserialize(_doc.first_node());
+    }
+private:
+    std::shared_ptr<IVisualElement> deserialize(xml_node<>* node)
+    {
+        string type = node->name();
+        
+        auto name_node = node->first_attribute("name");
+        auto name = name_node ? name_node->value() : "";
+        std::string name_str = name_node ? (std::string(" ") + name) : "";
+        
+        auto position_node = node->first_attribute("position");
+        auto position_str = position_node ? position_node->value() : "";
+        auto position = parse_size(position_str);
+        
+        auto size_node = node->first_attribute("size");
+        auto size_str = size_node ? size_node->value() : "";
+        auto size = parse_size(size_str);
+        
+        auto margin_node = node->first_attribute("margin");
+        auto margin_str = margin_node ? margin_node->value() : "";
+        auto margin = parse_margin(margin_str);
+        
+        if (type == "Button")
+        {        
+            auto color_node = node->first_attribute("color");
+            auto color_str = color_node ? color_node->value() : "";
+            auto color = parse_color(color_str);
+            
+            return std::shared_ptr<Button>(new Button(
+                position, size, margin, color
+            ));
+        }
+        else if (type == "Container")
+        {       
+            auto ori_node = node->first_attribute("orientation");
+            auto ori_str = ori_node ? ori_node->value() : "";
+            auto orientation = parse_orientation(ori_str);
+             
+            auto res = std::shared_ptr<Container>(new Container(
+                position, size, margin, orientation
+            ));
+            
+            for (xml_node<>* sub_node = node->first_node(); 
+                 sub_node; 
+                 sub_node = sub_node->next_sibling()) {
+	            try
+	            {
+	                res->add_item(deserialize(sub_node));
+	            } catch (const std::exception& ex) {
+	                LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
+	                           << name_str << ")" << endl;
+	            }
+	        }
+            
+            return res;
+        }
+        
+        std::stringstream ss; ss << "Unrecognized Visual Element (" << type 
+                                 << name_str << ")";
+        throw std::runtime_error(ss.str());
+    }
+
+    Size2 parse_size(const std::string& str)
+    {
+        MinimalParser p(str);
+        return p.get_size2();
+    }
+
+    Color3 parse_color(const std::string& str)
+    {
+        MinimalParser p(str);
+        return p.get_color();
+    }
+
+    Margin parse_margin(const std::string& str)
+    {
+        MinimalParser p(str);
+        return p.get_margin();
+    }
+
+    Orientation parse_orientation(const std::string& str)
+    {
+        if (str == "") return Orientation::vertical;
+        
+        auto s = to_lower(str);
+        if (s == "vertical") return Orientation::vertical;
+        if (s == "horizontal") return Orientation::horizontal;
+        std::stringstream ss; ss << "Invalid Orientation '" << str << "'";
+        throw std::runtime_error(ss.str());
+    }
+    
+    vector<char> _buffer;
+    xml_document<> _doc;
+};
+
 int main(int argc, char * argv[]) try
 {
     glfwInit();
     GLFWwindow * win = glfwCreateWindow(1280, 960, "main", 0, 0);
     glfwMakeContextCurrent(win);
 
-    Color3 redish { 0.8f, 0.5f, 0.6f };
-    Color3 greenish { 0.6f, 0.9f, 0.6f };
-    Color3 bluish { 0.5f, 0.5f, 0.8f };
-    
-    auto b = std::shared_ptr<Button>(new Button( { 0, 0 }, Auto(), { 5, 5, 5, 5 }, greenish ));
-    auto b2 = std::shared_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, greenish ));
-
-    
-    Container c({ 0, 0 }, { 1.0f, 1.0f }, 0, Orientation::horizontal);
-    
-    auto left = std::shared_ptr<Container>(new Container( { 0, 0 }, { 1.0f, 1.0f }, 0, Orientation::vertical ));
-    auto right = std::shared_ptr<Grid>(new Grid( { 0, 0 }, { 1.0f, 1.0f }, 0, Orientation::vertical ));
-
-    for (int i = 0; i < 7; i++)
-    {
-        auto lrow = std::shared_ptr<Container>(new Container( { 0, 0 }, { 1.0f, 1.0f }, 0, Orientation::horizontal ));
-         
-        for (int j = 0; j < 7; j++)
-        {
-            auto w = rand() % 100;
-            auto h = rand() % 100;
-            
-            lrow->add_item(std::shared_ptr<Button>(new Button( { 0, 0 }, { w, h }, 5, bluish )));
-            right->add_item(std::shared_ptr<Button>(new Button( { 0, 0 }, { w, h }, 5, redish )));
-        }
-        
-        
-        left->add_item(lrow);
-        right->commit_line();
-    }
-    
-    c.add_item(left);
-    c.add_item(right);
-    
+	Container c({0,0},{1.0f, 1.0f},0); // create root-level container for the GUI
+	
+	try
+	{
+	    LOG(INFO) << "Loading UI...";
+	    Serializer s("ui.xml");
+	    c.add_item(s.deserialize());
+	} catch(const std::exception& ex) {
+	    LOG(ERROR) << "UI Loading Error: " << ex.what() << endl;
+	}
 
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<Container size="*">
+    <Button size="*" margin="10" color="pink" />
+    <Button size="*" margin="10,0,10,10" color="violet" />
+    <Container size="*" margin="10,0,10,10" orientation="horizontal">
+        <Button size="*,auto" color="blue" />
+        <Button size="*,auto" color="green" />
+    </Container>
+</Container>
