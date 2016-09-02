@@ -124,6 +124,13 @@ enum class MouseState
     up
 };
 
+enum class Alignment
+{
+    left,
+    center,
+    right
+};
+
 class IVisualElement
 {
 public:
@@ -140,6 +147,7 @@ public:
     virtual void focus(bool on) = 0;
     virtual bool is_focused() const = 0;
     virtual const std::string& get_name() const = 0;
+    virtual Alignment get_alignment() const = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -193,8 +201,10 @@ public:
     ControlBase(std::string name,
                 const Size2& position,
                 const Size2& size,
-                const Margin& margin)
-        : _position(position), _size(size), _margin(margin), _name(name)
+                const Margin& margin,
+                Alignment alignment)
+        : _position(position), _size(size), 
+          _margin(margin), _name(name), _align(alignment)
     {}
 
     Rect arrange(const Rect& origin) override;
@@ -208,7 +218,8 @@ public:
     void focus(bool on) override { _focused = on; }
     bool is_focused() const override { return _focused; }
     
-    virtual const std::string& get_name() const { return _name; }
+    const std::string& get_name() const override { return _name; }
+    Alignment get_alignment() const override { return _align; }
 
 private:
     Size2 _position;
@@ -216,13 +227,7 @@ private:
     Margin _margin;
     bool _focused = false;
     std::string _name;
-};
-
-enum class TextAlignment
-{
-    left,
-    center,
-    right
+    Alignment _align;
 };
 
 class TextBlock : public ControlBase
@@ -230,13 +235,13 @@ class TextBlock : public ControlBase
 public:
     TextBlock(std::string name,
             std::string text,
-            TextAlignment alignment,
+            Alignment alignment,
             const Size2& position,
             const Size2& size,
             const Margin& margin,
             const Color3& color)
-        : ControlBase(name, position, size, margin), 
-          _color(color), _text(text), _align(alignment)
+        : ControlBase(name, position, size, margin, alignment), 
+          _color(color), _text(text)
     {}
 
     Size2 get_intrinsic_size() const override;
@@ -246,28 +251,32 @@ public:
 private:
     Color3 _color;
     std::string _text;
-    TextAlignment _align;
 };
 
-class Button : public TextBlock
+class Button : public ControlBase
 {
 public:
     Button(std::string name,
            std::string text,
-           TextAlignment alignment,
+           Alignment text_alignment,
            const Color3& text_color,
+           Alignment alignment,
            const Size2& position,
            const Size2& size,
            const Margin& margin,
            const Color3& color)
-        : TextBlock(name, text, alignment, position, size, margin, text_color), 
+        : ControlBase(name, position, size, margin, alignment), 
+          _text_block(name, text, text_alignment, {0, 0}, size, 0, text_color), 
           _color(color)
     {}
+    
+    Size2 get_intrinsic_size() const override;
 
     void render(const Rect& origin) override;
 
 private:
     Color3 _color;
+    TextBlock _text_block;
 };
 
 enum class Orientation
@@ -294,8 +303,9 @@ public:
     Container(std::string name,
               const Size2& position,
               const Size2& size,
-              const Margin& margin)
-        : ControlBase(name, position, size, margin),
+              const Margin& margin,
+              Alignment alignment)
+        : ControlBase(name, position, size, margin, alignment),
           _on_items_change([](){})
     {}
     
@@ -357,9 +367,10 @@ public:
               const Size2& position,
               const Size2& size,
               const Margin& margin,
+              Alignment alignment,
               Orientation orientation = Orientation::vertical,
               ISizeCalculator* resizer = nullptr)
-        : Container(name, position, size, margin),
+        : Container(name, position, size, margin, alignment),
           _orientation(orientation),
           _resizer(resizer)
     {}
@@ -406,8 +417,9 @@ public:
     Panel(std::string name,
           const Size2& position,
           const Size2& size,
-          const Margin& margin)
-        : Container(name, position, size, margin)
+          const Margin& margin,
+          Alignment alignment)
+        : Container(name, position, size, margin, alignment)
     {}
                    
     Size2 get_intrinsic_size() const override;
@@ -425,8 +437,9 @@ public:
           const Size2& position,
           const Size2& size,
           const Margin& margin,
+          Alignment alignment,
           Orientation orientation = Orientation::vertical)
-        : StackPanel(name, position, size, margin, orientation),
+        : StackPanel(name, position, size, margin, alignment, orientation),
           _current_line(nullptr)
     {
         commit_line();

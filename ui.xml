@@ -1,14 +1,16 @@
 <?xml version="1.0"?>
 <StackPanel size="600,*" orientation="horizontal">
-    <StackPanel size="300,*">
-        <TextBlock text="Hello World!" text.color="red" text.align="left" />
-        <Button size="*,auto" color="pink" text="test" text.color="white" margin="5" />
-        <Button size="*,auto" color="violet" text="test2" text.align="right" margin="5^" />
-        <Button size="*,auto" color="blue" margin="5^" />
-        <Button size="*,auto" color="green"  margin="5^" />
-    </StackPanel>
+    <Using text.align="right" color="violet">
+        <StackPanel size="300,*">
+            <TextBlock text="Hello World!" text.color="red" text.align="left" />
+            <Button size="100,auto" text="def" text.color="white" margin="5" />
+            <Button size="100,auto" text="def" margin="5^" align="center" text.color="white" />
+            <Button size="100,auto" margin="5^" align="right" text="left" text.align="left" text.color="white" />
+            <Button size="*,auto" color="green" margin="5^" />
+        </StackPanel>
+    </Using>
     <Panel size="300,*">
         <Button size="*,auto" />
-        <TextBlock text="Hello World!" text.color="red" />
+        <TextBlock text="Hello World!" text.color="red" text.align="center" />
     </Panel>
 </StackPanel>

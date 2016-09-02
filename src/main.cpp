@@ -16,7 +16,8 @@ int main(int argc, char * argv[]) try
     GLFWwindow * win = glfwCreateWindow(1280, 960, "main", 0, 0);
     glfwMakeContextCurrent(win);
 
-	StackPanel c("",{0,0},{1.0f, 1.0f},0); // create root-level StackPanel for the GUI
+    // create root-level container for the GUI
+	Panel c("",{0,0},{1.0f, 1.0f},0,Alignment::left); 
 	
 	try
 	{

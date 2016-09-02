@@ -213,6 +213,8 @@ private:
     int _index = 0;
 };
 
+typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
+
 class Serializer
 {
 public:
@@ -220,10 +222,12 @@ public:
     
     std::shared_ptr<IVisualElement> deserialize()
     {
-        return deserialize(_doc.first_node());
+        AttrBag bag;
+        return deserialize(_doc.first_node(), bag);
     }
 private:
-    std::shared_ptr<IVisualElement> deserialize(rapidxml::xml_node<>* node);
+    std::shared_ptr<IVisualElement> deserialize(rapidxml::xml_node<>* node,
+                                                const AttrBag& bag);
 
     Size2 parse_size(const std::string& str)
     {
@@ -254,15 +258,15 @@ private:
         throw std::runtime_error(ss.str());
     }
     
-    TextAlignment parse_text_alignment(const std::string& str)
+    Alignment parse_text_alignment(const std::string& str)
     {
-        if (str == "") return TextAlignment::center;
+        if (str == "") return Alignment::center;
         
         auto s = to_lower(str);
-        if (s == "left") return TextAlignment::left;
-        if (s == "center") return TextAlignment::center;
-        if (s == "right") return TextAlignment::right;
-        std::stringstream ss; ss << "Invalid TextAlignment '" << str << "'";
+        if (s == "left") return Alignment::left;
+        if (s == "center") return Alignment::center;
+        if (s == "right") return Alignment::right;
+        std::stringstream ss; ss << "Invalid Alignment '" << str << "'";
         throw std::runtime_error(ss.str());
     }
     

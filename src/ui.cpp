@@ -87,8 +87,21 @@ Rect ControlBase::arrange(const Rect& origin)
     auto h = min(size.y.to_pixels(origin.size.y),
                       origin.size.y - _margin.bottom - _margin.top);
 
-    x0 += origin.position.x;
-    y0 += origin.position.y;
+    y0 += origin.position.y; // Y is unaffected by alignment for now
+    // TODO: vertical alignment? is it useful?
+    
+    if (_align == Alignment::left)
+    {
+        x0 += origin.position.x;
+    }
+    else if (_align == Alignment::right)
+    {
+        x0 = origin.position.x + origin.size.x - x0 - w;
+    }
+    else // center
+    {
+        x0 = origin.position.x + origin.size.x / 2 - w / 2;
+    }
 
     return { { x0, y0 }, { w, h } };
 }
@@ -111,7 +124,7 @@ void Button::render(const Rect& origin)
     glColor3f(c.r, c.g, c.b);
 
     auto rect = arrange(origin);
-
+    
     glVertex2i(rect.position.x, rect.position.y);
     glVertex2i(rect.position.x, rect.position.y + rect.size.y);
     glVertex2i(rect.position.x + rect.size.x,
@@ -121,7 +134,13 @@ void Button::render(const Rect& origin)
 
     glEnd();
     
-    TextBlock::render(origin);
+    _text_block.render(rect);
+}
+
+Size2 Button::get_intrinsic_size() const
+{
+    auto res = _text_block.get_intrinsic_size();
+    return get_margin().apply(res);
 }
 
 Size2 TextBlock::get_intrinsic_size() const
@@ -143,9 +162,9 @@ void TextBlock::render(const Rect& origin)
     auto y_margin = rect.size.y / 2 - text_height / 2;
     auto text_y = rect.position.y + y_margin;
 
-    if (_align == TextAlignment::left){
+    if (get_alignment() == Alignment::left){
         draw_text(rect.position.x + y_margin, text_y, text);
-    } else if (_align == TextAlignment::center){
+    } else if (get_alignment() == Alignment::center){
         draw_text(rect.position.x + rect.size.x / 2 - text_width / 2, 
                   text_y, text);
     } else {
@@ -348,7 +367,7 @@ void Grid::commit_line()
         _lines.push_back(_current_line);
     }
     _current_line = shared_ptr<StackPanel>(
-        new StackPanel("", {0,0}, { 1.0f, 1.0f }, 0,
+        new StackPanel("", {0,0}, { 1.0f, 1.0f }, 0, get_alignment(),
         get_orientation() == Orientation::vertical 
             ? Orientation::horizontal : Orientation::vertical,
         this));

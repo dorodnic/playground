@@ -12,80 +12,90 @@ Serializer::Serializer(const char* filename)
     _doc.parse<0>(_buffer.data());
 }
 
-shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
+xml_attribute<>* find_attribute(xml_node<>* node, const std::string& name,
+                                const AttrBag& bag)
+{
+    auto attr = node->first_attribute(name.c_str());
+    if (attr != nullptr) return attr;
+    for (auto p : bag)
+    {
+        if (p->name() == name) return p;
+    }
+    return nullptr;
+}
+
+shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
+                                                   const AttrBag& bag)
 {
     string type = node->name();
     
-    auto name_node = node->first_attribute("name");
+    auto name_node = find_attribute(node, "name", bag);
     auto name = name_node ? name_node->value() : "";
     string name_str = name_node ? (string(" ") + name) : "";
     
-    auto position_node = node->first_attribute("position");
+    auto position_node = find_attribute(node, "position", bag);
     auto position_str = position_node ? position_node->value() : "";
     auto position = parse_size(position_str);
     
-    auto size_node = node->first_attribute("size");
+    auto size_node = find_attribute(node, "size", bag);
     auto size_str = size_node ? size_node->value() : "";
     auto size = parse_size(size_str);
     
-    auto margin_node = node->first_attribute("margin");
+    auto margin_node = find_attribute(node, "margin", bag);
     auto margin_str = margin_node ? margin_node->value() : "";
     auto margin = parse_margin(margin_str);
     
-    if (type == "TextBlock")
-    {        
-        auto color_node = node->first_attribute("text.color");
-        auto color_str = color_node ? color_node->value() : "black";
-        auto color = parse_color(color_str);
+    auto align_node = find_attribute(node, "align", bag);
+    auto align_str = align_node ? align_node->value() : "left";
+    auto align = parse_text_alignment(align_str);
+    
+    auto txt_color_node = find_attribute(node, "text.color", bag);
+    auto txt_color_str = txt_color_node ? txt_color_node->value() : "black";
+    auto txt_color = parse_color(txt_color_str);
 
-        auto align_node = node->first_attribute("text.align");
-        auto align_str = align_node ? align_node->value() : "center";
-        auto align = parse_text_alignment(align_str);
-        
-        auto txt_node = node->first_attribute("text");
-        auto txt_str = txt_node ? txt_node->value() : "";
-        
+    auto txt_align_node = find_attribute(node, "text.align", bag);
+    auto txt_align_str = txt_align_node ? txt_align_node->value() : "left";
+    auto txt_align = parse_text_alignment(txt_align_str);
+    
+    auto txt_node = find_attribute(node, "text", bag);
+    auto txt_str = txt_node ? txt_node->value() : "";
+    
+    auto color_node = find_attribute(node, "color", bag);
+    auto color_str = color_node ? color_node->value() : "gray";
+    auto color = parse_color(color_str);
+    
+    auto ori_node = find_attribute(node, "orientation", bag);
+    auto ori_str = ori_node ? ori_node->value() : "";
+    auto orientation = parse_orientation(ori_str);
+
+    if (type == "TextBlock")
+    {                
         return shared_ptr<TextBlock>(new TextBlock(
-            name, txt_str, align, position, size, margin, color
+            name, txt_str, txt_align, position, size, margin, txt_color
         ));
     }
     else if (type == "Button")
-    {        
-        auto color_node = node->first_attribute("color");
-        auto color_str = color_node ? color_node->value() : "gray";
-        auto color = parse_color(color_str);
-        
-        auto txt_color_node = node->first_attribute("text.color");
-        auto txt_color_str = txt_color_node ? txt_color_node->value() : "black";
-        auto txt_color = parse_color(txt_color_str);
-        
-        auto align_node = node->first_attribute("text.align");
-        auto align_str = align_node ? align_node->value() : "center";
-        auto align = parse_text_alignment(align_str);
-        
-        auto txt_node = node->first_attribute("text");
-        auto txt_str = txt_node ? txt_node->value() : "";
-        
+    {
+        if (find_attribute(node, "text.align", bag) == nullptr) 
+            txt_align = Alignment::center;
+    
         return shared_ptr<Button>(new Button(
-            name, txt_str, align, txt_color, position, size, margin, color
+            name, txt_str, txt_align, txt_color, 
+            align, position, size, margin, color
         ));
     }
     else if (type == "StackPanel")
-    {       
-        auto ori_node = node->first_attribute("orientation");
-        auto ori_str = ori_node ? ori_node->value() : "";
-        auto orientation = parse_orientation(ori_str);
-         
+    {
         auto res = shared_ptr<StackPanel>(new StackPanel(
-            name, position, size, margin, orientation
+            name, position, size, margin, align, orientation
         ));
         
-        for (xml_node<>* sub_node = node->first_node(); 
+        for (auto sub_node = node->first_node(); 
              sub_node; 
              sub_node = sub_node->next_sibling()) {
             try
             {
-                res->add_item(deserialize(sub_node));
+                res->add_item(deserialize(sub_node, bag));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                            << name_str << ")" << endl;
@@ -97,15 +107,15 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
     else if (type == "Panel")
     {                
         auto res = shared_ptr<Panel>(new Panel(
-            name, position, size, margin
+            name, position, size, margin, align
         ));
         
-        for (xml_node<>* sub_node = node->first_node(); 
+        for (auto sub_node = node->first_node(); 
              sub_node; 
              sub_node = sub_node->next_sibling()) {
             try
             {
-                res->add_item(deserialize(sub_node));
+                res->add_item(deserialize(sub_node, bag));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                            << name_str << ")" << endl;
@@ -115,23 +125,19 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
         return res;
     }
     else if (type == "Grid")
-    {       
-        auto ori_node = node->first_attribute("orientation");
-        auto ori_str = ori_node ? ori_node->value() : "";
-        auto orientation = parse_orientation(ori_str);
-         
+    {
         auto res = shared_ptr<Grid>(new Grid(
-            name, position, size, margin, orientation
+            name, position, size, margin, align, orientation
         ));
         
-        for (xml_node<>* sub_node = node->first_node(); 
+        for (auto sub_node = node->first_node(); 
              sub_node; 
              sub_node = sub_node->next_sibling()) {
             try
             {
                 string sub_name = sub_node->name();
                 if (sub_name == "Break") res->commit_line();
-                else res->add_item(deserialize(sub_node));
+                else res->add_item(deserialize(sub_node, bag));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                            << name_str << ")" << endl;
@@ -139,6 +145,46 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
         }
         
         res->commit_line();
+        
+        return res;
+    }
+    else if (type == "Using")
+    {        
+        shared_ptr<IVisualElement> res;
+        auto sub_node = node->first_node();
+        
+        AttrBag new_bag;
+        for (auto attr = node->first_attribute(); 
+             attr; 
+             attr = attr->next_attribute()) {
+            new_bag.push_back(attr);
+        }
+        for (auto attr : bag)
+        {
+            auto it = std::find_if(new_bag.begin(), new_bag.end(),
+                        [attr](xml_attribute<>* x) { 
+                            return std::string(x->name()) == attr->name(); 
+                        });
+            if (it == new_bag.end())
+            {
+                new_bag.push_back(attr);
+            }
+        }
+        
+        try
+        {
+            res = deserialize(sub_node, new_bag);
+        } catch (const exception& ex) {
+            LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
+                       << name_str << ")" << endl;
+        }
+        
+        if (sub_node->next_sibling())
+        {
+            stringstream ss; 
+            ss << "Using should not have multiple nested items!";
+            throw runtime_error(ss.str());
+        }
         
         return res;
     }
