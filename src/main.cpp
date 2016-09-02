@@ -348,6 +348,7 @@ public:
         }
 
         auto sum = _arrangement.position.*ifield;
+        _focused = nullptr;
         for (auto& p : _content) {
             auto new_origin = _arrangement;
             (new_origin.position.*ifield) = sum;
