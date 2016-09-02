@@ -63,6 +63,19 @@ struct Margin
     }
 };
 
+enum class MouseButton
+{
+    left,
+    middle,
+    right
+};
+
+enum class MouseState
+{
+    down,
+    up
+};
+
 class IVisualElement
 {
 public:
@@ -71,10 +84,23 @@ public:
     virtual const Margin& get_margin() const = 0;
     virtual const Size2& get_size() const = 0;
     
+    virtual void UpdateMousePosition(Int2 cursor) = 0;
+    virtual void UpdateMouseState(MouseButton button, MouseState state) = 0;
+    virtual void UpdateMouseScroll(Int2 scroll) = 0;
+    
     virtual ~IVisualElement() {}
 };
 
-class ControlBase : public IVisualElement
+class MouseEventsHandler : public virtual IVisualElement
+{
+public:
+    virtual void UpdateMousePosition(Int2 cursor) {};
+    virtual void UpdateMouseState(MouseButton button, MouseState state) {};
+    virtual void UpdateMouseScroll(Int2 scroll) {};
+};
+
+class ControlBase : public virtual IVisualElement, 
+                    public MouseEventsHandler
 {
 public:
     ControlBase(const Size2& position, 
@@ -221,7 +247,54 @@ int main(int argc, char * argv[]) try
     glfwInit();
     GLFWwindow * win = glfwCreateWindow(1280, 960, "main", 0, 0);
     glfwMakeContextCurrent(win);
-
+    
+    Color3 redish { 0.8f, 0.5f, 0.6f };
+        
+    Container c( { 0, 0 }, { 300, 1.0f }, { 5, 5, 5, 5 } );
+    c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+    c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
+    c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+    c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+        
+    glfwSetWindowUserPointer(win, &c);
+    glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) { 
+        auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+        ui_element->UpdateMousePosition({ (int)x, (int)y });
+    });
+    glfwSetScrollCallback(win, [](GLFWwindow * w, double x, double y) { 
+        auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+        ui_element->UpdateMouseScroll({ (int)x, (int)y });
+    });
+    glfwSetMouseButtonCallback(win, [](GLFWwindow * w, int button, int action, int mods) 
+    { 
+        auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+        MouseButton button_type;
+        switch(button)
+        {
+        case GLFW_MOUSE_BUTTON_RIGHT:
+            button_type = MouseButton::right; break;
+        case GLFW_MOUSE_BUTTON_LEFT:
+            button_type = MouseButton::left; break;
+        case GLFW_MOUSE_BUTTON_MIDDLE:
+            button_type = MouseButton::middle; break;
+        default:
+            button_type = MouseButton::left;
+        };
+        
+        MouseState mouse_state;
+        switch(action)
+        {
+        case GLFW_PRESS:
+            mouse_state = MouseState::up; break;
+        case GLFW_RELEASE:
+            mouse_state = MouseState::down; break;
+        default:
+            mouse_state = MouseState::up;
+        };
+        
+        ui_element->UpdateMouseState(button_type, mouse_state);
+    });    
+        
     while (!glfwWindowShouldClose(win))
     {
         glfwPollEvents();
@@ -236,14 +309,6 @@ int main(int argc, char * argv[]) try
         glOrtho(0, w, h, 0, -1, +1);
         
         Rect origin { { 0, 0 }, { w, h } };
-        
-        Color3 redish { 0.8f, 0.5f, 0.6f };
-        
-        Container c( { 0, 0 }, { 300, 1.0f }, { 5, 5, 5, 5 } );
-        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
-        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
-        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
-        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
         
         c.render(origin);
 
