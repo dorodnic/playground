@@ -126,8 +126,9 @@ void Button::render(const Rect& origin)
 
 Size2 TextBlock::get_intrinsic_size() const
 {
-    return { get_text_width(to_upper(_text)) + 16, 20 };
-};
+    Size2 res = { get_text_width(to_upper(_text)) + 16, 20 };
+    return get_margin().apply(res);
+}
 
 void TextBlock::render(const Rect& origin)
 {

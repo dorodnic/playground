@@ -44,6 +44,12 @@ public:
     float get_percents() const { return _percents; }
     int get_pixels() const { return _pixels; }
     bool is_auto() const { return _pixels == 0 && _is_pixels; }
+    
+    Size add_pixels(int px) const
+    {
+        if (_is_pixels && _pixels != 0) return Size(_pixels + px);
+        else return *this;
+    }
 
 private:
     int _pixels;
@@ -97,6 +103,11 @@ struct Margin
     {
         return { { r.position.x + left, r.position.y + top },
                  { r.size.x + left + right, r.size.y + top + bottom } };
+    }
+    
+    Size2 apply(const Size2 s) const
+    {
+        return { s.x.add_pixels(left + right), s.y.add_pixels(top + bottom) };
     }
 };
 
