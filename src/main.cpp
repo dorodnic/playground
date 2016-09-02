@@ -891,6 +891,34 @@ private:
             
             return res;
         }
+        else if (type == "Grid")
+        {       
+            auto ori_node = node->first_attribute("orientation");
+            auto ori_str = ori_node ? ori_node->value() : "";
+            auto orientation = parse_orientation(ori_str);
+             
+            auto res = std::shared_ptr<Grid>(new Grid(
+                position, size, margin, orientation
+            ));
+            
+            for (xml_node<>* sub_node = node->first_node(); 
+                 sub_node; 
+                 sub_node = sub_node->next_sibling()) {
+	            try
+	            {
+	                std::string sub_name = sub_node->name();
+	                if (sub_name == "Break") res->commit_line();
+	                else res->add_item(deserialize(sub_node));
+	            } catch (const std::exception& ex) {
+	                LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
+	                           << name_str << ")" << endl;
+	            }
+	        }
+	        
+	        res->commit_line();
+            
+            return res;
+        }
         
         std::stringstream ss; ss << "Unrecognized Visual Element (" << type 
                                  << name_str << ")";
