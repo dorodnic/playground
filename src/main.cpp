@@ -2,6 +2,8 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <chrono>
+#include <map>
 
 #define GLFW_INCLUDE_GLU
 #include <GLFW/glfw3.h>
@@ -84,19 +86,85 @@ public:
     virtual const Margin& get_margin() const = 0;
     virtual const Size2& get_size() const = 0;
     
-    virtual void UpdateMousePosition(Int2 cursor) = 0;
-    virtual void UpdateMouseState(MouseButton button, MouseState state) = 0;
-    virtual void UpdateMouseScroll(Int2 scroll) = 0;
+    virtual void update_mouse_position(Int2 cursor) = 0;
+    virtual void update_mouse_state(MouseButton button, MouseState state) = 0;
+    virtual void update_mouse_scroll(Int2 scroll) = 0;
     
     virtual ~IVisualElement() {}
 };
 
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
+
 class MouseEventsHandler : public virtual IVisualElement
 {
 public:
-    virtual void UpdateMousePosition(Int2 cursor) {};
-    virtual void UpdateMouseState(MouseButton button, MouseState state) {};
-    virtual void UpdateMouseScroll(Int2 scroll) {};
+    MouseEventsHandler()
+        : _on_double_click([](){})
+    {
+        _state[MouseButton::left] = _state[MouseButton::right] = 
+        _state[MouseButton::middle] = MouseState::up;
+        
+        _on_click[MouseButton::left] = _on_click[MouseButton::right] = 
+        _on_click[MouseButton::middle] = [](){};
+        
+        auto now = std::chrono::high_resolution_clock::now();
+        _last_update[MouseButton::left] = _last_update[MouseButton::right] = 
+        _last_update[MouseButton::middle] = now;
+        
+        _last_click[MouseButton::left] = _last_click[MouseButton::right] = 
+        _last_click[MouseButton::middle] = now;
+    }
+
+    void update_mouse_position(Int2 cursor) override {};
+    
+    void update_mouse_state(MouseButton button, MouseState state) override {
+        auto now = std::chrono::high_resolution_clock::now();
+        auto curr = _state[button];
+        if (curr != state)
+        {
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>
+                            (now - _last_update[button]).count();
+            if (ms < CLICK_TIME_MS)
+            {
+                if (state == MouseState::up)
+                {
+                    ms = std::chrono::duration_cast<std::chrono::milliseconds>
+                         (now - _last_click[button]).count();
+                    _last_click[button] = now;
+                    
+                    if (ms < CLICK_TIME_MS && button == MouseButton::left) {
+                        _on_double_click();
+                    } else {
+                        _on_click[button]();
+                    }
+                }
+            }
+            
+            _state[button] = state;
+        }
+        _last_update[button] = now;
+    };
+    
+    void update_mouse_scroll(Int2 scroll) override {};
+
+    void set_on_click(std::function<void()> on_click, 
+                      MouseButton button = MouseButton::left) { 
+        _on_click[button] = on_click; 
+    }
+    
+    void set_on_double_click(std::function<void()> on_click){ 
+        _on_double_click = on_click; 
+    }
+    
+private:
+    std::map<MouseButton, MouseState> _state;
+    std::map<MouseButton, TimePoint> _last_update;
+    std::map<MouseButton, TimePoint> _last_click;
+
+    std::map<MouseButton, std::function<void()>> _on_click;
+    std::function<void()> _on_double_click;
+    
+    const int CLICK_TIME_MS = 200;
 };
 
 class ControlBase : public virtual IVisualElement, 
@@ -255,15 +323,19 @@ int main(int argc, char * argv[]) try
     c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
     c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
     c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+    
+    c.set_on_double_click([&](){
+        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+    });
         
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) { 
         auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-        ui_element->UpdateMousePosition({ (int)x, (int)y });
+        ui_element->update_mouse_position({ (int)x, (int)y });
     });
     glfwSetScrollCallback(win, [](GLFWwindow * w, double x, double y) { 
         auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-        ui_element->UpdateMouseScroll({ (int)x, (int)y });
+        ui_element->update_mouse_scroll({ (int)x, (int)y });
     });
     glfwSetMouseButtonCallback(win, [](GLFWwindow * w, int button, int action, int mods) 
     { 
@@ -285,14 +357,16 @@ int main(int argc, char * argv[]) try
         switch(action)
         {
         case GLFW_PRESS:
-            mouse_state = MouseState::up; break;
+            mouse_state = MouseState::down; 
+            break;
         case GLFW_RELEASE:
-            mouse_state = MouseState::down; break;
+            mouse_state = MouseState::up; 
+            break;
         default:
             mouse_state = MouseState::up;
         };
         
-        ui_element->UpdateMouseState(button_type, mouse_state);
+        ui_element->update_mouse_state(button_type, mouse_state);
     });    
         
     while (!glfwWindowShouldClose(win))
