@@ -1,5 +1,7 @@
 #include <iostream>
 #include <memory>
+#include <vector>
+#include <unordered_map>
 
 #define GLFW_INCLUDE_GLU
 #include <GLFW/glfw3.h>
@@ -27,6 +29,10 @@ public:
         else return (int) (_percents * base_pixels);
     }
     
+    bool is_const() const { return _is_pixels; }
+    float get_percents() const { return _percents; }
+    int get_pixels() const { return _pixels; }
+    
 private:
     int _pixels;
     float _percents;
@@ -39,48 +45,166 @@ struct Rect { Int2 position, size; };
 struct Margin
 {
     int left, right, top, bottom;
+    
     Margin(int v) : left(v), right(v), top(v), bottom(v) {}
     Margin(int x, int y) : left(x), right(x), top(y), bottom(y) {}
     Margin(int left, int right, int top, int bottom)
         : left(left), right(right), top(top), bottom(bottom) {}
+        
+    Margin operator-()
+    {
+        return { -left, -right, -top, -bottom };
+    }
+        
+    Rect apply(const Rect& r) const
+    {
+        return { { r.position.x + left, r.position.y + top },
+                 { r.size.x + left + right, r.size.y + top + bottom } };
+    }
 };
 
-class Button
+class ControlBase
+{
+public:
+    ControlBase(const Size2& position, 
+                const Size2& size, 
+                const Margin& margin)
+        : _position(position), _size(size), _margin(margin)
+    {}
+    
+    Rect arrange(const Rect& origin)
+    {
+        auto x0 = _position.x.to_pixels(origin.size.x) + _margin.left;
+        auto y0 = _position.y.to_pixels(origin.size.y) + _margin.top;
+        
+        auto w = std::min(_size.x.to_pixels(origin.size.x),
+                          origin.size.x - _margin.right - _margin.left);
+        auto h = std::min(_size.y.to_pixels(origin.size.y),
+                          origin.size.y - _margin.bottom - _margin.top);
+        
+        x0 += origin.position.x;
+        y0 += origin.position.y;
+        
+        return { { x0, y0 }, { w, h } };
+    }
+    
+    const Margin& get_margin() const { return _margin; }
+    const Size2& get_size() const { return _size; }
+    
+    virtual void render(const Rect& origin) = 0;
+    
+    virtual ~ControlBase() {}
+    
+private:
+    Size2 _position;
+    Size2 _size;
+    Margin _margin;
+};
+
+class Button : public ControlBase
 {
 public:
     Button(const Size2& position, 
            const Size2& size, 
            const Margin& margin,
            const Color3& color)
-        : _position(position), _size(size), _color(color), _margin(margin)
+        : ControlBase(position, size, margin), _color(color)
     {}
 
-    void render(const Rect& origin)
+    void render(const Rect& origin) override
     {
         glBegin(GL_QUADS);
         glColor3f(_color.r, _color.g, _color.b);
         
-        auto x0 = _position.x.to_pixels(origin.size.x);
-        auto y0 = _position.y.to_pixels(origin.size.y);
+        auto rect = arrange(origin);
         
-        auto w = _size.x.to_pixels(origin.size.x);
-        auto h = _size.y.to_pixels(origin.size.y);
-        
-        x0 += origin.position.x;
-        y0 += origin.position.y;
-        
-        glVertex2i(x0, y0);
-        glVertex2i(x0, y0 + h);
-        glVertex2i(x0 + w, y0 + h);
-        glVertex2i(x0 + w, y0);
+        glVertex2i(rect.position.x, rect.position.y);
+        glVertex2i(rect.position.x, rect.position.y + rect.size.y);
+        glVertex2i(rect.position.x + rect.size.x, 
+                   rect.position.y + rect.size.y);
+        glVertex2i(rect.position.x + rect.size.x, 
+                   rect.position.y);
+                   
         glEnd();
     }
     
 private:
-    Size2 _position;
-    Size2 _size;
     Color3 _color;
-    Margin _margin;
+};
+
+enum class Orientation
+{
+    vertical,
+    horizontal
+};
+
+class Container : public ControlBase
+{
+public:
+    Container(const Size2& position, 
+              const Size2& size, 
+              const Margin& margin,
+              Orientation orientation = Orientation::vertical)
+        : ControlBase(position, size, margin), _orientation(orientation)
+    {}
+    
+    void add_item(std::unique_ptr<ControlBase> item)
+    {
+        _content.push_back(std::move(item));
+    }
+    
+    void render(const Rect& origin) override
+    {
+        Size Size2::* field;
+        int Int2::* ifield;
+        if (_orientation == Orientation::vertical) {
+            field = &Size2::y;
+            ifield = &Int2::y;
+        } else {
+            field = &Size2::x;
+            ifield = &Int2::x;
+        }
+    
+        // first, scan items, map the "greedy" ones wanting relative portion
+        std::vector<ControlBase*> greedy;
+        std::unordered_map<ControlBase*, int> sizes;
+        auto sum = 0;
+        for (auto& p : _content) {
+            auto p_rect = p->arrange(origin);
+            auto p_total = p->get_margin().apply(p_rect);
+            
+            if ((p->get_size().*field).is_const()) {
+                auto pixels = (p->get_size().*field).get_pixels();
+                sum += pixels;
+                sizes[p.get()] = pixels;
+            } else {
+                greedy.push_back(p.get());
+            }
+        }
+        
+        auto rest = std::max(origin.size.*ifield - sum, 0);
+        float total_parts = 0;
+        for (auto ptr : greedy) {
+            total_parts += (ptr->get_size().*field).get_percents();
+        }
+        for (auto ptr : greedy) {
+            auto f = ((ptr->get_size().*field).get_percents() / total_parts);
+            sizes[ptr] = (int) (rest * f);
+        }
+        
+        sum = origin.position.*ifield;
+        for (auto& p : _content) {
+            auto new_origin = origin;
+            (new_origin.position.*ifield) = sum;
+            (new_origin.size.*ifield) = sizes[p.get()];
+            sum += sizes[p.get()];
+            p->render(new_origin);
+        }
+    }
+    
+private:
+    std::vector<std::unique_ptr<ControlBase>> _content;
+    Orientation _orientation;
 };
 
 int main(int argc, char * argv[]) try
@@ -106,8 +230,13 @@ int main(int argc, char * argv[]) try
         
         Color3 redish { 0.8f, 0.5f, 0.6f };
         
-        Button b( { 50, 50 }, { 0.5f, 35 }, { 0, 0, 0, 0 }, redish );
-        b.render(origin);
+        Container c( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 } );
+        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
+        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
+        
+        c.render(origin);
 
         glPopMatrix();
         glfwSwapBuffers(win);
