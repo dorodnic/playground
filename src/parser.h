@@ -188,6 +188,14 @@ public:
         if (eof()) return { 0 };
         auto left = get_int();
         if (eof()) return { left }; 
+        
+        if (peek() == '^')
+        {
+            get();
+            req_eof();
+            return { left, 0, left, left };
+        }
+        
         req(',');
         auto top = get_int();
         if (eof()) return { left, top };
@@ -243,6 +251,18 @@ private:
         if (s == "vertical") return Orientation::vertical;
         if (s == "horizontal") return Orientation::horizontal;
         std::stringstream ss; ss << "Invalid Orientation '" << str << "'";
+        throw std::runtime_error(ss.str());
+    }
+    
+    TextAlignment parse_text_alignment(const std::string& str)
+    {
+        if (str == "") return TextAlignment::center;
+        
+        auto s = to_lower(str);
+        if (s == "left") return TextAlignment::left;
+        if (s == "center") return TextAlignment::center;
+        if (s == "right") return TextAlignment::right;
+        std::stringstream ss; ss << "Invalid TextAlignment '" << str << "'";
         throw std::runtime_error(ss.str());
     }
     

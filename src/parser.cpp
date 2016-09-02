@@ -32,14 +32,42 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
     auto margin_str = margin_node ? margin_node->value() : "";
     auto margin = parse_margin(margin_str);
     
-    if (type == "Button")
+    if (type == "TextBlock")
     {        
         auto color_node = node->first_attribute("color");
-        auto color_str = color_node ? color_node->value() : "";
+        auto color_str = color_node ? color_node->value() : "gray";
+        auto color = parse_color(color_str);
+
+        auto align_node = node->first_attribute("align");
+        auto align_str = align_node ? align_node->value() : "center";
+        auto align = parse_text_alignment(align_str);
+        
+        auto txt_node = node->first_attribute("text");
+        auto txt_str = txt_node ? txt_node->value() : "";
+        
+        return shared_ptr<TextBlock>(new TextBlock(
+            name, txt_str, align, position, size, margin, color
+        ));
+    }
+    else if (type == "Button")
+    {        
+        auto color_node = node->first_attribute("color");
+        auto color_str = color_node ? color_node->value() : "gray";
         auto color = parse_color(color_str);
         
+        auto txt_color_node = node->first_attribute("text.color");
+        auto txt_color_str = txt_color_node ? txt_color_node->value() : "black";
+        auto txt_color = parse_color(txt_color_str);
+        
+        auto align_node = node->first_attribute("align");
+        auto align_str = align_node ? align_node->value() : "center";
+        auto align = parse_text_alignment(align_str);
+        
+        auto txt_node = node->first_attribute("text");
+        auto txt_str = txt_node ? txt_node->value() : "";
+        
         return shared_ptr<Button>(new Button(
-            position, size, margin, color
+            name, txt_str, align, txt_color, position, size, margin, color
         ));
     }
     else if (type == "Container")
@@ -49,7 +77,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
         auto orientation = parse_orientation(ori_str);
          
         auto res = shared_ptr<Container>(new Container(
-            position, size, margin, orientation
+            name, position, size, margin, orientation
         ));
         
         for (xml_node<>* sub_node = node->first_node(); 
@@ -73,7 +101,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
         auto orientation = parse_orientation(ori_str);
          
         auto res = shared_ptr<Grid>(new Grid(
-            position, size, margin, orientation
+            name, position, size, margin, orientation
         ));
         
         for (xml_node<>* sub_node = node->first_node(); 

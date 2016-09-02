@@ -128,6 +128,7 @@ public:
 
     virtual void focus(bool on) = 0;
     virtual bool is_focused() const = 0;
+    virtual const std::string& get_name() const = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -178,10 +179,11 @@ class ControlBase : public virtual IVisualElement,
                     public MouseClickHandler
 {
 public:
-    ControlBase(const Size2& position,
+    ControlBase(std::string name,
+                const Size2& position,
                 const Size2& size,
                 const Margin& margin)
-        : _position(position), _size(size), _margin(margin)
+        : _position(position), _size(size), _margin(margin), _name(name)
     {}
 
     Rect arrange(const Rect& origin) override;
@@ -194,29 +196,62 @@ public:
 
     void focus(bool on) override { _focused = on; }
     bool is_focused() const override { return _focused; }
+    
+    virtual const std::string& get_name() const { return _name; }
 
 private:
     Size2 _position;
     Size2 _size;
     Margin _margin;
     bool _focused = false;
+    std::string _name;
 };
 
-class Button : public ControlBase
+enum class TextAlignment
+{
+    left,
+    center,
+    right
+};
+
+class TextBlock : public ControlBase
 {
 public:
-    Button(const Size2& position,
+    TextBlock(std::string name,
+            std::string text,
+            TextAlignment alignment,
+            const Size2& position,
+            const Size2& size,
+            const Margin& margin,
+            const Color3& color)
+        : ControlBase(name, position, size, margin), 
+          _color(color), _text(text), _align(alignment)
+    {}
+
+    Size2 get_intrinsic_size() const override;
+
+    void render(const Rect& origin) override;
+
+private:
+    Color3 _color;
+    std::string _text;
+    TextAlignment _align;
+};
+
+class Button : public TextBlock
+{
+public:
+    Button(std::string name,
+           std::string text,
+           TextAlignment alignment,
+           const Color3& text_color,
+           const Size2& position,
            const Size2& size,
            const Margin& margin,
            const Color3& color)
-        : ControlBase(position, size, margin), _color(color)
+        : TextBlock(name, text, alignment, position, size, margin, text_color), 
+          _color(color)
     {}
-
-    Size2 get_intrinsic_size() const override
-    {
-        return { 150, 35 }; // TODO: Once button will have text, change
-                            // width to reflect text width
-    };
 
     void render(const Rect& origin) override;
 
@@ -245,12 +280,13 @@ public:
 class Container : public ControlBase
 {
 public:
-    Container(const Size2& position,
+    Container(std::string name,
+              const Size2& position,
               const Size2& size,
               const Margin& margin,
               Orientation orientation = Orientation::vertical,
               ISizeCalculator* resizer = nullptr)
-        : ControlBase(position, size, margin),
+        : ControlBase(name, position, size, margin),
           _orientation(orientation),
           _focused(nullptr),
           _on_items_change([](){}),
@@ -322,11 +358,12 @@ private:
 class Grid : public Container, public ISizeCalculator
 {
 public:
-    Grid( const Size2& position,
+    Grid( std::string name,
+          const Size2& position,
           const Size2& size,
           const Margin& margin,
           Orientation orientation = Orientation::vertical)
-        : Container(position, size, margin, orientation),
+        : Container(name, position, size, margin, orientation),
           _current_line(nullptr)
     {
         commit_line();

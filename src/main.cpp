@@ -16,7 +16,7 @@ int main(int argc, char * argv[]) try
     GLFWwindow * win = glfwCreateWindow(1280, 960, "main", 0, 0);
     glfwMakeContextCurrent(win);
 
-	Container c({0,0},{1.0f, 1.0f},0); // create root-level container for the GUI
+	Container c("",{0,0},{1.0f, 1.0f},0); // create root-level container for the GUI
 	
 	try
 	{
