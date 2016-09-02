@@ -155,6 +155,8 @@ public:
     
     void render(const Rect& origin) override
     {
+        auto rect = arrange(origin);
+    
         Size Size2::* field;
         int Int2::* ifield;
         if (_orientation == Orientation::vertical) {
@@ -170,7 +172,7 @@ public:
         std::unordered_map<ControlBase*, int> sizes;
         auto sum = 0;
         for (auto& p : _content) {
-            auto p_rect = p->arrange(origin);
+            auto p_rect = p->arrange(rect);
             auto p_total = p->get_margin().apply(p_rect);
             
             if ((p->get_size().*field).is_const()) {
@@ -182,7 +184,7 @@ public:
             }
         }
         
-        auto rest = std::max(origin.size.*ifield - sum, 0);
+        auto rest = std::max(rect.size.*ifield - sum, 0);
         float total_parts = 0;
         for (auto ptr : greedy) {
             total_parts += (ptr->get_size().*field).get_percents();
@@ -192,9 +194,9 @@ public:
             sizes[ptr] = (int) (rest * f);
         }
         
-        sum = origin.position.*ifield;
+        sum = rect.position.*ifield;
         for (auto& p : _content) {
-            auto new_origin = origin;
+            auto new_origin = rect;
             (new_origin.position.*ifield) = sum;
             (new_origin.size.*ifield) = sizes[p.get()];
             sum += sizes[p.get()];
@@ -230,11 +232,11 @@ int main(int argc, char * argv[]) try
         
         Color3 redish { 0.8f, 0.5f, 0.6f };
         
-        Container c( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 } );
+        Container c( { 0, 0 }, { 300, 1.0f }, { 5, 5, 5, 5 } );
         c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
         c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
         c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
-        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
+        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
         
         c.render(origin);
 
