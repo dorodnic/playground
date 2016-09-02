@@ -392,21 +392,24 @@ int main(int argc, char * argv[]) try
     
     auto b = std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, greenish ));
     auto b2 = std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, greenish ));
+    
+    auto c2 = std::unique_ptr<Container>(new Container( { 0, 0 }, { 1.0f, 1.0f }, 0, Orientation::horizontal ));
+    auto c2_ptr = c2.get();
 
-    Container c( { 0, 0 }, { 300, 1.0f }, { 5, 5, 5, 5 } );
+    Container c( { 0, 0 }, { 500, 1.0f }, 0 );
     
     b->set_on_click([&](){
         c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, bluish )));
     });
     b2->set_on_double_click([&](){
-        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
+        c2_ptr->add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
     });
     
     c.add_item(std::move(b));
     c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
     c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
     c.add_item(std::move(b2));
-    c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+    c.add_item(std::move(c2));
         
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) { 
