@@ -14,6 +14,16 @@ template<typename T>
 T clamp(T val, T from, T to) { return std::max(from, std::min(to, val)); }
 
 struct Color3 { float r, g, b; };
+Color3 brighten(const Color3& c, float f)
+{
+    return { clamp(c.r * f, 0.0f, 1.0f),  
+             clamp(c.g * f, 0.0f, 1.0f),
+             clamp(c.b * f, 0.0f, 1.0f) };
+} 
+Color3 operator-(const Color3& c)
+{
+    return { 1.0f - c.r, 1.0f - c.g, 1.0f - c.b };
+}
 
 class Size
 {
@@ -113,6 +123,9 @@ public:
     virtual void update_mouse_state(MouseButton button, MouseState state) = 0;
     virtual void update_mouse_scroll(Int2 scroll) = 0;
     
+    virtual void focus(bool on) = 0;
+    virtual bool is_focused() const = 0;
+    
     virtual ~IVisualElement() {}
 };
 
@@ -179,6 +192,15 @@ public:
         _on_double_click = on_click; 
     }
     
+    bool is_pressed(MouseButton button) const
+    {
+        auto it = _state.find(button);
+        if (it != _state.end())
+            return it->second == MouseState::down;
+        else
+            return false;
+    }
+    
 private:
     std::map<MouseButton, MouseState> _state;
     std::map<MouseButton, TimePoint> _last_update;
@@ -228,10 +250,14 @@ public:
     }
     Size2 get_intrinsic_size() const override { return _size; };
     
+    void focus(bool on) override { _focused = on; }
+    bool is_focused() const override { return _focused; }
+    
 private:
     Size2 _position;
     Size2 _size;
     Margin _margin;
+    bool _focused = false;
 };
 
 class Button : public ControlBase
@@ -253,7 +279,12 @@ public:
     void render(const Rect& origin) override
     {
         glBegin(GL_QUADS);
-        glColor3f(_color.r, _color.g, _color.b);
+        
+        auto c = _color;
+        if (is_focused()) c = brighten(c, 1.1f);
+        if (is_pressed(MouseButton::left)) c = brighten(c, 0.8f);
+        
+        glColor3f(c.r, c.g, c.b);
         
         auto rect = arrange(origin);
         
@@ -317,7 +348,11 @@ public:
             if (contains(new_origin, cursor))
             {
                 _focused = p.get();
-                return;
+                p->focus(true);
+            }
+            else
+            {
+                p->focus(false);
             }
         }
     }
