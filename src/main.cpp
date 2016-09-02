@@ -42,8 +42,26 @@ private:
 };
 
 struct Size2 { Size x, y; };
+
 struct Int2 { int x, y; };
+bool operator==(const Int2& a, const Int2& b) {
+    return (a.x == b.x) && (a.y == b.y);
+}
+inline std::ostream & operator << (std::ostream & o, const Int2& r) { return o << "(" << r.x << ", " << r.y << ")"; }
+
 struct Rect { Int2 position, size; };
+bool operator==(const Rect& a, const Rect& b) 
+{
+    return (a.position == b.position) && (a.size == b.size);
+}
+inline std::ostream & operator << (std::ostream & o, const Rect& r) { return o << "[" << r.position << ", " << r.size << "]"; }
+    
+bool contains(const Rect& rect, const Int2& v)
+{
+    return (rect.position.x <= v.x && rect.position.x + rect.size.x >= v.x) && 
+           (rect.position.y <= v.y && rect.position.y + rect.size.y >= v.y);
+}
+
 struct Margin
 {
     int left, right, top, bottom;
@@ -95,10 +113,10 @@ public:
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
-class MouseEventsHandler : public virtual IVisualElement
+class MouseClickHandler : public virtual IVisualElement
 {
 public:
-    MouseEventsHandler()
+    MouseClickHandler()
         : _on_double_click([](){})
     {
         _state[MouseButton::left] = _state[MouseButton::right] = 
@@ -115,9 +133,8 @@ public:
         _last_click[MouseButton::middle] = now;
     }
 
-    void update_mouse_position(Int2 cursor) override {};
-    
-    void update_mouse_state(MouseButton button, MouseState state) override {
+    void update_mouse_state(MouseButton button, MouseState state) override 
+    {
         auto now = std::chrono::high_resolution_clock::now();
         auto curr = _state[button];
         if (curr != state)
@@ -132,7 +149,7 @@ public:
                          (now - _last_click[button]).count();
                     _last_click[button] = now;
                     
-                    if (ms < CLICK_TIME_MS && button == MouseButton::left) {
+                    if (ms < CLICK_TIME_MS / 2 && button == MouseButton::left) {
                         _on_double_click();
                     } else {
                         _on_click[button]();
@@ -148,7 +165,8 @@ public:
     void update_mouse_scroll(Int2 scroll) override {};
 
     void set_on_click(std::function<void()> on_click, 
-                      MouseButton button = MouseButton::left) { 
+                      MouseButton button = MouseButton::left) 
+    { 
         _on_click[button] = on_click; 
     }
     
@@ -168,7 +186,7 @@ private:
 };
 
 class ControlBase : public virtual IVisualElement, 
-                    public MouseEventsHandler
+                    public MouseClickHandler
 {
 public:
     ControlBase(const Size2& position, 
@@ -193,6 +211,8 @@ public:
         return { { x0, y0 }, { w, h } };
     }
     
+    void update_mouse_position(Int2 cursor) override {}
+       
     const Margin& get_margin() const override { return _margin; }
     const Size2& get_size() const override { return _size; }
     
@@ -246,18 +266,58 @@ public:
               const Size2& size, 
               const Margin& margin,
               Orientation orientation = Orientation::vertical)
-        : ControlBase(position, size, margin), _orientation(orientation)
+        : ControlBase(position, size, margin), 
+          _orientation(orientation),
+          _focused(nullptr)
     {}
+    
+    void update_mouse_position(Int2 cursor) override 
+    {
+        Size Size2::* field;
+        int Int2::* ifield;
+        if (_orientation == Orientation::vertical) {
+            field = &Size2::y;
+            ifield = &Int2::y;
+        } else {
+            field = &Size2::x;
+            ifield = &Int2::x;
+        }
+        
+        auto sum = _arrangement.position.*ifield;
+        for (auto& p : _content) {
+            auto new_origin = _arrangement;
+            (new_origin.position.*ifield) = sum;
+            (new_origin.size.*ifield) = _sizes[p.get()];
+            sum += _sizes[p.get()];
+            
+            //cout << new_origin << " - " << cursor << endl;
+            
+            if (contains(new_origin, cursor))
+            {
+                _focused = p.get();
+                return;
+            }
+        }
+    }
+    
+    void update_mouse_state(MouseButton button, MouseState state) override 
+    {
+        if (_focused)
+        {
+            _focused->update_mouse_state(button, state);
+        }
+    }
     
     void add_item(std::unique_ptr<IVisualElement> item)
     {
+        _origin = { { 0, 0 }, { 0, 0 } };
         _content.push_back(std::move(item));
     }
     
     void render(const Rect& origin) override
     {
-        auto rect = arrange(origin);
-    
+        auto sum = 0;
+        
         Size Size2::* field;
         int Int2::* ifield;
         if (_orientation == Orientation::vertical) {
@@ -268,39 +328,44 @@ public:
             ifield = &Int2::x;
         }
     
-        // first, scan items, map the "greedy" ones wanting relative portion
-        std::vector<IVisualElement*> greedy;
-        std::unordered_map<IVisualElement*, int> sizes;
-        auto sum = 0;
-        for (auto& p : _content) {
-            auto p_rect = p->arrange(rect);
-            auto p_total = p->get_margin().apply(p_rect);
-            
-            if ((p->get_size().*field).is_const()) {
-                auto pixels = (p->get_size().*field).get_pixels();
-                sum += pixels;
-                sizes[p.get()] = pixels;
-            } else {
-                greedy.push_back(p.get());
+        if (!(_origin == origin))
+        {
+            _arrangement = arrange(origin);
+        
+            // first, scan items, map the "greedy" ones wanting relative portion
+            std::vector<IVisualElement*> greedy;
+            for (auto& p : _content) {
+                auto p_rect = p->arrange(_arrangement);
+                auto p_total = p->get_margin().apply(p_rect);
+                
+                if ((p->get_size().*field).is_const()) {
+                    auto pixels = (p->get_size().*field).get_pixels();
+                    sum += pixels;
+                    _sizes[p.get()] = pixels;
+                } else {
+                    greedy.push_back(p.get());
+                }
             }
+            
+            auto rest = std::max(_arrangement.size.*ifield - sum, 0);
+            float total_parts = 0;
+            for (auto ptr : greedy) {
+                total_parts += (ptr->get_size().*field).get_percents();
+            }
+            for (auto ptr : greedy) {
+                auto f = ((ptr->get_size().*field).get_percents() / total_parts);
+                _sizes[ptr] = (int) (rest * f);
+            }
+            
+            _origin = origin;
         }
         
-        auto rest = std::max(rect.size.*ifield - sum, 0);
-        float total_parts = 0;
-        for (auto ptr : greedy) {
-            total_parts += (ptr->get_size().*field).get_percents();
-        }
-        for (auto ptr : greedy) {
-            auto f = ((ptr->get_size().*field).get_percents() / total_parts);
-            sizes[ptr] = (int) (rest * f);
-        }
-        
-        sum = rect.position.*ifield;
+        sum = _arrangement.position.*ifield;
         for (auto& p : _content) {
-            auto new_origin = rect;
+            auto new_origin = _arrangement;
             (new_origin.position.*ifield) = sum;
-            (new_origin.size.*ifield) = sizes[p.get()];
-            sum += sizes[p.get()];
+            (new_origin.size.*ifield) = _sizes[p.get()];
+            sum += _sizes[p.get()];
             p->render(new_origin);
         }
     }
@@ -308,6 +373,11 @@ public:
 private:
     std::vector<std::unique_ptr<IVisualElement>> _content;
     Orientation _orientation;
+    IVisualElement* _focused;
+    
+    Rect _origin;
+    Rect _arrangement;
+    std::unordered_map<IVisualElement*, int> _sizes;
 };
 
 int main(int argc, char * argv[]) try
@@ -317,16 +387,26 @@ int main(int argc, char * argv[]) try
     glfwMakeContextCurrent(win);
     
     Color3 redish { 0.8f, 0.5f, 0.6f };
-        
+    Color3 greenish { 0.6f, 0.9f, 0.6f };
+    Color3 bluish { 0.5f, 0.5f, 0.8f };
+    
+    auto b = std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, greenish ));
+    auto b2 = std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, greenish ));
+
     Container c( { 0, 0 }, { 300, 1.0f }, { 5, 5, 5, 5 } );
-    c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+    
+    b->set_on_click([&](){
+        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, bluish )));
+    });
+    b2->set_on_click([&](){
+        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
+    });
+    
+    c.add_item(std::move(b));
     c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
     c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+    c.add_item(std::move(b2));
     c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
-    
-    c.set_on_double_click([&](){
-        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
-    });
         
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) { 
