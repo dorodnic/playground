@@ -279,12 +279,12 @@ enum class Orientation
 typedef std::unordered_map<IVisualElement*, std::pair<int, Size>> SizeMap;
 typedef std::vector<std::shared_ptr<IVisualElement>> Elements;
 
-class Container;
+class StackPanel;
 
 class ISizeCalculator
 {
 public:
-    virtual SizeMap calc_sizes(const Container* sender,
+    virtual SizeMap calc_sizes(const StackPanel* sender,
                                const Rect& arrangement) const = 0;
 };
 
@@ -294,18 +294,19 @@ public:
     Container(std::string name,
               const Size2& position,
               const Size2& size,
-              const Margin& margin,
-              Orientation orientation = Orientation::vertical,
-              ISizeCalculator* resizer = nullptr)
+              const Margin& margin)
         : ControlBase(name, position, size, margin),
-          _orientation(orientation),
-          _focused(nullptr),
-          _on_items_change([](){}),
-          _resizer(resizer)
+          _on_items_change([](){})
     {}
-
-    void update_mouse_position(Int2 cursor) override;
-
+    
+    void update_mouse_position(Int2 cursor) override
+    {
+        if (_focused)
+        {
+            _focused->update_mouse_position(cursor);
+        }
+    }
+    
     void update_mouse_state(MouseButton button, MouseState state) override
     {
         if (_focused)
@@ -325,7 +326,46 @@ public:
     {
         _on_items_change = on_change;
     }
+    
+    const Elements& get_elements() const { return _content; }
+    const Rect& get_arrangement() const { return _arrangement; }
+    
+    bool update_layout(const Rect& origin)
+    {
+        if (_origin == origin) return false;
+        
+        _arrangement = arrange(origin);
+        _origin = origin;
+        return true;
+    }
+    
+    void set_focused_child(IVisualElement* focused) { _focused = focused; }
 
+private:
+    Elements _content;
+    Rect _origin;
+    Rect _arrangement;
+    IVisualElement* _focused = nullptr;
+    
+    std::function<void()> _on_items_change;
+};
+
+class StackPanel : public Container
+{
+public:
+    StackPanel(std::string name,
+              const Size2& position,
+              const Size2& size,
+              const Margin& margin,
+              Orientation orientation = Orientation::vertical,
+              ISizeCalculator* resizer = nullptr)
+        : Container(name, position, size, margin),
+          _orientation(orientation),
+          _resizer(resizer)
+    {}
+    
+    void update_mouse_position(Int2 cursor) override;
+    
     static SizeMap calc_sizes(Orientation orientation,
                               const Elements& content,
                               const Rect& arrangement);
@@ -333,7 +373,7 @@ public:
     SizeMap calc_local_sizes(const Rect& arrangement) const
     {
         return calc_sizes(_orientation,
-                          _content,
+                          get_elements(),
                           arrangement);
     }
 
@@ -353,20 +393,32 @@ public:
     Orientation get_orientation() const { return _orientation; }
 
 private:
-    Elements _content;
-    Orientation _orientation;
-    IVisualElement* _focused;
-
-    Rect _origin;
-    Rect _arrangement;
     SizeMap _sizes;
-
-    std::function<void()> _on_items_change;
-    
     ISizeCalculator* _resizer;
+    Orientation _orientation;
 };
 
-class Grid : public Container, public ISizeCalculator
+typedef std::unordered_map<IVisualElement*,Int2> SimpleSizeMap;
+
+class Panel : public Container
+{
+public:
+    Panel(std::string name,
+          const Size2& position,
+          const Size2& size,
+          const Margin& margin)
+        : Container(name, position, size, margin)
+    {}
+                   
+    Size2 get_intrinsic_size() const override;
+
+    void render(const Rect& origin) override;
+    
+    static SimpleSizeMap calc_size_map(const Elements& content,
+                                       const Rect& arrangement);
+};
+
+class Grid : public StackPanel, public ISizeCalculator
 {
 public:
     Grid( std::string name,
@@ -374,7 +426,7 @@ public:
           const Size2& size,
           const Margin& margin,
           Orientation orientation = Orientation::vertical)
-        : Container(name, position, size, margin, orientation),
+        : StackPanel(name, position, size, margin, orientation),
           _current_line(nullptr)
     {
         commit_line();
@@ -388,11 +440,11 @@ public:
     void commit_line();
 
 
-    SizeMap calc_sizes(const Container* sender,
+    SizeMap calc_sizes(const StackPanel* sender,
                        const Rect& arrangement) const override;
 
 private:
-    std::shared_ptr<Container> _current_line;
-    std::vector<std::shared_ptr<Container>> _lines;
+    std::shared_ptr<StackPanel> _current_line;
+    std::vector<std::shared_ptr<StackPanel>> _lines;
 };
 

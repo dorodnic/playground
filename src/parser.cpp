@@ -70,14 +70,34 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
             name, txt_str, align, txt_color, position, size, margin, color
         ));
     }
-    else if (type == "Container")
+    else if (type == "StackPanel")
     {       
         auto ori_node = node->first_attribute("orientation");
         auto ori_str = ori_node ? ori_node->value() : "";
         auto orientation = parse_orientation(ori_str);
          
-        auto res = shared_ptr<Container>(new Container(
+        auto res = shared_ptr<StackPanel>(new StackPanel(
             name, position, size, margin, orientation
+        ));
+        
+        for (xml_node<>* sub_node = node->first_node(); 
+             sub_node; 
+             sub_node = sub_node->next_sibling()) {
+            try
+            {
+                res->add_item(deserialize(sub_node));
+            } catch (const exception& ex) {
+                LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
+                           << name_str << ")" << endl;
+            }
+        }
+        
+        return res;
+    }
+    else if (type == "Panel")
+    {                
+        auto res = shared_ptr<Panel>(new Panel(
+            name, position, size, margin
         ));
         
         for (xml_node<>* sub_node = node->first_node(); 

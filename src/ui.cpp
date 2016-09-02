@@ -154,7 +154,7 @@ void TextBlock::render(const Rect& origin)
     }
 }
 
-void Container::update_mouse_position(Int2 cursor)
+void StackPanel::update_mouse_position(Int2 cursor)
 {
     Size Size2::* field;
     int Int2::* ifield;
@@ -166,10 +166,10 @@ void Container::update_mouse_position(Int2 cursor)
         ifield = &Int2::x;
     }
 
-    auto sum = _arrangement.position.*ifield;
-    _focused = nullptr;
-    for (auto& p : _content) {
-        auto new_origin = _arrangement;
+    auto sum = get_arrangement().position.*ifield;
+    set_focused_child(nullptr);
+    for (auto& p : get_elements()) {
+        auto new_origin = get_arrangement();
         (new_origin.position.*ifield) = sum;
         (new_origin.size.*ifield) = _sizes[p.get()].first;
         sum += _sizes[p.get()].first;
@@ -178,7 +178,7 @@ void Container::update_mouse_position(Int2 cursor)
 
         if (contains(new_origin, cursor))
         {
-            _focused = p.get();
+            set_focused_child(p.get());
             p->focus(true);
             p->update_mouse_position(cursor);
         }
@@ -193,20 +193,22 @@ void Container::add_item(shared_ptr<IVisualElement> item)
 {
     invalidate_layout();
 
-    auto container = dynamic_cast<Container*>(item.get());
-    if (container)
+    auto panel = dynamic_cast<Container*>(item.get());
+    if (panel)
     {
-        container->set_items_change([this](){
+        panel->set_items_change([this](){
             invalidate_layout();
         });
     }
 
     _on_items_change();
+    
+    _focused = item.get();
 
-    _content.push_back(move(item));
+    _content.push_back(item);
 }
 
-SizeMap Container::calc_sizes(Orientation orientation,
+SizeMap StackPanel::calc_sizes(Orientation orientation,
                               const Elements& content,
                               const Rect& arrangement)
 {
@@ -258,7 +260,7 @@ SizeMap Container::calc_sizes(Orientation orientation,
     return sizes;
 }
 
-Size2 Container::get_intrinsic_size() const
+Size2 StackPanel::get_intrinsic_size() const
 {
     auto sizes = calc_global_sizes({ { 0, 0 }, { 0, 0 } });
     auto total = 0;
@@ -276,9 +278,9 @@ Size2 Container::get_intrinsic_size() const
     } else {
         return { Size(total), Size(max) };
     }
-};
+}
 
-void Container::render(const Rect& origin)
+void StackPanel::render(const Rect& origin)
 {
     Size Size2::* field;
     int Int2::* ifield;
@@ -290,16 +292,14 @@ void Container::render(const Rect& origin)
         ifield = &Int2::x;
     }
 
-    if (!(_origin == origin))
+    if (update_layout(origin))
     {
-        _arrangement = arrange(origin);
-        _sizes = calc_global_sizes(_arrangement);
-        _origin = origin;
+        _sizes = calc_global_sizes(get_arrangement());
     }
 
-    auto sum = _arrangement.position.*ifield;
-    for (auto& p : _content) {
-        auto new_origin = _arrangement;
+    auto sum = get_arrangement().position.*ifield;
+    for (auto& p : get_elements()) {
+        auto new_origin = get_arrangement();
         (new_origin.position.*ifield) = sum;
         (new_origin.size.*ifield) = _sizes[p.get()].first;
         sum += _sizes[p.get()].first;
@@ -307,23 +307,57 @@ void Container::render(const Rect& origin)
     }
 }
 
+SimpleSizeMap Panel::calc_size_map(const Elements& content,
+                                   const Rect& arrangement)
+{
+    SimpleSizeMap map;
+    for (auto& p : content)
+    {
+        map[p.get()] = p->arrange(arrangement).size;
+    }
+    return map;
+}
+
+void Panel::render(const Rect& origin)
+{
+    for (auto& p : get_elements()) {
+        p->render(origin);
+    }
+}
+
+Size2 Panel::get_intrinsic_size() const
+{
+    auto sizes = calc_size_map(get_elements(), { { 0, 0 }, { 0, 0 } });
+    auto max_x = 0;
+    auto max_y = 0;
+    for (auto& kvp : sizes) {
+        auto x = kvp.second.x;
+        auto y = kvp.second.y;
+
+        max_x = std::max(max_x, x);
+        max_y = std::max(max_y, y);
+    }
+
+    return { Size(max_x), Size(max_y) };
+}
+
 void Grid::commit_line()
 {
     if (_current_line) {
-        Container::add_item(_current_line);
+        StackPanel::add_item(_current_line);
         _lines.push_back(_current_line);
     }
-    _current_line = shared_ptr<Container>(
-        new Container("", {0,0}, { 1.0f, 1.0f }, 0,
+    _current_line = shared_ptr<StackPanel>(
+        new StackPanel("", {0,0}, { 1.0f, 1.0f }, 0,
         get_orientation() == Orientation::vertical 
             ? Orientation::horizontal : Orientation::vertical,
         this));
 }
 
-SizeMap Grid::calc_sizes(const Container* sender,
+SizeMap Grid::calc_sizes(const StackPanel* sender,
                          const Rect& arrangement) const
 {
-    map<const Container*, SizeMap> maps;
+    map<const StackPanel*, SizeMap> maps;
     auto max_length = 0;
     for (auto& p : _lines)
     {
