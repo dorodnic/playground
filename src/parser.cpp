@@ -34,11 +34,11 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
     
     if (type == "TextBlock")
     {        
-        auto color_node = node->first_attribute("color");
-        auto color_str = color_node ? color_node->value() : "gray";
+        auto color_node = node->first_attribute("text.color");
+        auto color_str = color_node ? color_node->value() : "black";
         auto color = parse_color(color_str);
 
-        auto align_node = node->first_attribute("align");
+        auto align_node = node->first_attribute("text.align");
         auto align_str = align_node ? align_node->value() : "center";
         auto align = parse_text_alignment(align_str);
         
@@ -59,7 +59,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node)
         auto txt_color_str = txt_color_node ? txt_color_node->value() : "black";
         auto txt_color = parse_color(txt_color_str);
         
-        auto align_node = node->first_attribute("align");
+        auto align_node = node->first_attribute("text.align");
         auto align_str = align_node ? align_node->value() : "center";
         auto align = parse_text_alignment(align_str);
         
