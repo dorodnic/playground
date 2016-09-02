@@ -18,12 +18,14 @@ struct Color3 { float r, g, b; };
 class Size
 {
 public:
+    Size() : _pixels(0), _is_pixels(true) {} // Default is Auto
     Size(int pixels) : _pixels(pixels) {}
     Size(float percents) 
         : _percents(percents), _is_pixels(false) {}
     
     static Size All() { return Size(1.0f); }
     static Size Nth(int n) { return Size(1.0f / n); }
+    static Size Auto() { return Size(0); }
     
     int to_pixels(int base_pixels) const 
     { 
@@ -34,6 +36,7 @@ public:
     bool is_const() const { return _is_pixels; }
     float get_percents() const { return _percents; }
     int get_pixels() const { return _pixels; }
+    bool is_auto() const { return _pixels == 0 && _is_pixels; }
     
 private:
     int _pixels;
@@ -42,6 +45,7 @@ private:
 };
 
 struct Size2 { Size x, y; };
+Size2 Auto() { return { Size::Auto(), Size::Auto() }; }
 
 struct Int2 { int x, y; };
 bool operator==(const Int2& a, const Int2& b) {
@@ -102,7 +106,8 @@ public:
     virtual Rect arrange(const Rect& origin) = 0;
     virtual void render(const Rect& origin) = 0;
     virtual const Margin& get_margin() const = 0;
-    virtual const Size2& get_size() const = 0;
+    virtual Size2 get_size() const = 0;
+    virtual Size2 get_intrinsic_size() const = 0;
     
     virtual void update_mouse_position(Int2 cursor) = 0;
     virtual void update_mouse_state(MouseButton button, MouseState state) = 0;
@@ -200,9 +205,10 @@ public:
         auto x0 = _position.x.to_pixels(origin.size.x) + _margin.left;
         auto y0 = _position.y.to_pixels(origin.size.y) + _margin.top;
         
-        auto w = std::min(_size.x.to_pixels(origin.size.x),
+        auto size = get_size();
+        auto w = std::min(size.x.to_pixels(origin.size.x),
                           origin.size.x - _margin.right - _margin.left);
-        auto h = std::min(_size.y.to_pixels(origin.size.y),
+        auto h = std::min(size.y.to_pixels(origin.size.y),
                           origin.size.y - _margin.bottom - _margin.top);
         
         x0 += origin.position.x;
@@ -214,7 +220,13 @@ public:
     void update_mouse_position(Int2 cursor) override {}
        
     const Margin& get_margin() const override { return _margin; }
-    const Size2& get_size() const override { return _size; }
+    Size2 get_size() const override 
+    { 
+        Size x = _size.x.is_auto() ? get_intrinsic_size().x : _size.x; 
+        Size y = _size.y.is_auto() ? get_intrinsic_size().y : _size.y; 
+        return { x, y };
+    }
+    Size2 get_intrinsic_size() const override { return _size; };
     
 private:
     Size2 _position;
@@ -231,6 +243,12 @@ public:
            const Color3& color)
         : ControlBase(position, size, margin), _color(color)
     {}
+    
+    Size2 get_intrinsic_size() const override 
+    { 
+        return { 150, 35 }; // TODO: Once button will have text, change 
+                            // width to reflect text width
+    };
 
     void render(const Rect& origin) override
     {
@@ -259,6 +277,9 @@ enum class Orientation
     horizontal
 };
 
+typedef std::unordered_map<IVisualElement*, std::pair<int, Size>> SizeMap;
+typedef std::vector<std::shared_ptr<IVisualElement>> Elements;
+
 class Container : public ControlBase
 {
 public:
@@ -268,7 +289,8 @@ public:
               Orientation orientation = Orientation::vertical)
         : ControlBase(position, size, margin), 
           _orientation(orientation),
-          _focused(nullptr)
+          _focused(nullptr),
+          on_items_change([](){})
     {}
     
     void update_mouse_position(Int2 cursor) override 
@@ -287,8 +309,8 @@ public:
         for (auto& p : _content) {
             auto new_origin = _arrangement;
             (new_origin.position.*ifield) = sum;
-            (new_origin.size.*ifield) = _sizes[p.get()];
-            sum += _sizes[p.get()];
+            (new_origin.size.*ifield) = _sizes[p.get()].first;
+            sum += _sizes[p.get()].first;
             
             //cout << new_origin << " - " << cursor << endl;
             
@@ -308,16 +330,109 @@ public:
         }
     }
     
-    void add_item(std::unique_ptr<IVisualElement> item)
+    void invalidate_layout()
     {
         _origin = { { 0, 0 }, { 0, 0 } };
+    }
+    
+    void add_item(std::shared_ptr<IVisualElement> item)
+    {
+        invalidate_layout();
+        
+        auto container = dynamic_cast<Container*>(item.get());
+        if (container)
+        {
+            container->set_items_change([this](){
+                invalidate_layout();
+            });
+        }
+        
+        on_items_change();
+        
         _content.push_back(std::move(item));
     }
     
-    void render(const Rect& origin) override
+    void set_items_change(std::function<void()> on_change)
     {
+        on_items_change = on_change;
+    }
+    
+    static SizeMap calc_sizes(Orientation orientation, 
+                              const Elements& content,
+                              const Rect& arrangement)
+    {
+        SizeMap sizes;
+        
         auto sum = 0;
         
+        Size Size2::* field;
+        int Int2::* ifield; 
+        Size Size2::* other;
+        if (orientation == Orientation::vertical) {
+            field = &Size2::y;
+            ifield = &Int2::y;
+            other = &Size2::x;
+        } else {
+            field = &Size2::x;
+            ifield = &Int2::x;
+            other = &Size2::y;
+        }
+        
+        // first, scan items, map the "greedy" ones wanting relative portion
+        std::vector<IVisualElement*> greedy;
+        for (auto& p : content) {
+            auto p_rect = p->arrange(arrangement);
+            auto p_total = p->get_margin().apply(p_rect);
+            auto p_size = p->get_size();
+            
+            if ((p_size.*field).is_const()) {
+                auto pixels = (p_size.*field).get_pixels();
+                sum += pixels;
+                sizes[p.get()].first = pixels;
+                sizes[p.get()].second = p_size.*other;
+            } else {
+                greedy.push_back(p.get());
+            }
+        }
+        
+        auto rest = std::max(arrangement.size.*ifield - sum, 0);
+        float total_parts = 0;
+        for (auto ptr : greedy) {
+            total_parts += (ptr->get_size().*field).get_percents();
+        }
+        for (auto ptr : greedy) {
+            auto f = ((ptr->get_size().*field).get_percents() / total_parts);
+            sizes[ptr].first = (int) (rest * f);
+            sizes[ptr].second = ptr->get_size().*other;
+        }
+        
+        return sizes;
+    }
+    
+    Size2 get_intrinsic_size() const override 
+    { 
+        auto sizes = calc_sizes(_orientation,
+                                _content,
+                                { { 0, 0 }, { 0, 0 } });
+        auto total = 0;
+        auto max = 0;
+        for (auto& kvp : sizes) {
+            auto pixels = kvp.second.first;
+            auto size = kvp.second.second;
+            
+            total += pixels;
+            max = std::max(max, size.to_pixels(0));
+        }
+        
+        if (_orientation == Orientation::vertical) {
+            return { Size(max), Size(total) };
+        } else {
+            return { Size(total), Size(max) };
+        }
+    };
+    
+    void render(const Rect& origin) override
+    {
         Size Size2::* field;
         int Int2::* ifield;
         if (_orientation == Orientation::vertical) {
@@ -331,53 +446,30 @@ public:
         if (!(_origin == origin))
         {
             _arrangement = arrange(origin);
-        
-            // first, scan items, map the "greedy" ones wanting relative portion
-            std::vector<IVisualElement*> greedy;
-            for (auto& p : _content) {
-                auto p_rect = p->arrange(_arrangement);
-                auto p_total = p->get_margin().apply(p_rect);
-                
-                if ((p->get_size().*field).is_const()) {
-                    auto pixels = (p->get_size().*field).get_pixels();
-                    sum += pixels;
-                    _sizes[p.get()] = pixels;
-                } else {
-                    greedy.push_back(p.get());
-                }
-            }
-            
-            auto rest = std::max(_arrangement.size.*ifield - sum, 0);
-            float total_parts = 0;
-            for (auto ptr : greedy) {
-                total_parts += (ptr->get_size().*field).get_percents();
-            }
-            for (auto ptr : greedy) {
-                auto f = ((ptr->get_size().*field).get_percents() / total_parts);
-                _sizes[ptr] = (int) (rest * f);
-            }
-            
+            _sizes = calc_sizes(_orientation, _content, _arrangement);
             _origin = origin;
         }
         
-        sum = _arrangement.position.*ifield;
+        auto sum = _arrangement.position.*ifield;
         for (auto& p : _content) {
             auto new_origin = _arrangement;
             (new_origin.position.*ifield) = sum;
-            (new_origin.size.*ifield) = _sizes[p.get()];
-            sum += _sizes[p.get()];
+            (new_origin.size.*ifield) = _sizes[p.get()].first;
+            sum += _sizes[p.get()].first;
             p->render(new_origin);
         }
     }
     
 private:
-    std::vector<std::unique_ptr<IVisualElement>> _content;
+    Elements _content;
     Orientation _orientation;
     IVisualElement* _focused;
     
     Rect _origin;
     Rect _arrangement;
-    std::unordered_map<IVisualElement*, int> _sizes;
+    SizeMap _sizes;
+    
+    std::function<void()> on_items_change;
 };
 
 int main(int argc, char * argv[]) try
@@ -390,26 +482,25 @@ int main(int argc, char * argv[]) try
     Color3 greenish { 0.6f, 0.9f, 0.6f };
     Color3 bluish { 0.5f, 0.5f, 0.8f };
     
-    auto b = std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, greenish ));
-    auto b2 = std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, greenish ));
+    auto b = std::shared_ptr<Button>(new Button( { 0, 0 }, Auto(), { 5, 5, 5, 5 }, greenish ));
+    auto b2 = std::shared_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, greenish ));
     
-    auto c2 = std::unique_ptr<Container>(new Container( { 0, 0 }, { 1.0f, 1.0f }, 0, Orientation::horizontal ));
-    auto c2_ptr = c2.get();
+    auto c2 = std::shared_ptr<Container>(new Container( { 0, 0 }, { 1.0f, Size::Auto() }, 0, Orientation::vertical ));
 
     Container c( { 0, 0 }, { 500, 1.0f }, 0 );
     
     b->set_on_click([&](){
-        c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, bluish )));
+        c.add_item(std::shared_ptr<Button>(new Button( { 0, 0 }, Auto(), { 5, 5, 5, 5 }, bluish )));
     });
     b2->set_on_double_click([&](){
-        c2_ptr->add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
+        c2->add_item(std::shared_ptr<Button>(new Button( { 0, 0 }, Auto(), { 5, 5, 5, 5 }, redish )));
     });
     
-    c.add_item(std::move(b));
-    c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 1.0f }, { 5, 5, 5, 5 }, redish )));
-    c.add_item(std::unique_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
-    c.add_item(std::move(b2));
-    c.add_item(std::move(c2));
+    c.add_item(b);
+    c.add_item(std::shared_ptr<Button>(new Button( { 0, 0 }, { 1.0f, Size::Auto() }, { 5, 5, 5, 5 }, redish )));
+    c.add_item(std::shared_ptr<Button>(new Button( { 0, 0 }, { 1.0f, 35 }, { 5, 5, 5, 5 }, redish )));
+    c.add_item(b2);
+    c.add_item(c2);
         
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) { 
