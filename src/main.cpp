@@ -63,7 +63,18 @@ struct Margin
     }
 };
 
-class ControlBase
+class IVisualElement
+{
+public:
+    virtual Rect arrange(const Rect& origin) = 0;
+    virtual void render(const Rect& origin) = 0;
+    virtual const Margin& get_margin() const = 0;
+    virtual const Size2& get_size() const = 0;
+    
+    virtual ~IVisualElement() {}
+};
+
+class ControlBase : public IVisualElement
 {
 public:
     ControlBase(const Size2& position, 
@@ -72,7 +83,7 @@ public:
         : _position(position), _size(size), _margin(margin)
     {}
     
-    Rect arrange(const Rect& origin)
+    Rect arrange(const Rect& origin) override
     {
         auto x0 = _position.x.to_pixels(origin.size.x) + _margin.left;
         auto y0 = _position.y.to_pixels(origin.size.y) + _margin.top;
@@ -88,12 +99,8 @@ public:
         return { { x0, y0 }, { w, h } };
     }
     
-    const Margin& get_margin() const { return _margin; }
-    const Size2& get_size() const { return _size; }
-    
-    virtual void render(const Rect& origin) = 0;
-    
-    virtual ~ControlBase() {}
+    const Margin& get_margin() const override { return _margin; }
+    const Size2& get_size() const override { return _size; }
     
 private:
     Size2 _position;
@@ -148,7 +155,7 @@ public:
         : ControlBase(position, size, margin), _orientation(orientation)
     {}
     
-    void add_item(std::unique_ptr<ControlBase> item)
+    void add_item(std::unique_ptr<IVisualElement> item)
     {
         _content.push_back(std::move(item));
     }
@@ -168,8 +175,8 @@ public:
         }
     
         // first, scan items, map the "greedy" ones wanting relative portion
-        std::vector<ControlBase*> greedy;
-        std::unordered_map<ControlBase*, int> sizes;
+        std::vector<IVisualElement*> greedy;
+        std::unordered_map<IVisualElement*, int> sizes;
         auto sum = 0;
         for (auto& p : _content) {
             auto p_rect = p->arrange(rect);
@@ -205,7 +212,7 @@ public:
     }
     
 private:
-    std::vector<std::unique_ptr<ControlBase>> _content;
+    std::vector<std::unique_ptr<IVisualElement>> _content;
     Orientation _orientation;
 };
 
