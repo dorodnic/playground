@@ -34,7 +34,7 @@ void Serializer::parse_container(Container* container,
          sub_node = sub_node->next_sibling()) {
         try
         {
-            container->add_item(deserialize(sub_node, bag));
+            container->add_item(deserialize(container, sub_node, bag));
         } catch (const exception& ex) {
             LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << node->name() 
                        << name << ")" << endl;
@@ -42,7 +42,8 @@ void Serializer::parse_container(Container* container,
     }
 }
 
-shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
+shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
+                                                   xml_node<>* node,
                                                    const AttrBag& bag)
 {
     string type = node->name();
@@ -93,7 +94,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
     if (type == "TextBlock")
     {                
         res = shared_ptr<TextBlock>(new TextBlock(
-            name, txt_str, txt_align, position, size, 0, txt_color
+            name, txt_str, txt_align, position, size, 0, txt_color, parent
         ));
     }
     else if (type == "Button")
@@ -103,13 +104,13 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
     
         res = shared_ptr<Button>(new Button(
             name, txt_str, txt_align, txt_color, 
-            align, position, size, 0, color
+            align, position, size, 0, color, parent
         ));
     }
     else if (type == "StackPanel")
     {
         auto panel = shared_ptr<StackPanel>(new StackPanel(
-            name, position, size, 0, align, orientation
+            name, position, size, 0, align, orientation, nullptr, parent
         ));
         
         parse_container(panel.get(), node, name_str, bag);
@@ -119,7 +120,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
     else if (type == "Panel")
     {                
         auto panel = shared_ptr<Panel>(new Panel(
-            name, position, size, 0, align
+            name, position, size, 0, align, parent
         ));
         
         parse_container(panel.get(), node, name_str, bag);
@@ -129,7 +130,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
     else if (type == "PageView")
     {                
         auto panel = shared_ptr<PageView>(new PageView(
-            name, position, size, 0, align
+            name, position, size, 0, align, parent
         ));
         
         parse_container(panel.get(), node, name_str, bag);
@@ -142,7 +143,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
     else if (type == "Grid")
     {
         auto grid = shared_ptr<Grid>(new Grid(
-            name, position, size, 0, align, orientation
+            name, position, size, 0, align, orientation, parent
         ));
         
         for (auto sub_node = node->first_node(); 
@@ -152,7 +153,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
             {
                 string sub_name = sub_node->name();
                 if (sub_name == "Break") grid->commit_line();
-                else grid->add_item(deserialize(sub_node, bag));
+                else grid->add_item(deserialize(grid.get(), sub_node, bag));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                            << name_str << ")" << endl;
@@ -186,7 +187,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
         
         try
         {
-            res = deserialize(sub_node, new_bag);
+            res = deserialize(parent, sub_node, new_bag);
         } catch (const exception& ex) {
             LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                        << name_str << ")" << endl;

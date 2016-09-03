@@ -226,7 +226,7 @@ public:
     std::shared_ptr<IVisualElement> deserialize()
     {
         AttrBag bag;
-        return deserialize(_doc.first_node(), bag);
+        return deserialize(nullptr, _doc.first_node(), bag);
     }
 private:
     void parse_container(Container* container, 
@@ -234,7 +234,8 @@ private:
                          const std::string& name,
                          const AttrBag& bag);
 
-    std::shared_ptr<IVisualElement> deserialize(rapidxml::xml_node<>* node,
+    std::shared_ptr<IVisualElement> deserialize(IVisualElement* parent,
+                                                rapidxml::xml_node<>* node,
                                                 const AttrBag& bag);
 
     Size2 parse_size(const std::string& str)

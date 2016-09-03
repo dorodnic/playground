@@ -1,7 +1,16 @@
 <?xml version="1.0"?>
 <StackPanel size="*" orientation="vertical">
-    <PageView size="*" selected="1" name="page">
-        <Button color="red" size="*" name="0" />
+    <PageView size="*" selected="0" name="page">
+        <StackPanel size="*" orientation="vertical" name="0">
+            <TextBlock text.color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
+            <StackPanel orientation="horizontal" size="*">
+                <TextBlock name="txtTestWidth" text="test" text.color="white" />
+                <StackPanel size="200,200" orientation="vertical">
+                    <Button text="do nothing" />
+                    <Button name="btnChangeText" text="click me!" color="blue" text.color="white" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
         <Button color="green" size="*" name="1" />
         <Button color="blue" size="*" name="2" />
     </PageView>

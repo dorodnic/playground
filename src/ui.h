@@ -152,6 +152,7 @@ class IVisualElement
 {
 public:
     virtual Rect arrange(const Rect& origin) = 0;
+    virtual void invalidate_layout() = 0;
     virtual void render(const Rect& origin) = 0;
     virtual const Margin& get_margin() const = 0;
     virtual Size2 get_size() const = 0;
@@ -231,12 +232,18 @@ public:
                 const Size2& position,
                 const Size2& size,
                 const Margin& margin,
-                Alignment alignment)
+                Alignment alignment,
+                IVisualElement* parent)
         : _position(position), _size(size), 
-          _margin(margin), _name(name), _align(alignment)
+          _margin(margin), _name(name), _align(alignment), _parent(parent)
     {}
 
     Rect arrange(const Rect& origin) override;
+    void invalidate_layout() override 
+    {
+        if (get_parent()) get_parent()->invalidate_layout();
+        else LOG(INFO) << "UI Layout has invalidated!";
+    }
     
     void update_mouse_position(Int2 cursor) override {}
 
@@ -260,6 +267,10 @@ public:
         if (get_name() == name) return this;
         else return nullptr;
     }
+    
+    IVisualElement* get_parent() { return _parent; }
+    const IVisualElement* get_parent() const { return _parent; }
+    void update_parent(IVisualElement* new_parent) { _parent = new_parent; }
 
 private:
     Size2 _position;
@@ -270,6 +281,7 @@ private:
     bool _enabled = true;
     bool _visible = true;
     Margin _margin;
+    IVisualElement* _parent;
 };
 
 class ElementAdaptor : public IVisualElement
@@ -280,6 +292,7 @@ public:
     {}
     
     Rect arrange(const Rect& origin) override { return _element->arrange(origin); }
+    void invalidate_layout() override { _element->invalidate_layout(); }
     void render(const Rect& origin) override { _element->render(origin); }
     const Margin& get_margin() const override { return _element->get_margin(); }
     Size2 get_size() const override { return _element->get_size(); }
@@ -368,8 +381,9 @@ public:
             const Size2& position,
             const Size2& size,
             const Margin& margin,
-            const Color3& color)
-        : ControlBase(name, position, size, margin, alignment), 
+            const Color3& color,
+            IVisualElement* parent)
+        : ControlBase(name, position, size, margin, alignment, parent), 
           _color(color), _text(text)
     {}
 
@@ -377,7 +391,11 @@ public:
 
     void render(const Rect& origin) override;
     
-    void set_text(std::string text) { _text = text; }
+    void set_text(std::string text) 
+    { 
+        _text = text; 
+        ControlBase::invalidate_layout();
+    }
 
 private:
     Color3 _color;
@@ -395,9 +413,11 @@ public:
            const Size2& position,
            const Size2& size,
            const Margin& margin,
-           const Color3& color)
-        : ControlBase(name, position, size, margin, alignment), 
-          _text_block(name, text, text_alignment, {0, 0}, size, 0, text_color), 
+           const Color3& color,
+           IVisualElement* parent)
+        : ControlBase(name, position, size, margin, alignment, parent),
+          _text_block(name, text, text_alignment, 
+                      {0, 0}, size, 0, text_color, this), 
           _color(color)
     {}
     
@@ -435,8 +455,9 @@ public:
               const Size2& position,
               const Size2& size,
               const Margin& margin,
-              Alignment alignment)
-        : ControlBase(name, position, size, margin, alignment),
+              Alignment alignment,
+              IVisualElement* parent)
+        : ControlBase(name, position, size, margin, alignment, parent), 
           _on_items_change([](){}),
           _on_focus_change([](){})
     {}
@@ -457,9 +478,10 @@ public:
         }
     }
 
-    void invalidate_layout()
+    void invalidate_layout() override
     {
         _origin = { { 0, 0 }, { 0, 0 } };
+        ControlBase::invalidate_layout();
     }
 
     virtual void add_item(std::shared_ptr<IVisualElement> item);
@@ -491,6 +513,9 @@ public:
         _on_focus_change();
     }
     
+    const IVisualElement* get_focused_child() const { return _focused; }
+    IVisualElement* get_focused_child() { return _focused; }
+    
     IVisualElement* find_element(const std::string& name) override
     {
         if (get_name() == name) return this;
@@ -504,10 +529,9 @@ public:
         return nullptr;
     }
 
-protected:
+private:
     IVisualElement* _focused = nullptr;
 
-private:
     Elements _content;
     Rect _origin;
     Rect _arrangement;
@@ -524,9 +548,10 @@ public:
               const Size2& size,
               const Margin& margin,
               Alignment alignment,
-              Orientation orientation = Orientation::vertical,
-              ISizeCalculator* resizer = nullptr)
-        : Container(name, position, size, margin, alignment),
+              Orientation orientation,
+              ISizeCalculator* resizer,
+              IVisualElement* parent)
+        : Container(name, position, size, margin, alignment, parent), 
           _orientation(orientation),
           _resizer(resizer)
     {}
@@ -574,8 +599,9 @@ public:
           const Size2& position,
           const Size2& size,
           const Margin& margin,
-          Alignment alignment)
-        : Container(name, position, size, margin, alignment)
+          Alignment alignment,
+          IVisualElement* parent)
+        : Container(name, position, size, margin, alignment, parent)
     {}
                    
     Size2 get_intrinsic_size() const override;
@@ -593,8 +619,9 @@ public:
              const Size2& position,
              const Size2& size,
              const Margin& margin,
-             Alignment alignment)
-        : Container(name, position, size, margin, alignment)
+             Alignment alignment,
+             IVisualElement* parent)
+        : Container(name, position, size, margin, alignment, parent)
     {
         set_focus_change([this]() { invalidate_layout(); });
     }
@@ -612,8 +639,10 @@ public:
           const Size2& size,
           const Margin& margin,
           Alignment alignment,
-          Orientation orientation = Orientation::vertical)
-        : StackPanel(name, position, size, margin, alignment, orientation),
+          Orientation orientation,
+          IVisualElement* parent)
+        : StackPanel(name, position, size, margin, 
+                     alignment, orientation, nullptr, parent),
           _current_line(nullptr)
     {
         commit_line();
@@ -621,6 +650,8 @@ public:
 
     virtual void add_item(std::shared_ptr<IVisualElement> item)
     {
+        auto control = dynamic_cast<ControlBase*>(item.get());
+        if (control) control->update_parent(_current_line.get());
         _current_line->add_item(item);
     }
 

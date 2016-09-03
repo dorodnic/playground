@@ -378,13 +378,13 @@ void PageView::render(const Rect& origin)
 {
     if (!is_visible()) return;
 
-    _focused->render(origin);
+    get_focused_child()->render(origin);
 }
 
 Size2 PageView::get_intrinsic_size() const
 {
-    if (_focused)
-        return _focused->get_intrinsic_size();
+    if (get_focused_child())
+        return get_focused_child()->get_intrinsic_size();
 }
 
 void Grid::commit_line()
@@ -397,7 +397,7 @@ void Grid::commit_line()
         new StackPanel("", {0,0}, { 1.0f, 1.0f }, 0, get_alignment(),
         get_orientation() == Orientation::vertical 
             ? Orientation::horizontal : Orientation::vertical,
-        this));
+        this, this));
 }
 
 SizeMap Grid::calc_sizes(const StackPanel* sender,
