@@ -374,6 +374,19 @@ Size2 Panel::get_intrinsic_size() const
     return { Size(max_x), Size(max_y) };
 }
 
+void PageView::render(const Rect& origin)
+{
+    if (!is_visible()) return;
+
+    _focused->render(origin);
+}
+
+Size2 PageView::get_intrinsic_size() const
+{
+    if (_focused)
+        return _focused->get_intrinsic_size();
+}
+
 void Grid::commit_line()
 {
     if (_current_line) {

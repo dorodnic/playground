@@ -1,24 +1,36 @@
 <?xml version="1.0"?>
 <StackPanel size="*" orientation="vertical">
-    <StackPanel size="*" orientation="vertical">
-    
-    </StackPanel>
-    <StackPanel size="*,50" margin="5" orientation="horizontal">
-        <Button name="btnNext"
-                text="Prev" 
-                text.align="center"
-                text.color="white"
-                color="Pink"
-                size="auto"
-                margin="10"
-                align="left" />
-        <Panel  size="*" />
-        <Button name="btnPrev"
-                text="Next" 
-                text.align="center"
-                text.color="white"
-                color="Pink"
-                size="auto"
-                align="right" />   
-    </StackPanel>
+    <PageView size="*" selected="1" name="page">
+        <Button color="red" size="*" name="0" />
+        <Button color="green" size="*" name="1" />
+        <Button color="blue" size="*" name="2" />
+    </PageView>
+    <Panel size="*,40">
+        <Button color="gray" size="*" />
+        <StackPanel orientation="horizontal" size="*">
+            <Button name="btnPrev"
+                    text="Prev" 
+                    text.align="center"
+                    text.color="white"
+                    color="Pink"
+                    size="auto,*"
+                    margin="5"
+                    align="left" />
+            <Panel  size="*">
+                <TextBlock name="txtStatus"
+                    text="hello world!" 
+                    text.align="center"
+                    text.color="white"
+                    size="*" />
+            </Panel>
+            <Button name="btnNext"
+                    text="Next" 
+                    text.align="center"
+                    text.color="white"
+                    color="Pink"
+                    margin="5"
+                    size="auto,*"
+                    align="right" />   
+        </StackPanel>
+    </Panel>
 </StackPanel>

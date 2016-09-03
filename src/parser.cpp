@@ -24,6 +24,24 @@ xml_attribute<>* find_attribute(xml_node<>* node, const std::string& name,
     return nullptr;
 }
 
+void Serializer::parse_container(Container* container, 
+                                 xml_node<>* node,
+                                 const std::string& name, 
+                                 const AttrBag& bag)
+{
+    for (auto sub_node = node->first_node(); 
+         sub_node; 
+         sub_node = sub_node->next_sibling()) {
+        try
+        {
+            container->add_item(deserialize(sub_node, bag));
+        } catch (const exception& ex) {
+            LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << node->name() 
+                       << name << ")" << endl;
+        }
+    }
+}
+
 shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
                                                    const AttrBag& bag)
 {
@@ -68,6 +86,9 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
     auto ori_node = find_attribute(node, "orientation", bag);
     auto ori_str = ori_node ? ori_node->value() : "";
     auto orientation = parse_orientation(ori_str);
+    
+    auto selected_node = find_attribute(node, "selected", bag);
+    auto selected_str = selected_node ? selected_node->value() : "\\";
 
     if (type == "TextBlock")
     {                
@@ -91,18 +112,8 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
             name, position, size, 0, align, orientation
         ));
         
-        for (auto sub_node = node->first_node(); 
-             sub_node; 
-             sub_node = sub_node->next_sibling()) {
-            try
-            {
-                panel->add_item(deserialize(sub_node, bag));
-            } catch (const exception& ex) {
-                LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
-                           << name_str << ")" << endl;
-            }
-        }
-        
+        parse_container(panel.get(), node, name_str, bag);
+
         res = panel;
     }
     else if (type == "Panel")
@@ -111,17 +122,20 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
             name, position, size, 0, align
         ));
         
-        for (auto sub_node = node->first_node(); 
-             sub_node; 
-             sub_node = sub_node->next_sibling()) {
-            try
-            {
-                panel->add_item(deserialize(sub_node, bag));
-            } catch (const exception& ex) {
-                LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
-                           << name_str << ")" << endl;
-            }
-        }
+        parse_container(panel.get(), node, name_str, bag);
+         
+        res = panel;
+    }
+    else if (type == "PageView")
+    {                
+        auto panel = shared_ptr<PageView>(new PageView(
+            name, position, size, 0, align
+        ));
+        
+        parse_container(panel.get(), node, name_str, bag);
+        
+        auto selected_item = panel->find_element(selected_str);
+        panel->set_focused_child(selected_item);
         
         res = panel;
     }

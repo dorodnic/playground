@@ -348,15 +348,11 @@ public:
 
     Size2 get_size() const override 
     {
-        auto s = _margin.apply(_element->get_size());
-        LOG(INFO) << "get_size = " << s << " was " << _element->get_size();
-        return s; 
+        return _margin.apply(_element->get_size()); 
     }
     Size2 get_intrinsic_size() const override 
     { 
-        auto s = _margin.apply(_element->get_intrinsic_size());
-        LOG(INFO) << "get_intrinsic_size = " << s << " was " << _element->get_intrinsic_size();
-        return s;
+        return _margin.apply(_element->get_intrinsic_size());
     }
     
 private:
@@ -380,6 +376,8 @@ public:
     Size2 get_intrinsic_size() const override;
 
     void render(const Rect& origin) override;
+    
+    void set_text(std::string text) { _text = text; }
 
 private:
     Color3 _color;
@@ -439,7 +437,8 @@ public:
               const Margin& margin,
               Alignment alignment)
         : ControlBase(name, position, size, margin, alignment),
-          _on_items_change([](){})
+          _on_items_change([](){}),
+          _on_focus_change([](){})
     {}
     
     void update_mouse_position(Int2 cursor) override
@@ -470,6 +469,11 @@ public:
         _on_items_change = on_change;
     }
     
+    void set_focus_change(std::function<void()> on_change)
+    {
+        _on_focus_change = on_change;
+    }
+    
     const Elements& get_elements() const { return _content; }
     const Rect& get_arrangement() const { return _arrangement; }
     
@@ -482,7 +486,10 @@ public:
         return true;
     }
     
-    void set_focused_child(IVisualElement* focused) { _focused = focused; }
+    void set_focused_child(IVisualElement* focused) { 
+        _focused = focused; 
+        _on_focus_change();
+    }
     
     IVisualElement* find_element(const std::string& name) override
     {
@@ -497,13 +504,16 @@ public:
         return nullptr;
     }
 
+protected:
+    IVisualElement* _focused = nullptr;
+
 private:
     Elements _content;
     Rect _origin;
     Rect _arrangement;
-    IVisualElement* _focused = nullptr;
-    
+
     std::function<void()> _on_items_change;
+    std::function<void()> _on_focus_change;
 };
 
 class StackPanel : public Container
@@ -574,6 +584,24 @@ public:
     
     static SimpleSizeMap calc_size_map(const Elements& content,
                                        const Rect& arrangement);
+};
+
+class PageView : public Container
+{
+public:
+    PageView(std::string name,
+             const Size2& position,
+             const Size2& size,
+             const Margin& margin,
+             Alignment alignment)
+        : Container(name, position, size, margin, alignment)
+    {
+        set_focus_change([this]() { invalidate_layout(); });
+    }
+
+    Size2 get_intrinsic_size() const override;
+
+    void render(const Rect& origin) override;
 };
 
 class Grid : public StackPanel, public ISizeCalculator

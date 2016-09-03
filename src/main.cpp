@@ -27,6 +27,35 @@ int main(int argc, char * argv[]) try
 	} catch(const std::exception& ex) {
 	    LOG(ERROR) << "UI Loading Error: " << ex.what() << endl;
 	}
+	
+	auto btn_next = c.find_element("btnNext");
+	auto btn_prev = c.find_element("btnPrev");
+	auto page = dynamic_cast<Container*>(c.find_element("page"));
+	auto page_id = 0;
+	
+	for (auto p : page->get_elements())
+	{
+	    p->set_on_click([p, &c](){
+	        LOG(INFO) << "element " << p->get_name() << " was clicked!";
+	        auto status = dynamic_cast<TextBlock*>(c.find_element("txtStatus"));
+	        stringstream ss; ss << "element " << p->get_name() << " was clicked!";
+	        status->set_text(ss.str());
+	    });
+	}
+	
+	btn_next->set_on_click([&](){
+	    page_id = (page_id + 1) % page->get_elements().size();
+	    stringstream ss; ss << page_id;
+	    auto child = page->find_element(ss.str());
+	    page->set_focused_child(child);
+	});
+	btn_prev->set_on_click([&](){
+	    page_id = (page->get_elements().size() + page_id - 1) 
+	                % page->get_elements().size();
+	    stringstream ss; ss << page_id;
+	    auto child = page->find_element(ss.str());
+	    page->set_focused_child(child);
+	});
 
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {

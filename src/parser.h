@@ -136,14 +136,11 @@ public:
     {
         if (eof()) return { 0, 0 };
         
-        if (is_letter(peek()))
-        {
-            return get_const_ids<Size2>({ { "auto", { 0, 0 } } });
-        }
-        
         auto first = peek();
         
         auto x = get_size();
+        
+        if (eof() && x.is_auto()) return { x, x };
         
         if (eof() && first == '*') return { 1.0f, 1.0f };
         
@@ -208,6 +205,12 @@ public:
         return { left, top, right, bottom };
     }
     
+    ~MinimalParser()
+    {
+        if (_index != _line.size())
+            LOG(WARNING) << "Not everything was parsed! " << to_string();
+    }
+    
 private:
     std::string _line;
     int _index = 0;
@@ -226,6 +229,11 @@ public:
         return deserialize(_doc.first_node(), bag);
     }
 private:
+    void parse_container(Container* container, 
+                         rapidxml::xml_node<>* node, 
+                         const std::string& name,
+                         const AttrBag& bag);
+
     std::shared_ptr<IVisualElement> deserialize(rapidxml::xml_node<>* node,
                                                 const AttrBag& bag);
 
