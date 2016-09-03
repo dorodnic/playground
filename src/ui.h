@@ -232,17 +232,16 @@ public:
                 const Size2& position,
                 const Size2& size,
                 const Margin& margin,
-                Alignment alignment,
-                IVisualElement* parent)
+                Alignment alignment)
         : _position(position), _size(size), 
-          _margin(margin), _name(name), _align(alignment), _parent(parent)
+          _margin(margin), _name(name), _align(alignment), _parent(nullptr)
     {}
 
     Rect arrange(const Rect& origin) override;
     void invalidate_layout() override 
     {
         if (get_parent()) get_parent()->invalidate_layout();
-        else LOG(INFO) << "UI Layout has invalidated!";
+        else LOG(INFO) << "UI Layout has invalidated! " << get_name();
     }
     
     void update_mouse_position(Int2 cursor) override {}
@@ -381,9 +380,8 @@ public:
             const Size2& position,
             const Size2& size,
             const Margin& margin,
-            const Color3& color,
-            IVisualElement* parent)
-        : ControlBase(name, position, size, margin, alignment, parent), 
+            const Color3& color)
+        : ControlBase(name, position, size, margin, alignment), 
           _color(color), _text(text)
     {}
 
@@ -415,17 +413,28 @@ public:
            const Size2& position,
            const Size2& size,
            const Margin& margin,
-           const Color3& color,
-           IVisualElement* parent)
-        : ControlBase(name, position, size, margin, alignment, parent),
+           const Color3& color)
+        : ControlBase(name, position, size, margin, alignment),
           _text_block(name, text, text_alignment, 
-                      {0, 0}, size, 0, text_color, this), 
+                      {0, 0}, size, 0, text_color), 
           _color(color)
-    {}
+    {
+        _text_block.update_parent(this);
+    }
     
     Size2 get_intrinsic_size() const override;
 
     void render(const Rect& origin) override;
+    
+    void set_color(Color3 color) { _color = color; }
+    const Color3& get_color() const { return _color; }
+    
+    void set_text(std::string text) 
+    { 
+        _text_block.set_text(text);
+    }
+    
+    const std::string& get_text() const { return _text_block.get_text(); }
 
 private:
     Color3 _color;
@@ -457,9 +466,8 @@ public:
               const Size2& position,
               const Size2& size,
               const Margin& margin,
-              Alignment alignment,
-              IVisualElement* parent)
-        : ControlBase(name, position, size, margin, alignment, parent), 
+              Alignment alignment)
+        : ControlBase(name, position, size, margin, alignment), 
           _on_items_change([](){}),
           _on_focus_change([](){})
     {}
@@ -483,7 +491,7 @@ public:
     void invalidate_layout() override
     {
         _origin = { { 0, 0 }, { 0, 0 } };
-        ControlBase::invalidate_layout();
+        if (get_parent()) ControlBase::invalidate_layout();
     }
 
     virtual void add_item(std::shared_ptr<IVisualElement> item);
@@ -551,9 +559,8 @@ public:
               const Margin& margin,
               Alignment alignment,
               Orientation orientation,
-              ISizeCalculator* resizer,
-              IVisualElement* parent)
-        : Container(name, position, size, margin, alignment, parent), 
+              ISizeCalculator* resizer = nullptr)
+        : Container(name, position, size, margin, alignment), 
           _orientation(orientation),
           _resizer(resizer)
     {}
@@ -601,9 +608,8 @@ public:
           const Size2& position,
           const Size2& size,
           const Margin& margin,
-          Alignment alignment,
-          IVisualElement* parent)
-        : Container(name, position, size, margin, alignment, parent)
+          Alignment alignment)
+        : Container(name, position, size, margin, alignment)
     {}
                    
     Size2 get_intrinsic_size() const override;
@@ -621,9 +627,8 @@ public:
              const Size2& position,
              const Size2& size,
              const Margin& margin,
-             Alignment alignment,
-             IVisualElement* parent)
-        : Container(name, position, size, margin, alignment, parent)
+             Alignment alignment)
+        : Container(name, position, size, margin, alignment)
     {
         set_focus_change([this]() { invalidate_layout(); });
     }
@@ -641,10 +646,9 @@ public:
           const Size2& size,
           const Margin& margin,
           Alignment alignment,
-          Orientation orientation,
-          IVisualElement* parent)
+          Orientation orientation)
         : StackPanel(name, position, size, margin, 
-                     alignment, orientation, nullptr, parent),
+                     alignment, orientation),
           _current_line(nullptr)
     {
         commit_line();

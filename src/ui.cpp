@@ -397,7 +397,8 @@ void Grid::commit_line()
         new StackPanel("", {0,0}, { 1.0f, 1.0f }, 0, get_alignment(),
         get_orientation() == Orientation::vertical 
             ? Orientation::horizontal : Orientation::vertical,
-        this, this));
+        this));
+    _current_line->update_parent(this);
 }
 
 SizeMap Grid::calc_sizes(const StackPanel* sender,

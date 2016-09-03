@@ -33,6 +33,34 @@ void setup_ui(IVisualElement* c)
 	    LOG(INFO) << "adding more text!";
 	});
 	
+	c->find_element("btnToggleEnabled")->set_on_click([=](){
+	    auto btn = dynamic_cast<Button*>(c->find_element("btnTestButton"));
+	    
+	    auto self = dynamic_cast<Button*>(c->find_element("btnToggleEnabled"));
+	    if (btn->is_enabled()) self->set_text("enable");
+	    else self->set_text("disable");
+	    
+	    btn->set_enabled(!btn->is_enabled());
+	    LOG(INFO) << "toggling is_enabled on and off";
+	});
+	
+	c->find_element("btnToggleVisible")->set_on_click([=](){
+	    auto btn = dynamic_cast<Button*>(c->find_element("btnTestButton"));
+	    
+	    auto self = dynamic_cast<Button*>(c->find_element("btnToggleVisible"));
+	    if (btn->is_visible()) self->set_text("show");
+	    else self->set_text("hide");
+	    
+	    btn->set_visible(!btn->is_visible());
+	    LOG(INFO) << "toggling is_visible on and off";
+	});
+	
+	c->find_element("btnTestButton")->set_on_click([=](){
+	    auto btn = dynamic_cast<Button*>(c->find_element("btnTestButton"));
+	    btn->set_color(-btn->get_color());
+	    LOG(INFO) << "button was clicked!";
+	});
+	
 	btn_next->set_on_click([page_id, page]() {
 	    *page_id = (*page_id + 1) % page->get_elements().size();
 	    LOG(INFO) << "moving to page " << *page_id << " out of " 
@@ -59,7 +87,7 @@ int main(int argc, char * argv[]) try
     glfwMakeContextCurrent(win);
 
     // create root-level container for the GUI
-	Panel c(".",{0,0},{1.0f, 1.0f},0,Alignment::left,nullptr); 
+	Panel c(".",{0,0},{1.0f, 1.0f},0,Alignment::left); 
 	
 	try
 	{
@@ -67,6 +95,9 @@ int main(int argc, char * argv[]) try
 	    Serializer s("ui.xml");
 	    c.add_item(s.deserialize());
 	    setup_ui(&c);
+	    Rect origin { { 0, 0 }, { 1280, 960 } };
+        c.arrange(origin);
+        LOG(INFO) << "UI has been succesfully loaded and arranged";
 	} catch(const std::exception& ex) {
 	    LOG(ERROR) << "UI Loading Error: " << ex.what();
 	    stringstream ss; ss << "UI Loading Error: \"" << ex.what() << "\"";
@@ -77,8 +108,7 @@ int main(int argc, char * argv[]) try
                 {0,0},
                 {0,0},
                 0,
-                { 1.0f, 0.2f, 0.2f }, 
-                &c
+                { 1.0f, 0.2f, 0.2f }
 	        )));
 	}
 

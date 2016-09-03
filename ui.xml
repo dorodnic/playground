@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<StackPanel size="*" orientation="vertical">
+<StackPanel size="*" orientation="vertical" name="samples">
     <PageView size="*" selected="0" name="page">
         <StackPanel size="*" orientation="vertical" name="0">
             <TextBlock text.color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
@@ -11,7 +11,18 @@
                 </StackPanel>
             </StackPanel>
         </StackPanel>
-        <Button color="green" size="*" name="1" />
+        <StackPanel size="*" orientation="vertical" name="1">
+            <TextBlock text.color="white" text="this demo provides control over visible and enabled properties" />
+            <StackPanel orientation="horizontal" size="*">
+                <Button text="button!" name="btnTestButton" color="200,130,20" enabled="false" visible="false" />
+                <Using margin="5">
+                    <StackPanel size="200,200" orientation="vertical" margin="0">
+                        <Button name="btnToggleEnabled" text="disable" />
+                        <Button name="btnToggleVisible" text="hide" />
+                    </StackPanel>
+                </Using>
+            </StackPanel>
+        </StackPanel>
         <Button color="blue" size="*" name="2" />
     </PageView>
     <Panel size="*,40">

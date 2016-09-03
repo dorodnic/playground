@@ -94,7 +94,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     if (type == "TextBlock")
     {                
         res = shared_ptr<TextBlock>(new TextBlock(
-            name, txt_str, txt_align, position, size, 0, txt_color, parent
+            name, txt_str, txt_align, position, size, 0, txt_color
         ));
     }
     else if (type == "Button")
@@ -104,13 +104,13 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     
         res = shared_ptr<Button>(new Button(
             name, txt_str, txt_align, txt_color, 
-            align, position, size, 0, color, parent
+            align, position, size, 0, color
         ));
     }
     else if (type == "StackPanel")
     {
         auto panel = shared_ptr<StackPanel>(new StackPanel(
-            name, position, size, 0, align, orientation, nullptr, parent
+            name, position, size, 0, align, orientation, nullptr
         ));
         
         parse_container(panel.get(), node, name_str, bag);
@@ -120,7 +120,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     else if (type == "Panel")
     {                
         auto panel = shared_ptr<Panel>(new Panel(
-            name, position, size, 0, align, parent
+            name, position, size, 0, align
         ));
         
         parse_container(panel.get(), node, name_str, bag);
@@ -130,7 +130,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     else if (type == "PageView")
     {                
         auto panel = shared_ptr<PageView>(new PageView(
-            name, position, size, 0, align, parent
+            name, position, size, 0, align
         ));
         
         parse_container(panel.get(), node, name_str, bag);
@@ -143,7 +143,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     else if (type == "Grid")
     {
         auto grid = shared_ptr<Grid>(new Grid(
-            name, position, size, 0, align, orientation, parent
+            name, position, size, 0, align, orientation
         ));
         
         for (auto sub_node = node->first_node(); 
@@ -207,6 +207,9 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
                                  << name_str << ")";
         throw runtime_error(ss.str());
     }
+    
+    auto control = dynamic_cast<ControlBase*>(res.get());
+    if (control) control->update_parent(parent);
     
     if (margin)
     {
