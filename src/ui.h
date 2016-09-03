@@ -7,6 +7,8 @@
 #include <chrono>
 #include <map>
 
+#include "../easyloggingpp/easylogging++.h"
+
 template<typename T>
 inline T clamp(T val, T from, T to) { return std::max(from, std::min(to, val)); }
 
@@ -58,7 +60,19 @@ private:
 };
 
 struct Size2 { Size x, y; };
+inline std::ostream & operator << (std::ostream & o, const Size& r) 
+{ 
+    if (r.is_auto()) o << "auto";
+    else if (r.is_const()) o << r.get_pixels() << "px";
+    else o << (int)(r.get_percents() * 100) << "%";
+}
+
 inline Size2 Auto() { return { Size::Auto(), Size::Auto() }; }
+
+inline std::ostream & operator << (std::ostream & o, const Size2& r) 
+{ 
+    return o << "{" << r.x << ", " << r.y << "}"; 
+}
 
 struct Int2 { int x, y; };
 inline bool operator==(const Int2& a, const Int2& b) {
@@ -68,7 +82,6 @@ inline std::ostream & operator << (std::ostream & o, const Int2& r)
 { 
     return o << "(" << r.x << ", " << r.y << ")"; 
 }
-
 struct Rect { Int2 position, size; };
 inline bool operator==(const Rect& a, const Rect& b)
 {
@@ -93,6 +106,10 @@ struct Margin
     Margin(int x, int y) : left(x), right(x), top(y), bottom(y) {}
     Margin(int left, int top, int right, int bottom)
         : left(left), right(right), top(top), bottom(bottom) {}
+        
+    operator bool() const { 
+        return left != 0 || right != 0 || top != 0 || bottom != 0;
+    }
 
     Margin operator-()
     {
@@ -101,7 +118,7 @@ struct Margin
 
     Rect apply(const Rect& r) const
     {
-        return { { r.position.x + left, r.position.y + top },
+        return { { r.position.x - left, r.position.y - top },
                  { r.size.x + left + right, r.size.y + top + bottom } };
     }
     
@@ -159,6 +176,7 @@ public:
     
     virtual void set_on_click(std::function<void()> on_click,
                               MouseButton button = MouseButton::left) = 0;
+    virtual void set_on_double_click(std::function<void()> on_click) = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -181,7 +199,7 @@ public:
         _on_click[button] = on_click;
     }
 
-    void set_on_double_click(std::function<void()> on_click){
+    void set_on_double_click(std::function<void()> on_click) override {
         _on_double_click = on_click;
     }
 
@@ -246,12 +264,103 @@ public:
 private:
     Size2 _position;
     Size2 _size;
-    Margin _margin;
     bool _focused = false;
     std::string _name;
     Alignment _align;
     bool _enabled = true;
     bool _visible = true;
+    Margin _margin;
+};
+
+class ElementAdaptor : public IVisualElement
+{
+public:
+    ElementAdaptor(std::shared_ptr<IVisualElement> element)
+        : _element(element)
+    {}
+    
+    Rect arrange(const Rect& origin) override { return _element->arrange(origin); }
+    void render(const Rect& origin) override { _element->render(origin); }
+    const Margin& get_margin() const override { return _element->get_margin(); }
+    Size2 get_size() const override { return _element->get_size(); }
+    Size2 get_intrinsic_size() const override { return _element->get_intrinsic_size(); }
+
+    void update_mouse_position(Int2 cursor) override 
+    { 
+        _element->update_mouse_position(cursor);
+    }
+    void update_mouse_state(MouseButton button, MouseState state) override
+    { 
+        _element->update_mouse_state(button, state);
+    }
+    void update_mouse_scroll(Int2 scroll) override
+    { 
+        _element->update_mouse_scroll(scroll);
+    }
+
+    void focus(bool on) override { _element->focus(on); }
+    bool is_focused() const override { return _element->is_focused(); }
+    const std::string& get_name() const override { return _element->get_name(); }
+    Alignment get_alignment() const override { return _element->get_alignment(); }
+    
+    void set_enabled(bool on) override { _element->set_enabled(on); }
+    bool is_enabled() const override { return _element->is_enabled(); }
+    
+    void set_visible(bool on) override { _element->set_visible(on); }
+    bool is_visible() const override { return _element->is_visible(); }
+    
+    IVisualElement* find_element(const std::string& name) override
+    {
+        return _element->find_element(name);
+    }
+    
+    void set_on_click(std::function<void()> on_click,
+                      MouseButton button = MouseButton::left) override
+    {
+        _element->set_on_click(on_click, button);
+    }
+    void set_on_double_click(std::function<void()> on_click) override
+    {
+        _element->set_on_double_click(on_click);
+    }
+    
+protected:
+    std::shared_ptr<IVisualElement> _element;
+};
+
+class MarginAdaptor : public ElementAdaptor
+{
+public:
+    MarginAdaptor(std::shared_ptr<IVisualElement> element,
+                  Margin margin)
+        : ElementAdaptor(element), _margin(margin)
+    {}
+    
+    Rect arrange(const Rect& origin) override 
+    { 
+        return _margin.apply(_element->arrange((-_margin).apply(origin))); 
+    }
+    
+    void render(const Rect& origin) override 
+    { 
+        _element->render((-_margin).apply(origin)); 
+    }
+
+    Size2 get_size() const override 
+    {
+        auto s = _margin.apply(_element->get_size());
+        LOG(INFO) << "get_size = " << s << " was " << _element->get_size();
+        return s; 
+    }
+    Size2 get_intrinsic_size() const override 
+    { 
+        auto s = _margin.apply(_element->get_intrinsic_size());
+        LOG(INFO) << "get_intrinsic_size = " << s << " was " << _element->get_intrinsic_size();
+        return s;
+    }
+    
+private:
+    Margin _margin;
 };
 
 class TextBlock : public ControlBase

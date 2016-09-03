@@ -1,16 +1,24 @@
 <?xml version="1.0"?>
-<StackPanel size="600,*" orientation="horizontal">
-    <Using text.align="right" color="violet">
-        <StackPanel size="300,*" >
-            <TextBlock text="Hello World!" text.color="red" text.align="left" />
-            <Button size="100,auto" text="def" text.color="white" margin="5" />
-            <Button size="100,auto" color="red" text="def" margin="5^" align="center" text.color="white" />
-            <Button size="100,auto" margin="5^" align="right" text="left" text.align="left" text.color="white" />
-            <Button size="*,auto" color="green" margin="5^" name="clickme" />
-        </StackPanel>
-    </Using>
-    <StackPanel size="300,*" name="list">
-        <Button size="*,auto" />
-        <TextBlock text="Hello World!" text.color="red" text.align="center" />
+<StackPanel size="*" orientation="vertical">
+    <StackPanel size="*" orientation="vertical">
+    
+    </StackPanel>
+    <StackPanel size="*,50" margin="5" orientation="horizontal">
+        <Button name="btnNext"
+                text="Prev" 
+                text.align="center"
+                text.color="white"
+                color="Pink"
+                size="auto"
+                margin="10"
+                align="left" />
+        <Panel  size="*" />
+        <Button name="btnPrev"
+                text="Next" 
+                text.align="center"
+                text.color="white"
+                color="Pink"
+                size="auto"
+                align="right" />   
     </StackPanel>
 </StackPanel>

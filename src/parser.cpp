@@ -28,6 +28,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
                                                    const AttrBag& bag)
 {
     string type = node->name();
+    shared_ptr<IVisualElement> res = nullptr;
     
     auto name_node = find_attribute(node, "name", bag);
     auto name = name_node ? name_node->value() : "";
@@ -70,8 +71,8 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
 
     if (type == "TextBlock")
     {                
-        return shared_ptr<TextBlock>(new TextBlock(
-            name, txt_str, txt_align, position, size, margin, txt_color
+        res = shared_ptr<TextBlock>(new TextBlock(
+            name, txt_str, txt_align, position, size, 0, txt_color
         ));
     }
     else if (type == "Button")
@@ -79,15 +80,15 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
         if (find_attribute(node, "text.align", bag) == nullptr) 
             txt_align = Alignment::center;
     
-        return shared_ptr<Button>(new Button(
+        res = shared_ptr<Button>(new Button(
             name, txt_str, txt_align, txt_color, 
-            align, position, size, margin, color
+            align, position, size, 0, color
         ));
     }
     else if (type == "StackPanel")
     {
-        auto res = shared_ptr<StackPanel>(new StackPanel(
-            name, position, size, margin, align, orientation
+        auto panel = shared_ptr<StackPanel>(new StackPanel(
+            name, position, size, 0, align, orientation
         ));
         
         for (auto sub_node = node->first_node(); 
@@ -95,19 +96,19 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
              sub_node = sub_node->next_sibling()) {
             try
             {
-                res->add_item(deserialize(sub_node, bag));
+                panel->add_item(deserialize(sub_node, bag));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                            << name_str << ")" << endl;
             }
         }
         
-        return res;
+        res = panel;
     }
     else if (type == "Panel")
     {                
-        auto res = shared_ptr<Panel>(new Panel(
-            name, position, size, margin, align
+        auto panel = shared_ptr<Panel>(new Panel(
+            name, position, size, 0, align
         ));
         
         for (auto sub_node = node->first_node(); 
@@ -115,19 +116,19 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
              sub_node = sub_node->next_sibling()) {
             try
             {
-                res->add_item(deserialize(sub_node, bag));
+                panel->add_item(deserialize(sub_node, bag));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                            << name_str << ")" << endl;
             }
         }
         
-        return res;
+        res = panel;
     }
     else if (type == "Grid")
     {
-        auto res = shared_ptr<Grid>(new Grid(
-            name, position, size, margin, align, orientation
+        auto grid = shared_ptr<Grid>(new Grid(
+            name, position, size, 0, align, orientation
         ));
         
         for (auto sub_node = node->first_node(); 
@@ -136,21 +137,19 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
             try
             {
                 string sub_name = sub_node->name();
-                if (sub_name == "Break") res->commit_line();
-                else res->add_item(deserialize(sub_node, bag));
+                if (sub_name == "Break") grid->commit_line();
+                else grid->add_item(deserialize(sub_node, bag));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                            << name_str << ")" << endl;
             }
         }
         
-        res->commit_line();
-        
-        return res;
+        grid->commit_line();
+        res = grid;
     }
     else if (type == "Using")
     {        
-        shared_ptr<IVisualElement> res;
         auto sub_node = node->first_node();
         
         AttrBag new_bag;
@@ -185,11 +184,21 @@ shared_ptr<IVisualElement> Serializer::deserialize(xml_node<>* node,
             ss << "Using should not have multiple nested items!";
             throw runtime_error(ss.str());
         }
-        
-        return res;
     }
     
-    stringstream ss; ss << "Unrecognized Visual Element (" << type 
-                             << name_str << ")";
-    throw runtime_error(ss.str());
+    if (!res)
+    {
+        stringstream ss; ss << "Unrecognized Visual Element (" << type 
+                                 << name_str << ")";
+        throw runtime_error(ss.str());
+    }
+    
+    if (margin)
+    {
+        res = shared_ptr<MarginAdaptor>(new MarginAdaptor(
+            res, margin
+        ));
+    }
+    
+    return res;
 }
