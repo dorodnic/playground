@@ -396,6 +396,8 @@ public:
         _text = text; 
         ControlBase::invalidate_layout();
     }
+    
+    const std::string& get_text() const { return _text; }
 
 private:
     Color3 _color;

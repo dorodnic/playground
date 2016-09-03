@@ -29,7 +29,8 @@ void setup_ui(IVisualElement* c)
 	
 	c->find_element("btnChangeText")->set_on_click([=](){
 	    auto status = dynamic_cast<TextBlock*>(c->find_element("txtTestWidth"));
-	    status->set_text("very long long text!");
+	    status->set_text(status->get_text() + ", very long long text!");
+	    LOG(INFO) << "adding more text!";
 	});
 	
 	btn_next->set_on_click([page_id, page]() {
