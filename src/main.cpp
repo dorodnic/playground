@@ -17,7 +17,7 @@ int main(int argc, char * argv[]) try
     glfwMakeContextCurrent(win);
 
     // create root-level container for the GUI
-	Panel c("",{0,0},{1.0f, 1.0f},0,Alignment::left); 
+	Panel c(".",{0,0},{1.0f, 1.0f},0,Alignment::left); 
 	
 	try
 	{
@@ -27,6 +27,20 @@ int main(int argc, char * argv[]) try
 	} catch(const std::exception& ex) {
 	    LOG(ERROR) << "UI Loading Error: " << ex.what() << endl;
 	}
+	
+	auto clickme = c.find_element("clickme");
+	clickme->set_on_click([&](){
+	    auto list = dynamic_cast<Container*>(c.find_element("list"));
+	    if (list)
+	    {
+	        auto button = shared_ptr<Button>(new Button(
+                "", "new!", Alignment::center, { 1.0f, 1.0f, 0.0f }, 
+                Alignment::left, {0, 0}, {0, 0}, 0, { 0.3f, 0.4f, 0.2f }
+            ));
+        
+	        list->add_item(button);
+	    }
+	});
 
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {

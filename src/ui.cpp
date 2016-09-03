@@ -45,11 +45,14 @@ void MouseClickHandler::update_mouse_state(MouseButton button, MouseState state)
                 ms = chrono::duration_cast<chrono::milliseconds>
                      (now - _last_click[button]).count();
                 _last_click[button] = now;
-
-                if (ms < CLICK_TIME_MS && button == MouseButton::left) {
-                    _on_double_click();
-                } else {
-                    _on_click[button]();
+                
+                if (is_enabled())
+                {
+                    if (ms < CLICK_TIME_MS && button == MouseButton::left) {
+                        _on_double_click();
+                    } else {
+                        _on_click[button]();
+                    }
                 }
             }
         }
@@ -115,11 +118,16 @@ Size2 ControlBase::get_size() const
 
 void Button::render(const Rect& origin)
 {
+    if (!is_visible()) return;
+
     glBegin(GL_QUADS);
 
     auto c = _color;
-    if (is_focused()) c = brighten(c, 1.1f);
-    if (is_pressed(MouseButton::left)) c = brighten(c, 0.8f);
+    if (is_enabled())
+    {
+        if (is_focused()) c = brighten(c, 1.1f);
+        if (is_pressed(MouseButton::left)) c = brighten(c, 0.8f);
+    }
 
     glColor3f(c.r, c.g, c.b);
 
@@ -151,6 +159,8 @@ Size2 TextBlock::get_intrinsic_size() const
 
 void TextBlock::render(const Rect& origin)
 {
+    if (!is_visible()) return;
+
     auto c = _color;
     glColor3f(c.r, c.g, c.b);
     
@@ -301,6 +311,8 @@ Size2 StackPanel::get_intrinsic_size() const
 
 void StackPanel::render(const Rect& origin)
 {
+    if (!is_visible()) return;
+
     Size Size2::* field;
     int Int2::* ifield;
     if (_orientation == Orientation::vertical) {
@@ -339,6 +351,8 @@ SimpleSizeMap Panel::calc_size_map(const Elements& content,
 
 void Panel::render(const Rect& origin)
 {
+    if (!is_visible()) return;
+
     for (auto& p : get_elements()) {
         p->render(origin);
     }

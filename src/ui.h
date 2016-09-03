@@ -148,6 +148,17 @@ public:
     virtual bool is_focused() const = 0;
     virtual const std::string& get_name() const = 0;
     virtual Alignment get_alignment() const = 0;
+    
+    virtual void set_enabled(bool on) = 0;
+    virtual bool is_enabled() const = 0;
+    
+    virtual void set_visible(bool on) = 0;
+    virtual bool is_visible() const = 0;
+    
+    virtual IVisualElement* find_element(const std::string& name) = 0;
+    
+    virtual void set_on_click(std::function<void()> on_click,
+                              MouseButton button = MouseButton::left) = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -165,7 +176,7 @@ public:
     };
 
     void set_on_click(std::function<void()> on_click,
-                      MouseButton button = MouseButton::left)
+                      MouseButton button = MouseButton::left) override
     {
         _on_click[button] = on_click;
     }
@@ -220,6 +231,17 @@ public:
     
     const std::string& get_name() const override { return _name; }
     Alignment get_alignment() const override { return _align; }
+    
+    void set_enabled(bool on) override { _enabled = on; }
+    bool is_enabled() const override { return _enabled; }
+    void set_visible(bool on) override { _visible = on; }
+    bool is_visible() const override { return _visible; }
+    
+    IVisualElement* find_element(const std::string& name) override
+    {
+        if (get_name() == name) return this;
+        else return nullptr;
+    }
 
 private:
     Size2 _position;
@@ -228,6 +250,8 @@ private:
     bool _focused = false;
     std::string _name;
     Alignment _align;
+    bool _enabled = true;
+    bool _visible = true;
 };
 
 class TextBlock : public ControlBase
@@ -350,6 +374,19 @@ public:
     }
     
     void set_focused_child(IVisualElement* focused) { _focused = focused; }
+    
+    IVisualElement* find_element(const std::string& name) override
+    {
+        if (get_name() == name) return this;
+        
+        for (auto& e : get_elements())
+        {
+            auto r = e->find_element(name);
+            if (r) return r;
+        }
+        
+        return nullptr;
+    }
 
 private:
     Elements _content;
