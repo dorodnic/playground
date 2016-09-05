@@ -60,14 +60,12 @@ MouseClickHandler::MouseClickHandler()
 
 Rect ControlBase::arrange(const Rect& origin)
 {
-    auto x0 = _position.x.to_pixels(origin.size.x) + _margin.left;
-    auto y0 = _position.y.to_pixels(origin.size.y) + _margin.top;
+    auto x0 = _position.x.to_pixels(origin.size.x);
+    auto y0 = _position.y.to_pixels(origin.size.y);
 
     auto size = get_size();
-    auto w = min(size.x.to_pixels(origin.size.x),
-                      origin.size.x - _margin.right - _margin.left);
-    auto h = min(size.y.to_pixels(origin.size.y),
-                      origin.size.y - _margin.bottom - _margin.top);
+    auto w = min(size.x.to_pixels(origin.size.x), origin.size.x);
+    auto h = min(size.y.to_pixels(origin.size.y), origin.size.y);
 
     y0 += origin.position.y; // Y is unaffected by alignment for now
     // TODO: vertical alignment? is it useful?

@@ -26,6 +26,8 @@ public:
     }
     
     const std::string& get_text() const { return _text; }
+    
+    const char* get_type() const override { return "TextBlock"; }
 
 private:
     Color3 _color;
@@ -51,6 +53,8 @@ public:
     {
         _text_block.update_parent(this);
     }
+    
+    const char* get_type() const override { return "Button"; }
     
     Size2 get_intrinsic_size() const override;
 

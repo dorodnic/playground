@@ -11,7 +11,6 @@ public:
     Rect arrange(const Rect& origin) override { return _element->arrange(origin); }
     void invalidate_layout() override { _element->invalidate_layout(); }
     void render(const Rect& origin) override { _element->render(origin); }
-    const Margin& get_margin() const override { return _element->get_margin(); }
     Size2 get_size() const override { return _element->get_size(); }
     Size2 get_intrinsic_size() const override { return _element->get_intrinsic_size(); }
 
@@ -53,6 +52,8 @@ public:
     {
         _element->set_on_double_click(on_click);
     }
+    
+    const char* get_type() const override { return _element->get_type(); }
     
 protected:
     std::shared_ptr<IVisualElement> _element;

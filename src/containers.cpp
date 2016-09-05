@@ -83,9 +83,8 @@ SizeMap StackPanel::calc_sizes(Orientation orientation,
     vector<IVisualElement*> greedy;
     for (auto& p : content) {
         auto p_rect = p->arrange(arrangement);
-        auto p_total = p->get_margin().apply(p_rect);
         auto p_size = p->get_size();
-        LOG(INFO) << "child " << p->get_name() << " returned size " << p_size;
+        LOG(INFO) << "child " << p->get_name() << " asked size " << p_size;
 
         if ((p_size.*field).is_const()) {
             auto pixels = (p_size.*field).get_pixels();
@@ -134,13 +133,19 @@ Size2 StackPanel::get_intrinsic_size() const
 void StackPanel::render(const Rect& origin)
 {
     Size Size2::* field;
+    Size Size2::* other;
     int Int2::* ifield;
+    int Int2::* iother;
     if (_orientation == Orientation::vertical) {
         field = &Size2::y;
+        other = &Size2::x;
         ifield = &Int2::y;
+        iother = &Int2::x;
     } else {
         field = &Size2::x;
+        other = &Size2::y;
         ifield = &Int2::x;
+        iother = &Int2::y;
     }
 
     if (update_layout(origin))
@@ -150,7 +155,8 @@ void StackPanel::render(const Rect& origin)
         LOG(INFO) << "New layout for element " << get_name() << ":";
         for (auto& kvp : _sizes)
         {
-            LOG(INFO) << "\t" << kvp.first->get_name() << " = " << kvp.second.first;
+            LOG(INFO) << "\t" << kvp.first->get_name() << " = " 
+                << kvp.second.first << ", " << kvp.second.second;
         }
     }
 
@@ -159,6 +165,26 @@ void StackPanel::render(const Rect& origin)
         auto new_origin = get_arrangement();
         (new_origin.position.*ifield) = sum;
         (new_origin.size.*ifield) = _sizes[p.get()].first;
+        
+        // relative sized controls will try to calc relative size
+        // from what we give them, but we did that for them already
+        // so neutralize their calculation by giving them more space
+        if (!(p->get_size().*field).is_const())
+        {
+            (new_origin.size.*ifield) = (new_origin.size.*ifield) 
+                / (p->get_size().*field).get_percents();
+        }
+        
+        // calculation of the secondary size
+        auto other_size = _sizes[p.get()].second;
+        auto curr_other = origin.size.*iother;
+        (new_origin.size.*iother) = other_size.to_pixels(curr_other);
+        if (!(p->get_size().*other).is_const())
+        {
+            (new_origin.size.*iother) = (new_origin.size.*iother) 
+                / (p->get_size().*other).get_percents();
+        }
+        
         sum += _sizes[p.get()].first;
         p->render(new_origin);
     }

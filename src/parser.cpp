@@ -112,7 +112,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     else if (type == "Button")
     {
         if (find_attribute(node, "text.align", bag) == nullptr) 
-            txt_align = Alignment::center;
+            txt_align = Alignment::center; // override default for buttons
     
         res = shared_ptr<Button>(new Button(
             name, txt_str, txt_align, txt_color, 

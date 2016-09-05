@@ -184,7 +184,7 @@ public:
     virtual Rect arrange(const Rect& origin) = 0;
     virtual void invalidate_layout() = 0;
     virtual void render(const Rect& origin) = 0;
-    virtual const Margin& get_margin() const = 0;
+
     virtual Size2 get_size() const = 0;
     virtual Size2 get_intrinsic_size() const = 0;
 
@@ -195,6 +195,7 @@ public:
     virtual void focus(bool on) = 0;
     virtual bool is_focused() const = 0;
     virtual const std::string& get_name() const = 0;
+    virtual const char* get_type() const = 0;
     virtual Alignment get_alignment() const = 0;
     
     virtual void set_enabled(bool on) = 0;
@@ -264,7 +265,7 @@ public:
                 const Margin& margin,
                 Alignment alignment)
         : _position(position), _size(size), 
-          _margin(margin), _name(name), _align(alignment), _parent(nullptr)
+          _name(name), _align(alignment), _parent(nullptr)
     {}
 
     Rect arrange(const Rect& origin) override;
@@ -276,7 +277,6 @@ public:
     
     void update_mouse_position(Int2 cursor) override {}
 
-    const Margin& get_margin() const override { return _margin; }
     Size2 get_size() const override;
     Size2 get_intrinsic_size() const override { return _size; };
 
@@ -305,6 +305,8 @@ public:
     IVisualElement* get_parent() { return _parent; }
     const IVisualElement* get_parent() const { return _parent; }
     void update_parent(IVisualElement* new_parent) { _parent = new_parent; }
+    
+    std::string to_string() const { return get_name() + "(" + get_type() + ")"; }
 
 private:
     Size2 _position;
@@ -314,7 +316,6 @@ private:
     Alignment _align;
     bool _enabled = true;
     bool _visible = true;
-    Margin _margin;
     IVisualElement* _parent;
 };
 

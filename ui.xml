@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <StackPanel size="*" orientation="vertical" name="samples">
-    <PageView size="*" selected="0" name="page">
+    <PageView size="*" selected="2" name="page">
         <StackPanel size="*" orientation="vertical" name="0">
             <TextBlock text.color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
             <StackPanel orientation="horizontal" size="*">
@@ -19,7 +19,17 @@
                 <Button name="btnToggleVisible" text="hide" margin="5" />
             </StackPanel>
         </StackPanel>
-        <Button color="blue" size="*" name="2" />
+        <StackPanel size="*" orientation="vertical" name="2">
+            <TextBlock text.color="white" text="this demo provides tests how relative widths affect layout" />
+            
+            <Panel margin="10" size="300,300" name="part2_panel" >
+                <Button color="gray" size="*" name="btnBackground" />
+                <StackPanel size="*" orientation="horizontal" name="par2_sp">
+                    <Button color="red" margin="5" size="33%,33%" text="33%" name="btn33" />
+                    <Button color="green" margin="5" size="66%,66%" text="66%" name="btn66" />
+                </StackPanel>
+            </Panel>
+        </StackPanel>
     </PageView>
     <Panel size="*,40">
         <Button color="gray" size="*" />

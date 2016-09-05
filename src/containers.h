@@ -125,6 +125,8 @@ public:
           _resizer(resizer)
     {}
     
+    const char* get_type() const override { return "StackPanel"; }
+    
     void update_mouse_position(Int2 cursor) override;
     
     static SizeMap calc_sizes(Orientation orientation,
@@ -171,6 +173,8 @@ public:
           Alignment alignment)
         : Container(name, position, size, margin, alignment)
     {}
+    
+    const char* get_type() const override { return "Panel"; }
                    
     Size2 get_intrinsic_size() const override;
 
@@ -192,6 +196,8 @@ public:
     {
         set_focus_change([this]() { invalidate_layout(); });
     }
+    
+    const char* get_type() const override { return "PageView"; }
 
     Size2 get_intrinsic_size() const override;
 
@@ -213,6 +219,8 @@ public:
     {
         commit_line();
     }
+    
+    const char* get_type() const override { return "Grid"; }
 
     virtual void add_item(std::shared_ptr<IVisualElement> item)
     {
