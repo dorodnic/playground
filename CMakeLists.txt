@@ -7,7 +7,12 @@ set(CMAKE_BUILD_TYPE Debug)
 
 find_package(glfw3 3.2 REQUIRED)
 
-add_executable(main src/main.cpp src/ui.cpp src/ui.h src/parser.cpp src/parser.h)
+add_executable(main src/main.cpp 
+               src/ui.cpp src/ui.h 
+               src/parser.cpp src/parser.h
+               src/adaptors.h src/containers.h src/containers.cpp
+               src/controls.h src/controls.cpp
+               )
 target_include_directories(main PUBLIC ${OPENGL_INCLUDE_DIR})
 target_link_libraries(main ${OPENGL_gl_LIBRARY})
 target_link_libraries(main glfw)

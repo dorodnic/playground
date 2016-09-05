@@ -10,6 +10,7 @@
 #include "../easyloggingpp/easylogging++.h"
 
 #include "ui.h"
+#include "containers.h"
 
 inline std::string to_lower(std::string data)
 {

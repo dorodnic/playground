@@ -1,5 +1,9 @@
 #include "parser.h"
 
+#include "controls.h"
+#include "containers.h"
+#include "adaptors.h"
+
 using namespace std;
 using namespace rapidxml;
 
