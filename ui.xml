@@ -14,13 +14,9 @@
         <StackPanel size="*" orientation="vertical" name="1">
             <TextBlock text.color="white" text="this demo provides control over visible and enabled properties" />
             <StackPanel orientation="horizontal" size="*">
-                <Button text="button!" name="btnTestButton" color="200,130,20" enabled="false" visible="false" />
-                <Using margin="5">
-                    <StackPanel size="200,200" orientation="vertical" margin="0">
-                        <Button name="btnToggleEnabled" text="disable" />
-                        <Button name="btnToggleVisible" text="hide" />
-                    </StackPanel>
-                </Using>
+                <Button text="button!" name="btnTestButton" color="200,130,20" enabled="false" margin="5" />
+                <Button name="btnToggleEnabled" text="enable" margin="5" />
+                <Button name="btnToggleVisible" text="hide" margin="5" />
             </StackPanel>
         </StackPanel>
         <Button color="blue" size="*" name="2" />

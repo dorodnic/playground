@@ -12,17 +12,39 @@
 template<typename T>
 inline T clamp(T val, T from, T to) { return std::max(from, std::min(to, val)); }
 
-struct Color3 { float r, g, b; };
-inline Color3 brighten(const Color3& c, float f)
+inline float mix(float a, float b, float t)
 {
-    return { clamp(c.r * f, 0.0f, 1.0f),
-             clamp(c.g * f, 0.0f, 1.0f),
-             clamp(c.b * f, 0.0f, 1.0f) };
+    return a * (1 - t) + b * t;
 }
-inline Color3 operator-(const Color3& c)
-{
-    return { 1.0f - c.r, 1.0f - c.g, 1.0f - c.b };
-}
+
+struct Color3 { 
+    float r, g, b; 
+    
+    Color3 brighten(float f) const
+    {
+        return { clamp(r * f, 0.0f, 1.0f),
+                 clamp(g * f, 0.0f, 1.0f),
+                 clamp(b * f, 0.0f, 1.0f) };
+    }
+    
+    Color3 operator-() const
+    {
+        return { 1.0f - r, 1.0f - g, 1.0f - b };
+    }
+    
+    Color3 to_grayscale() const
+    {
+        auto avg = (r + g + b) / 3;
+        return { avg, avg, avg };
+    }
+    
+    Color3 mix_with(const Color3& other, float t) const
+    {
+        return { mix(r, other.r, t),
+                 mix(g, other.b, t),
+                 mix(b, other.b, t) };
+    }
+};
 
 class Size
 {
@@ -59,7 +81,10 @@ private:
     bool _is_pixels = true;
 };
 
-struct Size2 { Size x, y; };
+struct Size2 
+{ 
+    Size x, y; 
+};
 inline std::ostream & operator << (std::ostream & o, const Size& r) 
 { 
     if (r.is_auto()) o << "auto";
@@ -74,7 +99,9 @@ inline std::ostream & operator << (std::ostream & o, const Size2& r)
     return o << "{" << r.x << ", " << r.y << "}"; 
 }
 
-struct Int2 { int x, y; };
+struct Int2 { 
+    int x, y; 
+};
 inline bool operator==(const Int2& a, const Int2& b) {
     return (a.x == b.x) && (a.y == b.y);
 }
@@ -82,7 +109,10 @@ inline std::ostream & operator << (std::ostream & o, const Int2& r)
 { 
     return o << "(" << r.x << ", " << r.y << ")"; 
 }
-struct Rect { Int2 position, size; };
+struct Rect 
+{ 
+    Int2 position, size; 
+};
 inline bool operator==(const Rect& a, const Rect& b)
 {
     return (a.position == b.position) && (a.size == b.size);
@@ -258,7 +288,12 @@ public:
     
     void set_enabled(bool on) override { _enabled = on; }
     bool is_enabled() const override { return _enabled; }
-    void set_visible(bool on) override { _visible = on; }
+    void set_visible(bool on) override 
+    { 
+        _visible = on;
+        invalidate_layout();
+    }
+    
     bool is_visible() const override { return _visible; }
     
     IVisualElement* find_element(const std::string& name) override

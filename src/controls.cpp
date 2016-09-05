@@ -32,15 +32,17 @@ inline void draw_text(int x, int y, const std::string& text)
 
 void Button::render(const Rect& origin)
 {
-    if (!is_visible()) return;
-
     glBegin(GL_QUADS);
 
     auto c = _color;
     if (is_enabled())
     {
-        if (is_focused()) c = brighten(c, 1.1f);
-        if (is_pressed(MouseButton::left)) c = brighten(c, 0.8f);
+        if (is_focused()) c = c.brighten(1.1f);
+        if (is_pressed(MouseButton::left)) c = c.brighten(0.8f);
+    }
+    else
+    {
+        c = c.mix_with(c.to_grayscale(), 0.7);
     }
 
     glColor3f(c.r, c.g, c.b);
@@ -73,9 +75,13 @@ Size2 TextBlock::get_intrinsic_size() const
 
 void TextBlock::render(const Rect& origin)
 {
-    if (!is_visible()) return;
-
     auto c = _color;
+    
+    if (!is_enabled())
+    {
+        c = c.mix_with(c.to_grayscale(), 0.7);
+    }
+    
     glColor3f(c.r, c.g, c.b);
     
     auto rect = arrange(origin);

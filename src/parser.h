@@ -151,6 +151,14 @@ public:
         return { x, y };
     }
     
+    bool get_bool()
+    {
+        return get_const_ids<bool>({ 
+                    { "true",  true },
+                    { "false", false },
+                });
+    }
+    
     Color3 get_color()
     {
         if (is_letter(peek()))
@@ -255,6 +263,12 @@ private:
     {
         MinimalParser p(str);
         return p.get_margin();
+    }
+    
+    bool parse_bool(const std::string& str)
+    {
+        MinimalParser p(str);
+        return p.get_bool();
     }
 
     Orientation parse_orientation(const std::string& str)

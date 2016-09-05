@@ -88,3 +88,47 @@ public:
 private:
     Margin _margin;
 };
+
+class VisibilityAdaptor : public ElementAdaptor
+{
+public:
+    VisibilityAdaptor(std::shared_ptr<IVisualElement> element,
+                      bool is_visible)
+        : ElementAdaptor(element)
+    {}
+    
+    Rect arrange(const Rect& origin) override 
+    { 
+        Rect def = { {0,0}, {0,0} };
+        return _element->is_visible() ? _element->arrange(origin) : def;
+    }
+    
+    void render(const Rect& origin) override 
+    { 
+        if (_element->is_visible()) _element->render(origin);
+    }
+
+    Size2 get_size() const override 
+    {
+        Size2 def = { 0.0f, 0.0f };
+        return _element->is_visible() ? _element->get_size() : def;
+    }
+    Size2 get_intrinsic_size() const override 
+    { 
+        Size2 def = { 0.0f, 0.0f };
+        return _element->is_visible() ? _element->get_intrinsic_size() : def;
+    }
+    
+    void update_mouse_position(Int2 cursor) override 
+    { 
+        if (_element->is_visible()) _element->update_mouse_position(cursor);
+    }
+    void update_mouse_state(MouseButton button, MouseState state) override
+    { 
+        if (_element->is_visible()) _element->update_mouse_state(button, state);
+    }
+    void update_mouse_scroll(Int2 scroll) override
+    { 
+        if (_element->is_visible()) _element->update_mouse_scroll(scroll);
+    }
+};

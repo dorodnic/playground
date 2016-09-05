@@ -85,6 +85,7 @@ SizeMap StackPanel::calc_sizes(Orientation orientation,
         auto p_rect = p->arrange(arrangement);
         auto p_total = p->get_margin().apply(p_rect);
         auto p_size = p->get_size();
+        LOG(INFO) << "child " << p->get_name() << " returned size " << p_size;
 
         if ((p_size.*field).is_const()) {
             auto pixels = (p_size.*field).get_pixels();
@@ -97,7 +98,7 @@ SizeMap StackPanel::calc_sizes(Orientation orientation,
     }
 
     auto rest = max(arrangement.size.*ifield - sum, 0);
-    float total_parts = 0;
+    float total_parts = 0.0001;
     for (auto ptr : greedy) {
         total_parts += (ptr->get_size().*field).get_percents();
     }
@@ -132,8 +133,6 @@ Size2 StackPanel::get_intrinsic_size() const
 
 void StackPanel::render(const Rect& origin)
 {
-    if (!is_visible()) return;
-
     Size Size2::* field;
     int Int2::* ifield;
     if (_orientation == Orientation::vertical) {
@@ -147,6 +146,12 @@ void StackPanel::render(const Rect& origin)
     if (update_layout(origin))
     {
         _sizes = calc_global_sizes(get_arrangement());
+        
+        LOG(INFO) << "New layout for element " << get_name() << ":";
+        for (auto& kvp : _sizes)
+        {
+            LOG(INFO) << "\t" << kvp.first->get_name() << " = " << kvp.second.first;
+        }
     }
 
     auto sum = get_arrangement().position.*ifield;
@@ -172,8 +177,6 @@ SimpleSizeMap Panel::calc_size_map(const Elements& content,
 
 void Panel::render(const Rect& origin)
 {
-    if (!is_visible()) return;
-
     for (auto& p : get_elements()) {
         p->render(origin);
     }
@@ -197,8 +200,6 @@ Size2 Panel::get_intrinsic_size() const
 
 void PageView::render(const Rect& origin)
 {
-    if (!is_visible()) return;
-
     get_focused_child()->render(origin);
 }
 

@@ -94,6 +94,14 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     
     auto selected_node = find_attribute(node, "selected", bag);
     auto selected_str = selected_node ? selected_node->value() : "\\";
+    
+    auto visible_node = find_attribute(node, "visible", bag);
+    auto visible_str = visible_node ? visible_node->value() : "true";
+    auto visible = parse_bool(visible_str);
+    
+    auto enabled_node = find_attribute(node, "enabled", bag);
+    auto enabled_str = enabled_node ? enabled_node->value() : "true";
+    auto enabled = parse_bool(enabled_str);
 
     if (type == "TextBlock")
     {                
@@ -205,22 +213,31 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
         }
     }
     
+    // update controls parent before applying any adaptors
+    auto control = dynamic_cast<ControlBase*>(res.get());
+    if (control) control->update_parent(parent);
+    
     if (!res)
     {
         stringstream ss; ss << "Unrecognized Visual Element (" << type 
                                  << name_str << ")";
         throw runtime_error(ss.str());
     }
-    
-    auto control = dynamic_cast<ControlBase*>(res.get());
-    if (control) control->update_parent(parent);
-    
+
     if (margin)
     {
         res = shared_ptr<MarginAdaptor>(new MarginAdaptor(
             res, margin
         ));
     }
+    
+    if (!visible) LOG(INFO) << "element " << name << " is invisible!";
+    
+    res = shared_ptr<VisibilityAdaptor>(new VisibilityAdaptor(
+            res, visible
+        ));
+        
+    res->set_enabled(enabled);
     
     return res;
 }
