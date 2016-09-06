@@ -1,12 +1,6 @@
 #pragma once
 #include "ui.h"
 
-enum class Orientation
-{
-    vertical,
-    horizontal
-};
-
 typedef std::unordered_map<IVisualElement*, std::pair<int, Size>> SizeMap;
 typedef std::vector<std::shared_ptr<IVisualElement>> Elements;
 
@@ -25,9 +19,8 @@ public:
     Container(std::string name,
               const Size2& position,
               const Size2& size,
-              const Margin& margin,
               Alignment alignment)
-        : ControlBase(name, position, size, margin, alignment), 
+        : ControlBase(name, position, size, alignment), 
           _on_items_change([](){}),
           _on_focus_change([](){})
     {}
@@ -116,11 +109,10 @@ public:
     StackPanel(std::string name,
               const Size2& position,
               const Size2& size,
-              const Margin& margin,
               Alignment alignment,
               Orientation orientation,
               ISizeCalculator* resizer = nullptr)
-        : Container(name, position, size, margin, alignment), 
+        : Container(name, position, size, alignment), 
           _orientation(orientation),
           _resizer(resizer)
     {}
@@ -169,9 +161,8 @@ public:
     Panel(std::string name,
           const Size2& position,
           const Size2& size,
-          const Margin& margin,
           Alignment alignment)
-        : Container(name, position, size, margin, alignment)
+        : Container(name, position, size, alignment)
     {}
     
     const char* get_type() const override { return "Panel"; }
@@ -190,9 +181,8 @@ public:
     PageView(std::string name,
              const Size2& position,
              const Size2& size,
-             const Margin& margin,
              Alignment alignment)
-        : Container(name, position, size, margin, alignment)
+        : Container(name, position, size, alignment)
     {
         set_focus_change([this]() { invalidate_layout(); });
     }
@@ -210,10 +200,9 @@ public:
     Grid( std::string name,
           const Size2& position,
           const Size2& size,
-          const Margin& margin,
           Alignment alignment,
           Orientation orientation)
-        : StackPanel(name, position, size, margin, 
+        : StackPanel(name, position, size, 
                      alignment, orientation),
           _current_line(nullptr)
     {

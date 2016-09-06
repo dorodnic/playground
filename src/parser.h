@@ -92,6 +92,11 @@ public:
         return num;
     }
     
+    float get_float() 
+    {
+        return get_int(); // TODO: fix!
+    }
+    
     template<typename T>
     T get_const_ids(std::map<std::string, T> map)
     {
@@ -269,6 +274,12 @@ private:
     {
         MinimalParser p(str);
         return p.get_bool();
+    }
+    
+    float parse_float(const std::string& str)
+    {
+        MinimalParser p(str);
+        return p.get_float();
     }
 
     Orientation parse_orientation(const std::string& str)

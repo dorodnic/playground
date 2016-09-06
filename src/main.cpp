@@ -89,7 +89,7 @@ int main(int argc, char * argv[]) try
     glfwMakeContextCurrent(win);
 
     // create root-level container for the GUI
-	Panel c(".",{0,0},{1.0f, 1.0f},0,Alignment::left); 
+	Panel c(".",{0,0},{1.0f, 1.0f},Alignment::left); 
 	
 	try
 	{
@@ -109,7 +109,6 @@ int main(int argc, char * argv[]) try
                 Alignment::left,
                 {0,0},
                 {0,0},
-                0,
                 { 1.0f, 0.2f, 0.2f }
 	        )));
 	}

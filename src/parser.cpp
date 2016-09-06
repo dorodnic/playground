@@ -16,16 +16,16 @@ Serializer::Serializer(const char* filename)
     _doc.parse<0>(_buffer.data());
 }
 
-xml_attribute<>* find_attribute(xml_node<>* node, const std::string& name,
-                                const AttrBag& bag)
+std::string find_attribute(xml_node<>* node, const std::string& name,
+                           const AttrBag& bag, const std::string& def)
 {
     auto attr = node->first_attribute(name.c_str());
-    if (attr != nullptr) return attr;
+    if (attr != nullptr) return attr->value();
     for (auto p : bag)
     {
-        if (p->name() == name) return p;
+        if (p->name() == name) return p->value();
     }
-    return nullptr;
+    return def;
 }
 
 void Serializer::parse_container(Container* container, 
@@ -53,99 +53,102 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     string type = node->name();
     shared_ptr<IVisualElement> res = nullptr;
     
-    auto name_node = find_attribute(node, "name", bag);
-    auto name = name_node ? name_node->value() : "";
-    string name_str = name_node ? (string(" ") + name) : "";
+    auto name = find_attribute(node, "name", bag, "");
     
-    auto position_node = find_attribute(node, "position", bag);
-    auto position_str = position_node ? position_node->value() : "";
+    auto position_str = find_attribute(node, "position", bag, "");
     auto position = parse_size(position_str);
     
-    auto size_node = find_attribute(node, "size", bag);
-    auto size_str = size_node ? size_node->value() : "";
+    auto size_str = find_attribute(node, "size", bag, "auto");
     auto size = parse_size(size_str);
     
-    auto margin_node = find_attribute(node, "margin", bag);
-    auto margin_str = margin_node ? margin_node->value() : "";
+    auto margin_str = find_attribute(node, "margin", bag, "0");
     auto margin = parse_margin(margin_str);
     
-    auto align_node = find_attribute(node, "align", bag);
-    auto align_str = align_node ? align_node->value() : "left";
+    auto align_str = find_attribute(node, "align", bag, "left");
     auto align = parse_text_alignment(align_str);
     
-    auto txt_color_node = find_attribute(node, "text.color", bag);
-    auto txt_color_str = txt_color_node ? txt_color_node->value() : "black";
+    auto txt_color_str = find_attribute(node, "text.color", bag, "black");
     auto txt_color = parse_color(txt_color_str);
 
-    auto txt_align_node = find_attribute(node, "text.align", bag);
-    auto txt_align_str = txt_align_node ? txt_align_node->value() : "left";
+    auto txt_align_str = find_attribute(node, "text.align", bag, "left");
     auto txt_align = parse_text_alignment(txt_align_str);
     
-    auto txt_node = find_attribute(node, "text", bag);
-    auto txt_str = txt_node ? txt_node->value() : "";
-    
-    auto color_node = find_attribute(node, "color", bag);
-    auto color_str = color_node ? color_node->value() : "gray";
+    auto txt_str = find_attribute(node, "text", bag, "");
+
+    auto color_str = find_attribute(node, "color", bag, "gray");
     auto color = parse_color(color_str);
     
-    auto ori_node = find_attribute(node, "orientation", bag);
-    auto ori_str = ori_node ? ori_node->value() : "";
+    auto ori_str = find_attribute(node, "orientation", bag, "vertical");
     auto orientation = parse_orientation(ori_str);
+
+    auto selected_str = find_attribute(node, "selected", bag, "\\");
     
-    auto selected_node = find_attribute(node, "selected", bag);
-    auto selected_str = selected_node ? selected_node->value() : "\\";
-    
-    auto visible_node = find_attribute(node, "visible", bag);
-    auto visible_str = visible_node ? visible_node->value() : "true";
+    auto visible_str = find_attribute(node, "visible", bag, "true");
     auto visible = parse_bool(visible_str);
-    
-    auto enabled_node = find_attribute(node, "enabled", bag);
-    auto enabled_str = enabled_node ? enabled_node->value() : "true";
+
+    auto enabled_str = find_attribute(node, "enabled", bag, "true");
     auto enabled = parse_bool(enabled_str);
 
     if (type == "TextBlock")
     {                
         res = shared_ptr<TextBlock>(new TextBlock(
-            name, txt_str, txt_align, position, size, 0, txt_color
+            name, txt_str, txt_align, position, size, txt_color
         ));
     }
     else if (type == "Button")
     {
-        if (find_attribute(node, "text.align", bag) == nullptr) 
+        if (find_attribute(node, "text.align", bag, "\\") == "\\") 
             txt_align = Alignment::center; // override default for buttons
     
         res = shared_ptr<Button>(new Button(
             name, txt_str, txt_align, txt_color, 
-            align, position, size, 0, color
+            align, position, size, color
+        ));
+    }
+    else if (type == "Slider")
+    {
+        auto min_str = find_attribute(node, "min", bag, "0");
+        auto max_str = find_attribute(node, "max", bag, "100");
+        auto step_str = find_attribute(node, "step", bag, "20");
+        auto value_str = find_attribute(node, "value", bag, "0");
+        
+        auto min = parse_float(min_str);
+        auto max = parse_float(max_str);
+        auto step = parse_float(step_str);
+        auto value = parse_float(value_str);
+    
+        res = shared_ptr<Slider>(new Slider(
+            name, align, position, size, color, txt_color, 
+            orientation, min, max, step, value
         ));
     }
     else if (type == "StackPanel")
     {
         auto panel = shared_ptr<StackPanel>(new StackPanel(
-            name, position, size, 0, align, orientation, nullptr
+            name, position, size, align, orientation, nullptr
         ));
         
-        parse_container(panel.get(), node, name_str, bag);
+        parse_container(panel.get(), node, name, bag);
 
         res = panel;
     }
     else if (type == "Panel")
     {                
         auto panel = shared_ptr<Panel>(new Panel(
-            name, position, size, 0, align
+            name, position, size, align
         ));
         
-        parse_container(panel.get(), node, name_str, bag);
+        parse_container(panel.get(), node, name, bag);
          
         res = panel;
     }
     else if (type == "PageView")
     {                
         auto panel = shared_ptr<PageView>(new PageView(
-            name, position, size, 0, align
+            name, position, size, align
         ));
         
-        parse_container(panel.get(), node, name_str, bag);
+        parse_container(panel.get(), node, name, bag);
         
         auto selected_item = panel->find_element(selected_str);
         panel->set_focused_child(selected_item);
@@ -155,7 +158,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     else if (type == "Grid")
     {
         auto grid = shared_ptr<Grid>(new Grid(
-            name, position, size, 0, align, orientation
+            name, position, size, align, orientation
         ));
         
         for (auto sub_node = node->first_node(); 
@@ -168,7 +171,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
                 else grid->add_item(deserialize(grid.get(), sub_node, bag));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
-                           << name_str << ")" << endl;
+                           << " " << name << ")" << endl;
             }
         }
         
@@ -202,7 +205,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
             res = deserialize(parent, sub_node, new_bag);
         } catch (const exception& ex) {
             LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
-                       << name_str << ")" << endl;
+                       << " " << name << ")" << endl;
         }
         
         if (sub_node->next_sibling())
@@ -220,7 +223,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     if (!res)
     {
         stringstream ss; ss << "Unrecognized Visual Element (" << type 
-                                 << name_str << ")";
+                            << " " << name << ")";
         throw runtime_error(ss.str());
     }
 

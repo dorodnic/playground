@@ -9,9 +9,8 @@ public:
             Alignment alignment,
             const Size2& position,
             const Size2& size,
-            const Margin& margin,
             const Color3& color)
-        : ControlBase(name, position, size, margin, alignment), 
+        : ControlBase(name, position, size, alignment), 
           _color(color), _text(text)
     {}
 
@@ -44,11 +43,10 @@ public:
            Alignment alignment,
            const Size2& position,
            const Size2& size,
-           const Margin& margin,
            const Color3& color)
-        : ControlBase(name, position, size, margin, alignment),
+        : ControlBase(name, position, size, alignment),
           _text_block(name, text, text_alignment, 
-                      {0, 0}, { 1.0f, 1.0f }, 0, text_color), 
+                      {0, 0}, { 1.0f, 1.0f }, text_color), 
           _color(color)
     {
         _text_block.update_parent(this);
@@ -73,4 +71,37 @@ public:
 private:
     Color3 _color;
     TextBlock _text_block;
+};
+
+class Slider : public ControlBase
+{
+public:
+    Slider(std::string name,
+            Alignment alignment,
+            const Size2& position,
+            const Size2& size,
+            const Color3& color,
+            const Color3& text_color,
+            Orientation orientation,
+            float min, float max, float step, float value)
+        : ControlBase(name, position, size, alignment), 
+          _color(color), _text_color(text_color), _orientation(orientation),
+          _min(min), _max(max), _value(value), _step(step)         
+    {}
+
+    const char* get_type() const override { return "Slider"; }
+    
+    Size2 get_intrinsic_size() const override { return {0,0}; }
+
+    void render(const Rect& origin) override {}
+
+private:
+    float _min;
+    float _max;
+    float _step;
+    float _value;
+    bool _show_ticks;
+    Orientation _orientation;
+    Color3 _text_color;
+    Color3 _color;
 };

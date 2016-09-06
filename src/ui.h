@@ -9,6 +9,12 @@
 
 #include "../easyloggingpp/easylogging++.h"
 
+enum class Orientation
+{
+    vertical,
+    horizontal
+};
+
 template<typename T>
 inline T clamp(T val, T from, T to) { return std::max(from, std::min(to, val)); }
 
@@ -263,7 +269,6 @@ public:
     ControlBase(std::string name,
                 const Size2& position,
                 const Size2& size,
-                const Margin& margin,
                 Alignment alignment)
         : _position(position), _size(size), 
           _name(name), _align(alignment), _parent(nullptr)
