@@ -4,27 +4,94 @@
 
 using namespace std;
 
-void StackPanel::update_mouse_position(Int2 cursor)
+struct accessors
 {
     Size Size2::* field;
+    Size Size2::* other;
     int Int2::* ifield;
-    if (_orientation == Orientation::vertical) {
+    int Int2::* iother;
+};
+
+accessors get_accessors(Orientation orientation)
+{
+    Size Size2::* field;
+    Size Size2::* other;
+    int Int2::* ifield;
+    int Int2::* iother;
+    if (orientation == Orientation::vertical) {
         field = &Size2::y;
+        other = &Size2::x;
         ifield = &Int2::y;
+        iother = &Int2::x;
     } else {
         field = &Size2::x;
+        other = &Size2::y;
         ifield = &Int2::x;
+        iother = &Int2::y;
     }
+    return { field, other, ifield, iother };
+}
+
+Rect calc_new_layout(IVisualElement* p, 
+                     Orientation orientation, 
+                     const Rect& arrangement,
+                     const std::pair<int, Size>& size_pair,
+                     int& curr_sum,
+                     bool expand_relatives = true)
+{
+    auto accessors = get_accessors(orientation);
+    auto field  = accessors.field;
+    auto other  = accessors.other;
+    auto ifield = accessors.ifield;
+    auto iother = accessors.iother;
+
+    auto new_origin = arrangement;
+    (new_origin.position.*ifield) = curr_sum;
+    (new_origin.size.*ifield) = size_pair.first;
+    
+    if (expand_relatives)
+    {
+        // relative sized controls will try to calc relative size
+        // from what we give them, but we did that for them already
+        // so neutralize their calculation by giving them more space
+        if (!(p->get_size().*field).is_const())
+        {
+            (new_origin.size.*ifield) = (new_origin.size.*ifield) 
+                / (p->get_size().*field).get_percents();
+        }
+    }
+        
+    // calculation of the secondary size
+    auto other_size = size_pair.second;
+    auto curr_other = arrangement.size.*iother;
+    (new_origin.size.*iother) = other_size.to_pixels(curr_other);
+    
+    if (expand_relatives)
+    {
+        if (!(p->get_size().*other).is_const())
+        {
+            (new_origin.size.*iother) = (new_origin.size.*iother) 
+                / (p->get_size().*other).get_percents();
+        }
+    }
+    
+    curr_sum += size_pair.first;
+    
+    return new_origin;
+}
+
+void StackPanel::update_mouse_position(Int2 cursor)
+{
+    auto accessors = get_accessors(_orientation);
+    auto ifield = accessors.ifield;
 
     auto sum = get_arrangement().position.*ifield;
     set_focused_child(nullptr);
     for (auto& p : get_elements()) {
-        auto new_origin = get_arrangement();
-        (new_origin.position.*ifield) = sum;
-        (new_origin.size.*ifield) = _sizes[p.get()].first;
-        sum += _sizes[p.get()].first;
-
-        //cout << new_origin << " - " << cursor << endl;
+        auto new_origin = calc_new_layout(p.get(), _orientation,
+                                          get_arrangement(),
+                                          _sizes[p.get()],
+                                          sum, false);
 
         if (contains(new_origin, cursor))
         {
@@ -66,18 +133,11 @@ SizeMap StackPanel::calc_sizes(Orientation orientation,
 
     auto sum = 0;
 
-    Size Size2::* field;
-    int Int2::* ifield;
-    Size Size2::* other;
-    if (orientation == Orientation::vertical) {
-        field = &Size2::y;
-        ifield = &Int2::y;
-        other = &Size2::x;
-    } else {
-        field = &Size2::x;
-        ifield = &Int2::x;
-        other = &Size2::y;
-    }
+    auto accessors = get_accessors(orientation);
+    auto field  = accessors.field;
+    auto other  = accessors.other;
+    auto ifield = accessors.ifield;
+    auto iother = accessors.iother;
 
     // first, scan items, map the "greedy" ones wanting relative portion
     vector<IVisualElement*> greedy;
@@ -132,21 +192,11 @@ Size2 StackPanel::get_intrinsic_size() const
 
 void StackPanel::render(const Rect& origin)
 {
-    Size Size2::* field;
-    Size Size2::* other;
-    int Int2::* ifield;
-    int Int2::* iother;
-    if (_orientation == Orientation::vertical) {
-        field = &Size2::y;
-        other = &Size2::x;
-        ifield = &Int2::y;
-        iother = &Int2::x;
-    } else {
-        field = &Size2::x;
-        other = &Size2::y;
-        ifield = &Int2::x;
-        iother = &Int2::y;
-    }
+    auto accessors = get_accessors(_orientation);
+    auto field  = accessors.field;
+    auto other  = accessors.other;
+    auto ifield = accessors.ifield;
+    auto iother = accessors.iother;
 
     if (update_layout(origin))
     {
@@ -162,30 +212,11 @@ void StackPanel::render(const Rect& origin)
 
     auto sum = get_arrangement().position.*ifield;
     for (auto& p : get_elements()) {
-        auto new_origin = get_arrangement();
-        (new_origin.position.*ifield) = sum;
-        (new_origin.size.*ifield) = _sizes[p.get()].first;
-        
-        // relative sized controls will try to calc relative size
-        // from what we give them, but we did that for them already
-        // so neutralize their calculation by giving them more space
-        if (!(p->get_size().*field).is_const())
-        {
-            (new_origin.size.*ifield) = (new_origin.size.*ifield) 
-                / (p->get_size().*field).get_percents();
-        }
-        
-        // calculation of the secondary size
-        auto other_size = _sizes[p.get()].second;
-        auto curr_other = origin.size.*iother;
-        (new_origin.size.*iother) = other_size.to_pixels(curr_other);
-        if (!(p->get_size().*other).is_const())
-        {
-            (new_origin.size.*iother) = (new_origin.size.*iother) 
-                / (p->get_size().*other).get_percents();
-        }
-        
-        sum += _sizes[p.get()].first;
+        auto new_origin = calc_new_layout(p.get(), _orientation,
+                                  get_arrangement(),
+                                  _sizes[p.get()],
+                                  sum);
+
         p->render(new_origin);
     }
 }

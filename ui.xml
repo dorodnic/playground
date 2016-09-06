@@ -29,6 +29,14 @@
                     <Button color="green" margin="5" size="66%,66%" text="66%" name="btn66" />
                 </StackPanel>
             </Panel>
+            
+            <Panel margin="10" size="*" name="part2_panel2" >
+                <Button color="gray" size="*" name="btnBackground2" />
+                <StackPanel size="*" orientation="horizontal" name="par2_sp2">
+                    <Button color="red" margin="5" size="33%,33%" text="33%" name="btn33b" />
+                    <Button color="green" margin="5" size="66%,66%" text="66%" name="btn66b" />
+                </StackPanel>
+            </Panel>
         </StackPanel>
     </PageView>
     <Panel size="*,40">

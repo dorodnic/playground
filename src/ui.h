@@ -195,6 +195,7 @@ public:
     virtual void focus(bool on) = 0;
     virtual bool is_focused() const = 0;
     virtual const std::string& get_name() const = 0;
+    virtual std::string to_string() const = 0; 
     virtual const char* get_type() const = 0;
     virtual Alignment get_alignment() const = 0;
     
@@ -306,7 +307,7 @@ public:
     const IVisualElement* get_parent() const { return _parent; }
     void update_parent(IVisualElement* new_parent) { _parent = new_parent; }
     
-    std::string to_string() const { return get_name() + "(" + get_type() + ")"; }
+    std::string to_string() const override { return get_name() + "(" + get_type() + ")"; }
 
 private:
     Size2 _position;

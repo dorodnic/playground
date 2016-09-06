@@ -16,8 +16,8 @@ void setup_ui(IVisualElement* c)
 {
     auto btn_next = c->find_element("btnNext");
 	auto btn_prev = c->find_element("btnPrev");
-	auto page = dynamic_cast<Container*>(c->find_element("page"));
-	shared_ptr<int> page_id(new int(0));
+	auto page = dynamic_cast<PageView*>(c->find_element("page"));
+	shared_ptr<int> page_id(new int(atoi(page->get_focused_child()->get_name().c_str())));
 	
 	for (auto p : page->get_elements())
 	{

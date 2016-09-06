@@ -54,6 +54,7 @@ public:
     }
     
     const char* get_type() const override { return _element->get_type(); }
+    std::string to_string() const override { return _element->to_string(); }
     
 protected:
     std::shared_ptr<IVisualElement> _element;
