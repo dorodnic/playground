@@ -48,7 +48,7 @@ public:
            const Color3& color)
         : ControlBase(name, position, size, margin, alignment),
           _text_block(name, text, text_alignment, 
-                      {0, 0}, size, 0, text_color), 
+                      {0, 0}, { 1.0f, 1.0f }, 0, text_color), 
           _color(color)
     {
         _text_block.update_parent(this);
