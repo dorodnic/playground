@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <StackPanel size="*" orientation="vertical" name="samples">
-    <PageView size="*" selected="2" name="page">
+    <PageView size="*" selected="3" name="page">
         <StackPanel size="*" orientation="vertical" name="0">
             <TextBlock text.color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
             <StackPanel orientation="horizontal" size="*">
@@ -37,6 +37,9 @@
                     <Button color="green" margin="5" size="66%,66%" text="66%" name="btn66b" />
                 </StackPanel>
             </Panel>
+        </StackPanel>
+        <StackPanel size="*" orientation="vertical" name="3">
+            <Slider />
         </StackPanel>
     </PageView>
     <Panel size="*,40">
