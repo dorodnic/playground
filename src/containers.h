@@ -2,6 +2,7 @@
 #include "ui.h"
 
 typedef std::unordered_map<IVisualElement*, std::pair<int, Size>> SizeMap;
+typedef std::unordered_map<IVisualElement*, Size2> ElementsSizeCache;
 typedef std::vector<std::shared_ptr<IVisualElement>> Elements;
 
 class StackPanel;
@@ -149,6 +150,7 @@ public:
 
 private:
     SizeMap _sizes;
+    ElementsSizeCache _size_cache;
     ISizeCalculator* _resizer;
     Orientation _orientation;
 };

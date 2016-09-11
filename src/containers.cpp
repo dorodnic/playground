@@ -36,6 +36,7 @@ Rect calc_new_layout(IVisualElement* p,
                      Orientation orientation, 
                      const Rect& arrangement,
                      const std::pair<int, Size>& size_pair,
+                     const ElementsSizeCache& size_cache,
                      int& curr_sum,
                      bool expand_relatives = true)
 {
@@ -49,15 +50,17 @@ Rect calc_new_layout(IVisualElement* p,
     (new_origin.position.*ifield) = curr_sum;
     (new_origin.size.*ifield) = size_pair.first;
     
+    auto p_size = size_cache.find(p)->second;
+    
     if (expand_relatives)
     {
         // relative sized controls will try to calc relative size
         // from what we give them, but we did that for them already
         // so neutralize their calculation by giving them more space
-        if (!(p->get_size().*field).is_const())
+        if (!(p_size.*field).is_const())
         {
             (new_origin.size.*ifield) = (new_origin.size.*ifield) 
-                / (p->get_size().*field).get_percents();
+                / (p_size.*field).get_percents();
         }
     }
         
@@ -68,10 +71,10 @@ Rect calc_new_layout(IVisualElement* p,
     
     if (expand_relatives)
     {
-        if (!(p->get_size().*other).is_const())
+        if (!(p_size.*other).is_const())
         {
             (new_origin.size.*iother) = (new_origin.size.*iother) 
-                / (p->get_size().*other).get_percents();
+                / (p_size.*other).get_percents();
         }
     }
     
@@ -91,6 +94,7 @@ void StackPanel::update_mouse_position(Int2 cursor)
         auto new_origin = calc_new_layout(p.get(), _orientation,
                                           get_arrangement(),
                                           _sizes[p.get()],
+                                          _size_cache,
                                           sum, false);
 
         if (contains(new_origin, cursor))
@@ -207,6 +211,8 @@ void StackPanel::render(const Rect& origin)
         {
             LOG(INFO) << "\t" << kvp.first->get_name() << " = " 
                 << kvp.second.first << ", " << kvp.second.second;
+                
+            _size_cache[kvp.first] = kvp.first->get_size();
         }
     }
 
@@ -215,6 +221,7 @@ void StackPanel::render(const Rect& origin)
         auto new_origin = calc_new_layout(p.get(), _orientation,
                                   get_arrangement(),
                                   _sizes[p.get()],
+                                  _size_cache,
                                   sum);
 
         p->render(new_origin);
