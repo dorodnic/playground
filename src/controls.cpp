@@ -1,5 +1,7 @@
 #include "controls.h"
 
+#include <iomanip>
+
 #include "../easyloggingpp/easylogging++.h"
 
 #define GLFW_INCLUDE_GLU
@@ -8,6 +10,12 @@
 using namespace std;
 
 #include "../stb/stb_easy_font.h"
+
+
+inline bool float_eq(float a, float b)
+{
+    return abs(a-b) < 0.001f;
+}
 
 inline std::string to_upper(std::string data)
 {
@@ -22,6 +30,15 @@ inline std::string stringify(T t)
     return ss.str();
 }
 
+template<>
+inline std::string stringify(float t)
+{
+    if (float_eq(t, floor(t))) return stringify((int)t);
+
+    std::stringstream ss; ss << std::fixed << std::setprecision(2) << t;
+    return ss.str();
+}
+
 inline int get_text_width(const std::string& text)
 {
     return stb_easy_font_width((char *)text.c_str());
@@ -33,10 +50,6 @@ inline T lerp(T from, T to, float t)
     return to * t + from * (1.0f - t);
 }
 
-inline bool float_eq(float a, float b)
-{
-    return abs(a-b) < 0.001f;
-}
 
 inline int get_text_height() { return 8; }
 
@@ -66,6 +79,11 @@ struct interval
         if (contains(other) || other.contains(*this)) return true;
         if (contains(other.from) || contains(other.to)) return true;
         return false;
+    }
+    
+    interval<T> grow(T margin)
+    {
+        return { from - margin, to + margin };
     }
 };
 
@@ -176,6 +194,7 @@ void Slider::render(const Rect& origin)
 
     const auto pad = 1;
     auto rect = arrange(origin);
+    _rect = rect;
 
     auto x0 = rect.position.x;
     auto x1 = rect.position.x + rect.size.x;
@@ -203,11 +222,11 @@ void Slider::render(const Rect& origin)
     
     glBegin(GL_QUADS);
     
-    glVertex2i(x0 + pad, rect.position.y + pad);
-    glVertex2i(x0 + pad, text_y - pad - 1);
-    glVertex2i(x1 - pad,
+    glVertex2i(x0, rect.position.y + pad);
+    glVertex2i(x0, text_y - pad - 1);
+    glVertex2i(x1,
                text_y - pad - 1);
-    glVertex2i(x1 - pad,
+    glVertex2i(x1,
                rect.position.y + pad);
 
     glEnd();
@@ -232,21 +251,19 @@ void Slider::render(const Rect& origin)
             auto marker_x1 = marker_x0 + marker_width;
             
             interval<int> marker { marker_x0, marker_x1 };
+            marker = marker.grow(1);
             interval<int> free { last_x, max_x };
-            
-            if (marker_center > last_line_x + 8)
-            {
-                glBegin(GL_LINES);
-                glVertex2i(marker_center, rect.position.y + pad + 1);
-                glVertex2i(marker_center, text_y - pad - 2);
-                glEnd();
-                last_line_x = marker_center;
-            }
-            
+
             if (free.contains(marker) && !marker.intersects(value))
             {
                 draw_text(marker_x0, text_y, marker_txt);
                 last_x = marker_x1;
+                
+                glBegin(GL_LINES);
+                glVertex2i(marker_center, rect.position.y + pad + 2);
+                glVertex2i(marker_center, text_y - pad - 3);
+                glEnd();
+                last_line_x = marker_center;
             }
         }
     }
@@ -259,12 +276,78 @@ void Slider::render(const Rect& origin)
     glBegin(GL_QUADS);
     
     draw_diamond(btn_x, btn_y, size);
+    
+    if (_dragger_ready || _dragging) bg_color = -bg_color;
+    
     use(bg_color);
     draw_diamond(btn_x, btn_y, size - 3);
 
     glEnd();
 }
+
+void Slider::update_mouse_position(Int2 cursor)
+{
+    const auto pad = 1;
+    auto rect = _rect;
+
+    auto x0 = rect.position.x;
+    auto x1 = rect.position.x + rect.size.x;
     
+    auto text_y = rect.position.y + rect.size.y - get_text_height();
     
+    auto size = (text_y - rect.position.y) / 2 - pad;
+    auto btn_y = rect.position.y + pad + size;
+    
+    auto v = (clamp(_value, _min, _max) - _min) / (_max - _min + 0.01f);
+    auto value_x = (int)lerp(x0, x1, v);
+    auto btn_x = value_x;
+    
+    interval<int> x_int { btn_x - size, btn_x + size };
+    interval<int> y_int { btn_y - size, btn_y + size };
+    
+    _dragger_ready = x_int.grow(2).contains(cursor.x) 
+                  && y_int.grow(2).contains(cursor.y);
+
+    if (_dragging)
+    {
+        auto x = clamp(cursor.x, x0, x1);
+        auto min_dist = x - x0;
+        auto min_val = _min;
+        if (_step)
+        {
+            for (auto i = _min; i <= _max; i += _step)
+            {
+                auto t = (i - _min) / (_max - _min + 0.01f);
+                auto marker = (int)lerp(x0, x1, t);
+                auto dist = abs(x - marker);
+                if (dist < min_dist)
+                {
+                    min_dist = dist;
+                    min_val = i;
+                }
+            }
+            _value = min_val;
+        }
+        else
+        {
+            auto t = (x - x0) / (x1 - x0 + 0.01f);
+            _value = lerp(_min, _max, t);;
+        }
+    }
+}
+    
+void Slider::update_mouse_state(MouseButton button, MouseState state)
+{
+    if (_dragger_ready && 
+        button == MouseButton::left && 
+        state == MouseState::down)
+    {
+        _dragging = true;
+    }
+    if (_dragging && state == MouseState::up)
+    {
+        _dragging = false;
+    }
+}
 
 

@@ -94,6 +94,9 @@ public:
     Size2 get_intrinsic_size() const override;
 
     void render(const Rect& origin) override;
+    
+    void update_mouse_position(Int2 cursor) override;
+    void update_mouse_state(MouseButton button, MouseState state) override;
 
 private:
     float _min;
@@ -104,4 +107,8 @@ private:
     Orientation _orientation;
     Color3 _text_color;
     Color3 _color;
+    
+    bool _dragger_ready = false;
+    bool _dragging = false;
+    Rect _rect;
 };
