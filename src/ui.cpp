@@ -92,3 +92,6 @@ Size2 ControlBase::get_size() const
     Size y = _size.y.is_auto() ? get_intrinsic_size().y : _size.y;
     return { x, y };
 }
+
+
+

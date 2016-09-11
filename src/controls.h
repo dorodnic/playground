@@ -91,9 +91,9 @@ public:
 
     const char* get_type() const override { return "Slider"; }
     
-    Size2 get_intrinsic_size() const override { return {0,0}; }
+    Size2 get_intrinsic_size() const override;
 
-    void render(const Rect& origin) override {}
+    void render(const Rect& origin) override;
 
 private:
     float _min;

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE Debug)
 
 find_package(glfw3 3.2 REQUIRED)
+find_package(OpenGL REQUIRED)
 
 add_executable(main src/main.cpp 
                src/ui.cpp src/ui.h 
