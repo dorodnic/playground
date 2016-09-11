@@ -187,8 +187,6 @@ Size2 StackPanel::get_intrinsic_size() const
         max = std::max(max, size.to_pixels(0));
     }
     
-    LOG(INFO) << to_string() << " " << max << ", " << total;
-    
     if (_orientation == Orientation::vertical) {
         return { Size(max), Size(total) };
     } else {
@@ -282,7 +280,7 @@ void Grid::commit_line()
         _lines.push_back(_current_line);
     }
     _current_line = shared_ptr<StackPanel>(
-        new StackPanel("", {0,0}, { 1.0f, 1.0f }, get_alignment(),
+        new StackPanel("", {0,0}, {0,0}, get_alignment(),
         get_orientation() == Orientation::vertical 
             ? Orientation::horizontal : Orientation::vertical,
         this));
