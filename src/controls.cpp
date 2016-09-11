@@ -176,6 +176,7 @@ void Slider::render(const Rect& origin)
 
     const auto pad = 1;
     auto rect = arrange(origin);
+
     auto x0 = rect.position.x;
     auto x1 = rect.position.x + rect.size.x;
     
@@ -203,9 +204,9 @@ void Slider::render(const Rect& origin)
     glBegin(GL_QUADS);
     
     glVertex2i(x0 + pad, rect.position.y + pad);
-    glVertex2i(x0 + pad, rect.position.y + text_y - pad - 1);
+    glVertex2i(x0 + pad, text_y - pad - 1);
     glVertex2i(x1 - pad,
-               rect.position.y + text_y - pad - 1);
+               text_y - pad - 1);
     glVertex2i(x1 - pad,
                rect.position.y + pad);
 
@@ -237,7 +238,7 @@ void Slider::render(const Rect& origin)
             {
                 glBegin(GL_LINES);
                 glVertex2i(marker_center, rect.position.y + pad + 1);
-                glVertex2i(marker_center, rect.position.y + text_y - pad - 2);
+                glVertex2i(marker_center, text_y - pad - 2);
                 glEnd();
                 last_line_x = marker_center;
             }
@@ -250,8 +251,8 @@ void Slider::render(const Rect& origin)
         }
     }
     
-    auto size = text_y / 2 - pad;
-    auto btn_y = pad + size;
+    auto size = (text_y - rect.position.y) / 2 - pad;
+    auto btn_y = rect.position.y + pad + size;
     auto btn_x = value_x;
     
     

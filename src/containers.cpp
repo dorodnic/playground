@@ -186,7 +186,9 @@ Size2 StackPanel::get_intrinsic_size() const
         total += pixels;
         max = std::max(max, size.to_pixels(0));
     }
-
+    
+    LOG(INFO) << to_string() << " " << max << ", " << total;
+    
     if (_orientation == Orientation::vertical) {
         return { Size(max), Size(total) };
     } else {

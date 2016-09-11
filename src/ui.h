@@ -66,7 +66,7 @@ public:
 
     int to_pixels(int base_pixels) const
     {
-        if (_is_pixels) return clamp(_pixels, 0, base_pixels);
+        if (_is_pixels) return _pixels;
         else return (int) (_percents * base_pixels);
     }
 

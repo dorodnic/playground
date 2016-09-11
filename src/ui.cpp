@@ -88,8 +88,9 @@ Rect ControlBase::arrange(const Rect& origin)
 
 Size2 ControlBase::get_size() const
 {
-    Size x = _size.x.is_auto() ? get_intrinsic_size().x : _size.x;
-    Size y = _size.y.is_auto() ? get_intrinsic_size().y : _size.y;
+    auto intrinsic = get_intrinsic_size();
+    Size x = _size.x.is_auto() ? intrinsic.x : _size.x;
+    Size y = _size.y.is_auto() ? intrinsic.y : _size.y;
     return { x, y };
 }
 
