@@ -262,7 +262,7 @@ void StackPanel::render(const Rect& origin)
                                   get_arrangement(),
                                   _sizes[p.get()],
                                   _size_cache,
-                                  sum);
+                                  sum, false);
         if (p->is_focused())
             outline(new_origin, {1.0f, 1.0f, 1.0f});
     }
