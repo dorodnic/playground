@@ -43,23 +43,23 @@
                 <TextBlock text="sliders are a simple way to get feedback from the user:" margin="5" name="3_title" />
                 <Grid orientation="vertical" >
                     <TextBlock text="default:"  />
-                    <Slider />
+                    <Slider name="s1" />
                     <Break/>
 
                     <TextBlock text="0,1,1:"  />
-                    <Slider max="1" step="1" />
+                    <Slider name="s2" max="1" step="1" />
                     <Break/>
 
                     <TextBlock text="1,5,0:"  />
-                    <Slider min="1" max="5" step="0" value="2" />
+                    <Slider name="s3" min="1" max="5" step="0" value="2" />
                     <Break/>
                     
                     <TextBlock text="0,100,1:"  />
-                    <Slider step="1" value="57" />
+                    <Slider name="s4" step="1" value="57" />
                     <Break/>
                     
                     <TextBlock text="big one:"  />
-                    <Slider value="57" size="300,50" color="33,55,77" text.color="200,180,130" />
+                    <Slider name="S5" value="57" size="300,50" color="33,55,77" text.color="200,180,130" />
                     <Break/>
                 </Grid>
             </StackPanel>

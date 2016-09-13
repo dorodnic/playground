@@ -92,6 +92,16 @@ public:
         
         return nullptr;
     }
+    
+    void focus(bool on) override
+    {
+        for (auto& e : get_elements())
+        {
+            e->focus(on);
+        }
+        
+        ControlBase::focus(on);
+    }
 
 private:
     IVisualElement* _focused = nullptr;

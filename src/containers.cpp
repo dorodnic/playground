@@ -2,6 +2,9 @@
 
 #include "../easyloggingpp/easylogging++.h"
 
+#define GLFW_INCLUDE_GLU
+#include <GLFW/glfw3.h>
+
 using namespace std;
 
 struct accessors
@@ -83,13 +86,33 @@ Rect calc_new_layout(IVisualElement* p,
     return new_origin;
 }
 
+void outline(const Rect& r, const Color3& c)
+{
+    glPushAttrib(GL_ENABLE_BIT);
+
+    glLineStipple(1, 0xAAAA);
+    glEnable(GL_LINE_STIPPLE);
+
+    glBegin(GL_LINE_STRIP);
+    glColor3f(c.r, c.g, c.b);
+    glVertex2i(r.position.x, r.position.y);
+    glVertex2i(r.position.x, r.position.y + r.size.y);
+    glVertex2i(r.position.x + r.size.x, r.position.y + r.size.y);
+    glVertex2i(r.position.x + r.size.x, r.position.y);
+    glVertex2i(r.position.x, r.position.y);
+    glEnd();
+
+    glPopAttrib();
+}
+
 void StackPanel::update_mouse_position(Int2 cursor)
 {
     auto accessors = get_accessors(_orientation);
     auto ifield = accessors.ifield;
-
+    
     auto sum = get_arrangement().position.*ifield;
-    set_focused_child(nullptr);
+    
+    bool found = false;
     for (auto& p : get_elements()) {
         auto new_origin = calc_new_layout(p.get(), _orientation,
                                           get_arrangement(),
@@ -99,15 +122,21 @@ void StackPanel::update_mouse_position(Int2 cursor)
 
         if (contains(new_origin, cursor))
         {
-            set_focused_child(p.get());
-            p->focus(true);
+            if (get_focused_child() != p.get())
+            {
+                set_focused_child(p.get());
+            }
+            if (!p->is_focused()) p->focus(true);
             p->update_mouse_position(cursor);
+            found = true;
         }
         else
         {
-            p->focus(false);
+            if (p->is_focused()) p->focus(false);
         }
     }
+    
+    if (!found) set_focused_child(nullptr);
 }
 
 void Container::add_item(shared_ptr<IVisualElement> item)
@@ -225,6 +254,17 @@ void StackPanel::render(const Rect& origin)
                                   sum);
 
         p->render(new_origin);
+    }
+    
+    sum = get_arrangement().position.*ifield;
+    for (auto& p : get_elements()) {
+        auto new_origin = calc_new_layout(p.get(), _orientation,
+                                  get_arrangement(),
+                                  _sizes[p.get()],
+                                  _size_cache,
+                                  sum);
+        if (p->is_focused())
+            outline(new_origin, {1.0f, 1.0f, 1.0f});
     }
 }
 

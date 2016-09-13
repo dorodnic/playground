@@ -97,6 +97,16 @@ public:
     
     void update_mouse_position(Int2 cursor) override;
     void update_mouse_state(MouseButton button, MouseState state) override;
+    
+    void focus(bool on) override 
+    {
+        if (!on) {
+            
+            _dragging = false; 
+            _dragger_ready = false;
+        }
+        ControlBase::focus(on);
+    }
 
 private:
     float _min;
