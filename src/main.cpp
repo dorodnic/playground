@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "controls.h"
 #include "containers.h"
+#include "bind.h"
 
 #define GLFW_INCLUDE_GLU
 #include <GLFW/glfw3.h>
@@ -81,6 +82,18 @@ void setup_ui(IVisualElement* c)
 	    page->set_focused_child(child);
 	});
 }
+    
+struct Test : public BindableObjectBase
+{
+    std::string name;
+    int fps;
+    
+    virtual std::shared_ptr<IDataContext> make_data_context()
+    {
+        DefineClass(Test)->AddField(name)
+                         ->AddField(fps);
+    }
+};
 
 int main(int argc, char * argv[]) try
 {
