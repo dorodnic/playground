@@ -85,15 +85,23 @@ void setup_ui(IVisualElement* c)
     
 struct Test : public BindableObjectBase
 {
-    std::string name;
-    int fps;
+    std::string name = "name";
+    int fps = 15;
     bool is_enabled = true;
+    Color3 color = { 1.0f, 0.7f, 0.2f };
+    Size2 size = { 12, 13 };
+    Margin margin = { 5 };
+    Size s = { 12 };
     
     virtual std::shared_ptr<IDataContext> make_data_context()
     {
         DefineClass(Test)->AddField(name)
                          ->AddField(fps)
-                         ->AddField(is_enabled);
+                         ->AddField(is_enabled)
+                         ->AddField(size)
+                         ->AddField(color)
+                         ->AddField(margin)
+                         ->AddField(s);
     }
 };
 
@@ -110,10 +118,13 @@ int main(int argc, char * argv[]) try
 	t.fps = 45;
 	t.name = "test";
 	auto dc = t.make_data_context();
-	auto p_fps = dc->get_property("is_enabled");
-	LOG(INFO) << p_fps->get_value();
-	p_fps->set_value("false");
-	LOG(INFO) << t.is_enabled;
+	for (auto& pname : dc->get_property_names())
+	{
+	    auto pptr = dc->get_property(pname);
+	    LOG(INFO) << pptr->get_type() << ", " << pptr->get_name() << ", " << pptr->get_value();
+	}
+	
+	
 	
 	return 0;
 	

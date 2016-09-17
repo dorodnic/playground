@@ -312,7 +312,7 @@ private:
 namespace type_string_traits
 {
     template<class T>
-    inline void parse(const std::string& str, T* output);
+    inline T parse(const std::string& str, T* output);
 
     template<class T>
     inline std::string to_string(T val)
@@ -335,21 +335,66 @@ namespace type_string_traits
     }
 
     template<>
-    inline void parse(const std::string& str, int* output)
+    inline int parse(const std::string& str, int*)
     {
         MinimalParser p(str);
-        *output = p.get_int();
+        return p.get_int();
     }
     template<>
-    inline void parse(const std::string& str, bool* output)
+    inline float parse(const std::string& str, float*)
     {
         MinimalParser p(str);
-        *output = p.get_bool();
+        return p.get_float();
     }
     template<>
-    inline void parse(const std::string& str, std::string* output)
+    inline bool parse(const std::string& str, bool*)
     {
-        *output = str;
+        MinimalParser p(str);
+        return p.get_bool();
     }
+    template<>
+    inline std::string parse(const std::string& str, std::string*)
+    {
+        return str;
+    }
+    template<>
+    inline Size parse(const std::string& str, Size*)
+    {
+        MinimalParser p(str);
+        return p.get_size();
+    }
+    template<>
+    inline Size2 parse(const std::string& str, Size2*)
+    {
+        MinimalParser p(str);
+        return p.get_size2();
+    }
+    template<>
+    inline Color3 parse(const std::string& str, Color3*)
+    {
+        MinimalParser p(str);
+        return p.get_color();
+    }
+    template<>
+    inline Margin parse(const std::string& str, Margin*)
+    {
+        MinimalParser p(str);
+        return p.get_margin();
+    }
+    
+    template<class T>
+    inline std::string type_to_string(T* input);
+    
+    #define DECLARE_TYPE_NAME(T) template<>\
+    inline std::string type_to_string(T* input) { return #T; }
+    
+    DECLARE_TYPE_NAME(int);
+    DECLARE_TYPE_NAME(bool);
+    DECLARE_TYPE_NAME(std::string);
+    DECLARE_TYPE_NAME(float);
+    DECLARE_TYPE_NAME(Size);
+    DECLARE_TYPE_NAME(Size2);
+    DECLARE_TYPE_NAME(Margin);
+    DECLARE_TYPE_NAME(Color3);
 };
 

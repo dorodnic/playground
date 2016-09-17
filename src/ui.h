@@ -51,6 +51,12 @@ struct Color3 {
                  mix(b, other.b, t) };
     }
 };
+inline std::ostream & operator << (std::ostream & o, const Color3& c) 
+{ 
+    o << "{" << (int)(255 * c.r) << "," 
+      << (int)(255 * c.g) << "," 
+      << (int)(255 * c.b) << "}";
+}
 
 class Size
 {

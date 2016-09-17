@@ -84,13 +84,15 @@ public:
         : _owner(owner), _on_change([](IProperty*, 
                                        const std::string&,
                                        const std::string&){}),
-          _field(field), _name(name), _type("unknown")// TODO: fix
-    {}
+          _field(field), _name(name), 
+          _type(type_string_traits::type_to_string((S*)(nullptr)))
+    {
+    
+    }
     
     void set_value(std::string value) override
     {
-        S s;
-        type_string_traits::parse(value, &s);
+        auto s = type_string_traits::parse(value, (S*)(nullptr));
         auto old_value = get_value();
         auto t = (T*)_owner;
         (*t).*_field = s;
