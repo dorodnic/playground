@@ -75,6 +75,21 @@ public:
         return result;
     }
     
+    std::string rest() const
+    {
+        return _line.substr(_index);
+    }
+    
+    bool try_get_string(const std::string& prefix)
+    {
+        for (auto i = 0; i < prefix.size(); i++)
+        {
+            if (peek() == prefix[i]) get();
+            else return false;
+        }
+        return true;
+    }
+    
     int get_int() 
     {
         auto d = get();
@@ -397,4 +412,19 @@ namespace type_string_traits
     DECLARE_TYPE_NAME(Margin);
     DECLARE_TYPE_NAME(Color3);
 };
+
+inline std::string remove_prefix(const std::string& prefix, const std::string& str)
+{
+    MinimalParser p(str);
+    if (p.try_get_string(prefix))
+    {
+        auto rest = p.rest();
+        while (!p.eof()) p.get();
+        return rest;
+    }
+    else
+    {
+        return str;
+    }
+}
 

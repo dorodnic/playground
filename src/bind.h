@@ -87,7 +87,7 @@ private:
 #define DefineClass(T) using __Type = T;\
     return std::make_shared<DataContextBuilder<__Type>>(this, #T) 
     
-#define AddField(F) add(&__Type::F, #F)
+#define Add(F) add(&__Type::F, #F)
 
 template<class T, class S>
 class PropertyBase : public IProperty
@@ -110,12 +110,16 @@ public:
                 _value = value;
             }
         });
-        _value = get_value();
     }
     
     ~PropertyBase()
     {
         _owner->unsubscribe_on_change(this);
+    }
+    
+    void init()
+    {
+        _value = get_value();
     }
     
     virtual void set(S val) = 0;
@@ -168,7 +172,8 @@ class FieldProperty : public PropertyBase<T, S>
 {
 public:
     FieldProperty(IBindableObject* owner, std::string name, S T::* field) 
-        : PropertyBase<T,S>(owner, name), _field(field), _t((T*)owner)
+        : PropertyBase<T,S>(owner, name), _field(field), 
+          _t(dynamic_cast<T*>(owner))
     {
     }
     
@@ -185,6 +190,34 @@ public:
 private:
     T* _t;
     S T::* _field;
+};
+
+template<class T, class S>
+class ReadOnlyProperty : public PropertyBase<T, S>
+{
+public:
+    typedef S (T::*TGetter)() const;
+
+    ReadOnlyProperty(IBindableObject* owner, std::string name, 
+                     TGetter getter) 
+        : PropertyBase<T,S>(owner, name), _getter(getter), 
+          _t(dynamic_cast<T*>(owner))
+    {
+    }
+    
+    void set(S val) override
+    {
+        throw std::runtime_error("Property is read-only!");
+    }
+    
+    S get() const override
+    {
+        return ((*_t).*_getter)();
+    }
+
+private:
+    T* _t;
+    TGetter _getter;
 };
 
 template<class T>
@@ -224,7 +257,20 @@ public:
         std::string name_str(name);
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<FieldProperty<T, S>>(_owner, name_str, f);
+        ptr->init();
         result->_properties[name] = ptr;
+        return result;
+    }
+    
+    template<class S>
+    std::shared_ptr<DataContextBuilder<T>> add(S (T::*f)() const, const char* name) const
+    {
+        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto name_str = remove_prefix("get_", name);
+        result->_property_names.push_back(name_str);
+        auto ptr = std::make_shared<ReadOnlyProperty<T, S>>(_owner, name_str, f);
+        ptr->init();
+        result->_properties[name_str] = ptr;
         return result;
     }
 private:
