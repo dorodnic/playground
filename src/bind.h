@@ -39,8 +39,8 @@ class IDataContext : public IVirtualBase
 public:
     virtual const std::string& get_type() const = 0;
 
-    virtual const IProperty& get_property(const std::string& name) const = 0;
-    virtual IProperty& get_property(const std::string& name) = 0;
+    virtual const IProperty* get_property(const std::string& name) const = 0;
+    virtual IProperty* get_property(const std::string& name) = 0;
     virtual const std::vector<std::string> get_property_names() const = 0;
 };
 
@@ -80,27 +80,34 @@ class FieldProperty : public IProperty
 {
 public:
 
-    FieldProperty(IBindableObject* owner) 
+    FieldProperty(IBindableObject* owner, S T::* field, std::string name) 
         : _owner(owner), _on_change([](IProperty*, 
                                        const std::string&,
-                                       const std::string&){})
+                                       const std::string&){}),
+          _field(field), _name(name), _type("unknown")// TODO: fix
     {}
     
     void set_value(std::string value) override
     {
-    
+        S s;
+        type_string_traits::parse(value, &s);
+        auto old_value = get_value();
+        auto t = (T*)_owner;
+        (*t).*_field = s;
+        _on_change(this, old_value, value);
     }
     std::string get_value() const override
     {
-    
+        auto t = (T*)_owner;
+        return type_string_traits::to_string((*t).*_field);
     }
     const std::string& get_type() const override
     {
-    
+        return _type; 
     }
     const std::string& get_name() const override
     {
-    
+        return _name;
     }
     
     void set_on_change(OnPropertyChangeCallback on_change) override
@@ -111,6 +118,9 @@ public:
 private:
     OnPropertyChangeCallback _on_change;
     IBindableObject* _owner;
+    S T::* _field;
+    std::string _name;
+    std::string _type;
 };
 
 template<class T>
@@ -125,18 +135,18 @@ public:
         return _name;
     }
     
-    const IProperty& get_property(const std::string& name) const 
+    const IProperty* get_property(const std::string& name) const 
     {
         auto it = _properties.find(name);
         if (it != _properties.end())
         {
-            return *it->second.get();
+            return it->second.get();
         }
         throw std::runtime_error("Property not found!");
     }
-    IProperty& get_property(const std::string& name)
+    IProperty* get_property(const std::string& name)
     {
-        return *_properties[name];
+        return _properties[name].get();
     }
     const std::vector<std::string> get_property_names() const
     {
@@ -146,10 +156,15 @@ public:
     template<class S>
     std::shared_ptr<DataContextBuilder<T>> add(S T::* f, const char* name) const
     {
-        return std::make_shared<DataContextBuilder<T>>(*this);
+        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        std::string name_str(name);
+        result->_property_names.push_back(name_str);
+        auto ptr = std::make_shared<FieldProperty<T, S>>(_owner, f, name_str);
+        result->_properties[name] = ptr;
+        return result;
     }
 private:
-    IBindableObject* _owner;
+    mutable IBindableObject* _owner;
     std::vector<std::string> _property_names;
     std::map<std::string, std::shared_ptr<IProperty>> _properties;
     std::string _name;

@@ -308,3 +308,48 @@ private:
     std::vector<char> _buffer;
     rapidxml::xml_document<> _doc;
 };
+
+namespace type_string_traits
+{
+    template<class T>
+    inline void parse(const std::string& str, T* output);
+
+    template<class T>
+    inline std::string to_string(T val)
+    {
+        std::stringstream ss;
+        ss << val;
+        return ss.str();
+    }
+
+    template<>
+    inline std::string to_string(std::string val)
+    {
+        return val;
+    }
+
+    template<>
+    inline std::string to_string(bool val)
+    {
+        return val ? "true" : "false";
+    }
+
+    template<>
+    inline void parse(const std::string& str, int* output)
+    {
+        MinimalParser p(str);
+        *output = p.get_int();
+    }
+    template<>
+    inline void parse(const std::string& str, bool* output)
+    {
+        MinimalParser p(str);
+        *output = p.get_bool();
+    }
+    template<>
+    inline void parse(const std::string& str, std::string* output)
+    {
+        *output = str;
+    }
+};
+

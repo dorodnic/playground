@@ -87,11 +87,13 @@ struct Test : public BindableObjectBase
 {
     std::string name;
     int fps;
+    bool is_enabled = true;
     
     virtual std::shared_ptr<IDataContext> make_data_context()
     {
         DefineClass(Test)->AddField(name)
-                         ->AddField(fps);
+                         ->AddField(fps)
+                         ->AddField(is_enabled);
     }
 };
 
@@ -103,6 +105,17 @@ int main(int argc, char * argv[]) try
 
     // create root-level container for the GUI
 	Panel c(".",{0,0},{1.0f, 1.0f},Alignment::left); 
+	
+	Test t;
+	t.fps = 45;
+	t.name = "test";
+	auto dc = t.make_data_context();
+	auto p_fps = dc->get_property("is_enabled");
+	LOG(INFO) << p_fps->get_value();
+	p_fps->set_value("false");
+	LOG(INFO) << t.is_enabled;
+	
+	return 0;
 	
 	try
 	{
