@@ -4,6 +4,7 @@
 #include <exception>
 #include <memory>
 #include <string>
+#include <map>
 
 #include "parser.h"
 
@@ -31,7 +32,9 @@ public:
     virtual const std::string& get_type() const = 0;
     virtual const std::string& get_name() const = 0;
     
-    virtual void set_on_change(OnPropertyChangeCallback on_change) = 0;
+    virtual void subscribe_on_change(void* owner, 
+                                     OnPropertyChangeCallback on_change) = 0;
+    virtual void unsubscribe_on_change(void* owner) = 0;
 };
 
 class IDataContext : public IVirtualBase
@@ -47,27 +50,38 @@ public:
 class IBindableObject : public IVirtualBase
 {
 public:
-    virtual void set_on_change(OnFieldChangeCallback on_change) = 0;
+    virtual void subscribe_on_change(void* owner, 
+                                     OnFieldChangeCallback on_change) = 0;
+    virtual void unsubscribe_on_change(void* owner) = 0;
+    
     virtual std::shared_ptr<IDataContext> make_data_context() = 0;
 };
 
 class BindableObjectBase : public IBindableObject
 {
 public:
-    BindableObjectBase() : _on_change([](const char*){}) {}
-
-    void set_on_change(OnFieldChangeCallback on_change) override
-    {
-        _on_change = on_change;
-    }
+    BindableObjectBase() : _on_change() {}
     
     void fire_property_change(const char* property_name)
     {
-        _on_change(property_name);
+        for(auto& evnt : _on_change)
+        {
+            evnt.second(property_name);
+        }
+    }
+    
+    void subscribe_on_change(void* owner, 
+                             OnFieldChangeCallback on_change) override
+    {
+        _on_change[owner] = on_change;
+    }
+    void unsubscribe_on_change(void* owner) override
+    {
+        _on_change.erase(owner);
     }
     
 private:
-    OnFieldChangeCallback _on_change;
+    std::map<void*,OnFieldChangeCallback> _on_change;
 };
 
 #define DefineClass(T) using __Type = T;\
@@ -81,13 +95,27 @@ class FieldProperty : public IProperty
 public:
 
     FieldProperty(IBindableObject* owner, S T::* field, std::string name) 
-        : _owner(owner), _on_change([](IProperty*, 
-                                       const std::string&,
-                                       const std::string&){}),
+        : _owner(owner), _on_change(),
           _field(field), _name(name), 
           _type(type_string_traits::type_to_string((S*)(nullptr)))
     {
+        _owner->subscribe_on_change(this,[this](const char* field){
+            if (field == _name)
+            {
+                std::string value = get_value();
+                for(auto& evnt : _on_change)
+                {
+                    evnt.second(this, _value, value);
+                }
+                _value = value;
+            }
+        });
+        _value = get_value();
+    }
     
+    ~FieldProperty()
+    {
+        _owner->unsubscribe_on_change(this);
     }
     
     void set_value(std::string value) override
@@ -96,7 +124,11 @@ public:
         auto old_value = get_value();
         auto t = (T*)_owner;
         (*t).*_field = s;
-        _on_change(this, old_value, value);
+        _value = value;
+        for(auto& evnt : _on_change)
+        {
+            evnt.second(this, old_value, value);
+        }
     }
     std::string get_value() const override
     {
@@ -112,17 +144,23 @@ public:
         return _name;
     }
     
-    void set_on_change(OnPropertyChangeCallback on_change) override
+    void subscribe_on_change(void* owner, 
+                             OnPropertyChangeCallback on_change) override
     {
-        _on_change = on_change;
+        _on_change[owner] = on_change;
+    }
+    void unsubscribe_on_change(void* owner) override
+    {
+        _on_change.erase(owner);
     }
     
 private:
-    OnPropertyChangeCallback _on_change;
+    std::map<void*,OnPropertyChangeCallback> _on_change;
     IBindableObject* _owner;
     S T::* _field;
     std::string _name;
     std::string _type;
+    mutable std::string _value;
 };
 
 template<class T>

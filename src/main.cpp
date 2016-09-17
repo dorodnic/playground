@@ -121,10 +121,18 @@ int main(int argc, char * argv[]) try
 	for (auto& pname : dc->get_property_names())
 	{
 	    auto pptr = dc->get_property(pname);
+	    pptr->subscribe_on_change(nullptr, [](IProperty* sender, 
+	                                          const std::string& old_value,
+	                                          const std::string& new_value)
+          {
+            LOG(INFO) << sender->get_name() << " changed from " 
+                      << old_value << " to " << new_value;
+          });
 	    LOG(INFO) << pptr->get_type() << ", " << pptr->get_name() << ", " << pptr->get_value();
 	}
 	
-	
+	t.fps = 33;
+	t.fire_property_change("fps");
 	
 	return 0;
 	

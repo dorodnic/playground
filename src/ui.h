@@ -53,9 +53,9 @@ struct Color3 {
 };
 inline std::ostream & operator << (std::ostream & o, const Color3& c) 
 { 
-    o << "{" << (int)(255 * c.r) << "," 
+    o << (int)(255 * c.r) << "," 
       << (int)(255 * c.g) << "," 
-      << (int)(255 * c.b) << "}";
+      << (int)(255 * c.b);
 }
 
 class Size
@@ -108,7 +108,7 @@ inline Size2 Auto() { return { Size::Auto(), Size::Auto() }; }
 
 inline std::ostream & operator << (std::ostream & o, const Size2& r) 
 { 
-    return o << "{" << r.x << ", " << r.y << "}"; 
+    return o << r.x << ", " << r.y; 
 }
 
 struct Int2 { 
