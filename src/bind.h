@@ -90,13 +90,13 @@ private:
 #define AddField(F) add(&__Type::F, #F)
 
 template<class T, class S>
-class FieldProperty : public IProperty
+class PropertyBase : public IProperty
 {
 public:
 
-    FieldProperty(IBindableObject* owner, S T::* field, std::string name) 
+    PropertyBase(IBindableObject* owner, std::string name) 
         : _owner(owner), _on_change(),
-          _field(field), _name(name), 
+          _name(name), 
           _type(type_string_traits::type_to_string((S*)(nullptr)))
     {
         _owner->subscribe_on_change(this,[this](const char* field){
@@ -113,17 +113,19 @@ public:
         _value = get_value();
     }
     
-    ~FieldProperty()
+    ~PropertyBase()
     {
         _owner->unsubscribe_on_change(this);
     }
+    
+    virtual void set(S val) = 0;
+    virtual S get() const = 0;
     
     void set_value(std::string value) override
     {
         auto s = type_string_traits::parse(value, (S*)(nullptr));
         auto old_value = get_value();
-        auto t = (T*)_owner;
-        (*t).*_field = s;
+        set(s);
         _value = value;
         for(auto& evnt : _on_change)
         {
@@ -132,8 +134,7 @@ public:
     }
     std::string get_value() const override
     {
-        auto t = (T*)_owner;
-        return type_string_traits::to_string((*t).*_field);
+        return type_string_traits::to_string(get());
     }
     const std::string& get_type() const override
     {
@@ -157,10 +158,33 @@ public:
 private:
     std::map<void*,OnPropertyChangeCallback> _on_change;
     IBindableObject* _owner;
-    S T::* _field;
     std::string _name;
     std::string _type;
     mutable std::string _value;
+};
+
+template<class T, class S>
+class FieldProperty : public PropertyBase<T, S>
+{
+public:
+    FieldProperty(IBindableObject* owner, std::string name, S T::* field) 
+        : PropertyBase<T,S>(owner, name), _field(field), _t((T*)owner)
+    {
+    }
+    
+    void set(S val) override
+    {
+        (*_t).*_field = val;
+    }
+    
+    S get() const override
+    {
+        return (*_t).*_field;
+    }
+
+private:
+    T* _t;
+    S T::* _field;
 };
 
 template<class T>
@@ -199,7 +223,7 @@ public:
         auto result = std::make_shared<DataContextBuilder<T>>(*this);
         std::string name_str(name);
         result->_property_names.push_back(name_str);
-        auto ptr = std::make_shared<FieldProperty<T, S>>(_owner, f, name_str);
+        auto ptr = std::make_shared<FieldProperty<T, S>>(_owner, name_str, f);
         result->_properties[name] = ptr;
         return result;
     }
