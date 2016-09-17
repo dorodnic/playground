@@ -245,85 +245,6 @@ private:
     int _index = 0;
 };
 
-typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
-
-class Serializer
-{
-public:
-    Serializer(const char* filename);
-    
-    std::shared_ptr<IVisualElement> deserialize()
-    {
-        AttrBag bag;
-        return deserialize(nullptr, _doc.first_node(), bag);
-    }
-private:
-    void parse_container(Container* container, 
-                         rapidxml::xml_node<>* node, 
-                         const std::string& name,
-                         const AttrBag& bag);
-
-    std::shared_ptr<IVisualElement> deserialize(IVisualElement* parent,
-                                                rapidxml::xml_node<>* node,
-                                                const AttrBag& bag);
-
-    Size2 parse_size(const std::string& str)
-    {
-        MinimalParser p(str);
-        return p.get_size2();
-    }
-
-    Color3 parse_color(const std::string& str)
-    {
-        MinimalParser p(str);
-        return p.get_color();
-    }
-
-    Margin parse_margin(const std::string& str)
-    {
-        MinimalParser p(str);
-        return p.get_margin();
-    }
-    
-    bool parse_bool(const std::string& str)
-    {
-        MinimalParser p(str);
-        return p.get_bool();
-    }
-    
-    float parse_float(const std::string& str)
-    {
-        MinimalParser p(str);
-        return p.get_float();
-    }
-
-    Orientation parse_orientation(const std::string& str)
-    {
-        if (str == "") return Orientation::vertical;
-        
-        auto s = to_lower(str);
-        if (s == "vertical") return Orientation::vertical;
-        if (s == "horizontal") return Orientation::horizontal;
-        std::stringstream ss; ss << "Invalid Orientation '" << str << "'";
-        throw std::runtime_error(ss.str());
-    }
-    
-    Alignment parse_text_alignment(const std::string& str)
-    {
-        if (str == "") return Alignment::center;
-        
-        auto s = to_lower(str);
-        if (s == "left") return Alignment::left;
-        if (s == "center") return Alignment::center;
-        if (s == "right") return Alignment::right;
-        std::stringstream ss; ss << "Invalid Alignment '" << str << "'";
-        throw std::runtime_error(ss.str());
-    }
-    
-    std::vector<char> _buffer;
-    rapidxml::xml_document<> _doc;
-};
-
 namespace type_string_traits
 {
     template<class T>
@@ -347,6 +268,23 @@ namespace type_string_traits
     inline std::string to_string(bool val)
     {
         return val ? "true" : "false";
+    }
+    
+    template<>
+    inline std::string to_string(Orientation s)
+    {
+        if (s == Orientation::vertical) return "vertical";
+        else if (s == Orientation::horizontal) return "horizontal";
+        else return "unknown";
+    }
+    
+    template<>
+    inline std::string to_string(Alignment s)
+    {
+        if (s == Alignment::left) return "left";
+        else if (s == Alignment::center) return "center";
+        else if (s == Alignment::right) return "right";
+        else return "unknown";
     }
 
     template<>
@@ -397,6 +335,32 @@ namespace type_string_traits
         return p.get_margin();
     }
     
+    template<>
+    inline Orientation parse(const std::string& str, Orientation*)
+    {
+        if (str == "") return Orientation::vertical;
+        
+        auto s = to_lower(str);
+        if (s == "vertical") return Orientation::vertical;
+        if (s == "horizontal") return Orientation::horizontal;
+        std::stringstream ss; ss << "Invalid Orientation '" << str << "'";
+        throw std::runtime_error(ss.str());
+    }
+    
+    template<>
+    inline Alignment parse(const std::string& str, Alignment*)
+    {
+        if (str == "") return Alignment::center;
+        
+        auto s = to_lower(str);
+        if (s == "left") return Alignment::left;
+        if (s == "center") return Alignment::center;
+        if (s == "right") return Alignment::right;
+        std::stringstream ss; ss << "Invalid Alignment '" << str << "'";
+        throw std::runtime_error(ss.str());
+    }
+    
+    
     template<class T>
     inline std::string type_to_string(T* input);
     
@@ -411,7 +375,72 @@ namespace type_string_traits
     DECLARE_TYPE_NAME(Size2);
     DECLARE_TYPE_NAME(Margin);
     DECLARE_TYPE_NAME(Color3);
+    DECLARE_TYPE_NAME(Orientation);
+    DECLARE_TYPE_NAME(Alignment);
 };
+
+typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
+
+class Serializer
+{
+public:
+    Serializer(const char* filename);
+    
+    std::shared_ptr<IVisualElement> deserialize()
+    {
+        AttrBag bag;
+        return deserialize(nullptr, _doc.first_node(), bag);
+    }
+private:
+    void parse_container(Container* container, 
+                         rapidxml::xml_node<>* node, 
+                         const std::string& name,
+                         const AttrBag& bag);
+
+    std::shared_ptr<IVisualElement> deserialize(IVisualElement* parent,
+                                                rapidxml::xml_node<>* node,
+                                                const AttrBag& bag);
+
+    Size2 parse_size(const std::string& str)
+    {
+        return type_string_traits::parse(str, (Size2*)nullptr);
+    }
+
+    Color3 parse_color(const std::string& str)
+    {
+        return type_string_traits::parse(str, (Color3*)nullptr);
+    }
+
+    Margin parse_margin(const std::string& str)
+    {
+        return type_string_traits::parse(str, (Margin*)nullptr);
+    }
+    
+    bool parse_bool(const std::string& str)
+    {
+        return type_string_traits::parse(str, (bool*)nullptr);
+    }
+    
+    float parse_float(const std::string& str)
+    {
+        return type_string_traits::parse(str, (float*)nullptr);
+    }
+
+    Orientation parse_orientation(const std::string& str)
+    {
+        return type_string_traits::parse(str, (Orientation*)nullptr);
+    }
+    
+    Alignment parse_text_alignment(const std::string& str)
+    {
+        return type_string_traits::parse(str, (Alignment*)nullptr);
+    }
+    
+    std::vector<char> _buffer;
+    rapidxml::xml_document<> _doc;
+};
+
+
 
 inline std::string remove_prefix(const std::string& prefix, const std::string& str)
 {

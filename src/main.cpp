@@ -92,6 +92,8 @@ struct Test : public BindableObjectBase
     Size2 size = { 12, 13 };
     Margin margin = { 5 };
     Size s = { 12 };
+    Orientation o = Orientation::vertical;
+    Alignment a = Alignment::center;
     
     mutable int counter = 0;
     
@@ -116,6 +118,8 @@ struct Test : public BindableObjectBase
                          ->AddField(margin)
                          ->AddField(s)
                          ->AddField(get_text)
+                         ->AddField(o)
+                         ->AddField(a)
                          ->AddProperty(get_val, set_val);
     }
 };
