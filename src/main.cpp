@@ -98,17 +98,25 @@ struct Test : public BindableObjectBase
     std::string get_text() const { 
         return type_string_traits::to_string(counter++); 
     }
+    
+    bool _val;
+    bool get_val() const { return _val; }
+    void set_val(bool val) {
+        _val = val;
+        fire_property_change("val");
+    }
    
     virtual std::shared_ptr<IDataContext> make_data_context()
     {
-        DefineClass(Test)->Add(name)
-                         ->Add(fps)
-                         ->Add(is_enabled)
-                         ->Add(size)
-                         ->Add(color)
-                         ->Add(margin)
-                         ->Add(s)
-                         ->Add(get_text);
+        DefineClass(Test)->AddField(name)
+                         ->AddField(fps)
+                         ->AddField(is_enabled)
+                         ->AddField(size)
+                         ->AddField(color)
+                         ->AddField(margin)
+                         ->AddField(s)
+                         ->AddField(get_text)
+                         ->AddProperty(get_val, set_val);
     }
 };
 
@@ -141,6 +149,8 @@ int main(int argc, char * argv[]) try
 	t.fps = 33;
 	t.fire_property_change("fps");
 	t.fire_property_change("get_text");
+	
+	t.set_val(true);
 	
 	return 0;
 	

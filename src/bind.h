@@ -87,7 +87,9 @@ private:
 #define DefineClass(T) using __Type = T;\
     return std::make_shared<DataContextBuilder<__Type>>(this, #T) 
     
-#define Add(F) add(&__Type::F, #F)
+#define AddField(F) add(&__Type::F, #F)
+
+#define AddProperty(R, W) add(&__Type::R, &__Type::W, #R, #W)
 
 template<class T, class S>
 class PropertyBase : public IProperty
@@ -220,6 +222,36 @@ private:
     TGetter _getter;
 };
 
+template<class T, class S>
+class ReadWriteProperty : public PropertyBase<T, S>
+{
+public:
+    typedef S (T::*TGetter)() const;
+    typedef void (T::*TSetter)(S);
+
+    ReadWriteProperty(IBindableObject* owner, std::string name, 
+                      TGetter getter, TSetter setter) 
+        : PropertyBase<T,S>(owner, name), _getter(getter), _setter(setter),
+          _t(dynamic_cast<T*>(owner))
+    {
+    }
+    
+    void set(S val) override
+    {
+        ((*_t).*_setter)(val);
+    }
+    
+    S get() const override
+    {
+        return ((*_t).*_getter)();
+    }
+
+private:
+    T* _t;
+    TGetter _getter;
+    TSetter _setter;
+};
+
 template<class T>
 class DataContextBuilder : public IDataContext
 {
@@ -269,6 +301,25 @@ public:
         auto name_str = remove_prefix("get_", name);
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<ReadOnlyProperty<T, S>>(_owner, name_str, f);
+        ptr->init();
+        result->_properties[name_str] = ptr;
+        return result;
+    }
+    
+    template<class S>
+    std::shared_ptr<DataContextBuilder<T>> add(S (T::*r)() const, 
+                                               void (T::*w)(S), 
+                                               const char* rname,
+                                               const char* wname) const
+    {
+        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto name_str = remove_prefix("get_", rname);
+        if (name_str != remove_prefix("set_", wname))
+        {
+            throw std::runtime_error("Inconsistent property getter/setter naming!");
+        }
+        result->_property_names.push_back(name_str);
+        auto ptr = std::make_shared<ReadWriteProperty<T, S>>(_owner, name_str, r, w);
         ptr->init();
         result->_properties[name_str] = ptr;
         return result;
