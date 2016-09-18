@@ -27,6 +27,12 @@ public:
     const std::string& get_text() const { return _text; }
     
     const char* get_type() const override { return "TextBlock"; }
+    
+    std::shared_ptr<IDataContext> make_data_context() override
+    {
+        ExtendClass(TextBlock, ControlBase)
+             ->AddProperty(get_text, set_text);
+    }
 
 private:
     Color3 _color;
@@ -67,6 +73,13 @@ public:
     }
     
     const std::string& get_text() const { return _text_block.get_text(); }
+    
+    std::shared_ptr<IDataContext> make_data_context() override
+    {
+        ExtendClass(Button, ControlBase)
+             ->AddProperty(get_text, set_text)
+             ->AddProperty(get_color, set_color);
+    }
 
 private:
     Color3 _color;
@@ -106,6 +119,15 @@ public:
             _dragger_ready = false;
         }
         ControlBase::focus(on);
+    }
+    
+    void set_value(float val) { _value = val; }
+    float get_value() const { return _value; }
+        
+    std::shared_ptr<IDataContext> make_data_context() override
+    {
+        ExtendClass(Slider, ControlBase)
+             ->AddProperty(get_value, set_value);
     }
 
 private:

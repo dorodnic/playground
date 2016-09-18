@@ -81,48 +81,25 @@ void setup_ui(IVisualElement* c)
 	    auto child = page->find_element(ss.str());
 	    page->set_focused_child(child);
 	});
+	
+	auto slider = dynamic_cast<ControlBase*>(c->find_element("slider_bind_src"));
+	if (slider)
+	{
+	    auto dc = slider->make_data_context();
+	    for (auto& pname : dc->get_property_names())
+	    {
+	        auto pptr = dc->get_property(pname);
+	        pptr->subscribe_on_change(nullptr, [](IProperty* sender, 
+	                                              const std::string& old_value,
+	                                              const std::string& new_value)
+              {
+                LOG(INFO) << sender->get_name() << " changed from " 
+                          << old_value << " to " << new_value;
+              });
+	        LOG(INFO) << pptr->get_type() << ", " << pptr->get_name() << ", " << pptr->get_value();
+	    }
+	}
 }
-    
-struct Test : public BindableObjectBase
-{
-    std::string name = "name";
-    int fps = 15;
-    bool is_enabled = true;
-    Color3 color = { 1.0f, 0.7f, 0.2f };
-    Size2 size = { 12, 13 };
-    Margin margin = { 5 };
-    Size s = { 12 };
-    Orientation o = Orientation::vertical;
-    Alignment a = Alignment::center;
-    
-    mutable int counter = 0;
-    
-    std::string get_text() const { 
-        return type_string_traits::to_string(counter++); 
-    }
-    
-    bool _val;
-    bool get_val() const { return _val; }
-    void set_val(bool val) {
-        _val = val;
-        fire_property_change("val");
-    }
-   
-    virtual std::shared_ptr<IDataContext> make_data_context()
-    {
-        DefineClass(Test)->AddField(name)
-                         ->AddField(fps)
-                         ->AddField(is_enabled)
-                         ->AddField(size)
-                         ->AddField(color)
-                         ->AddField(margin)
-                         ->AddField(s)
-                         ->AddField(get_text)
-                         ->AddField(o)
-                         ->AddField(a)
-                         ->AddProperty(get_val, set_val);
-    }
-};
 
 int main(int argc, char * argv[]) try
 {
@@ -132,31 +109,6 @@ int main(int argc, char * argv[]) try
 
     // create root-level container for the GUI
 	Panel c(".",{0,0},{1.0f, 1.0f},Alignment::left); 
-	
-	Test t;
-	t.fps = 45;
-	t.name = "test";
-	auto dc = t.make_data_context();
-	for (auto& pname : dc->get_property_names())
-	{
-	    auto pptr = dc->get_property(pname);
-	    pptr->subscribe_on_change(nullptr, [](IProperty* sender, 
-	                                          const std::string& old_value,
-	                                          const std::string& new_value)
-          {
-            LOG(INFO) << sender->get_name() << " changed from " 
-                      << old_value << " to " << new_value;
-          });
-	    LOG(INFO) << pptr->get_type() << ", " << pptr->get_name() << ", " << pptr->get_value();
-	}
-	
-	t.fps = 33;
-	t.fire_property_change("fps");
-	t.fire_property_change("get_text");
-	
-	t.set_val(true);
-	
-	return 0;
 	
 	try
 	{

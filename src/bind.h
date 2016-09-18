@@ -84,13 +84,6 @@ private:
     std::map<void*,OnFieldChangeCallback> _on_change;
 };
 
-#define DefineClass(T) using __Type = T;\
-    return std::make_shared<DataContextBuilder<__Type>>(this, #T) 
-    
-#define AddField(F) add(&__Type::F, #F)
-
-#define AddProperty(R, W) add(&__Type::R, &__Type::W, #R, #W)
-
 template<class T, class S>
 class PropertyBase : public IProperty
 {
@@ -252,6 +245,47 @@ private:
     TSetter _setter;
 };
 
+template<class T, class S>
+class ReadWritePropertyLambda : public PropertyBase<T, S>
+{
+public:
+    typedef std::function<S()> TGetter;
+    typedef std::function<void(S)> TSetter;
+
+    ReadWritePropertyLambda(IBindableObject* owner, std::string name, 
+                      TGetter getter, TSetter setter) 
+        : PropertyBase<T,S>(owner, name), _getter(getter), _setter(setter)
+    {
+    }
+    
+    void set(S val) override
+    {
+        _setter(val);
+    }
+    
+    S get() const override
+    {
+        return _getter();
+    }
+
+private:
+    TGetter _getter;
+    TSetter _setter;
+};
+
+
+#define DefineClass(T) using __Type = T;\
+    return std::make_shared<DataContextBuilder<__Type>>(this, #T) 
+    
+#define AddField(F) add(&__Type::F, #F)
+
+#define AddProperty(R, W) add(&__Type::R, &__Type::W, #R, #W)
+
+#define ExtendClass(T, S) using __Type = T;\
+    auto base_ptr = S::make_data_context();\
+    auto base_builder = dynamic_cast<DataContextBuilder<S>*>(base_ptr.get());\
+    return base_builder->extend(#T, this)
+
 template<class T>
 class DataContextBuilder : public IDataContext
 {
@@ -282,6 +316,21 @@ public:
         return _property_names;
     }
     
+    void assign_fields(std::vector<std::string> property_names,
+                       std::map<std::string, std::shared_ptr<IProperty>> properties)
+    {
+        _property_names = property_names;
+        _properties = properties;
+    }
+    
+    template<class S>
+    std::shared_ptr<DataContextBuilder<S>> extend(const char* name, S* owner) const
+    {
+        auto result = std::make_shared<DataContextBuilder<S>>(owner, name);
+        result->assign_fields(_property_names, _properties);
+        return result;
+    }
+    
     template<class S>
     std::shared_ptr<DataContextBuilder<T>> add(S T::* f, const char* name) const
     {
@@ -299,8 +348,58 @@ public:
     {
         auto result = std::make_shared<DataContextBuilder<T>>(*this);
         auto name_str = remove_prefix("get_", name);
+        if (name_str == name) name_str = remove_prefix("is_", name);
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<ReadOnlyProperty<T, S>>(_owner, name_str, f);
+        ptr->init();
+        result->_properties[name_str] = ptr;
+        return result;
+    }
+    
+    template<class S>
+    std::shared_ptr<DataContextBuilder<T>> add(const S& (T::*r)() const, 
+                                               void (T::*w)(S), 
+                                               const char* rname,
+                                               const char* wname) const
+    {
+        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto name_str = remove_prefix("get_", rname);
+        if (name_str == rname) name_str = remove_prefix("is_", rname);
+        if (name_str != remove_prefix("set_", wname))
+        {
+            throw std::runtime_error("Inconsistent property getter/setter naming!");
+        }
+        result->_property_names.push_back(name_str);
+        auto t = dynamic_cast<T*>(_owner); 
+        auto rf = [t, r]() -> S {
+            return ((*t).*r)();
+        };
+        auto wf = [t, w](S s) {
+            ((*t).*w)(s);
+        };
+        
+        auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>(_owner, name_str, rf, wf);
+        ptr->init();
+        result->_properties[name_str] = ptr;
+        return result;
+    }
+    
+    template<class S>
+    std::shared_ptr<DataContextBuilder<T>> add(const S& (T::*f)() const, const char* name) const
+    {
+        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto name_str = remove_prefix("get_", name);
+        if (name_str == name) name_str = remove_prefix("is_", name);
+        result->_property_names.push_back(name_str);
+        auto t = dynamic_cast<T*>(_owner); 
+        auto rf = [t, f]() -> S {
+            return ((*t).*f)();
+        };
+        auto wf = [](S s) {
+            throw std::runtime_error("Property is read-only!");
+        };
+        
+        auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>(_owner, name_str, rf, wf);
         ptr->init();
         result->_properties[name_str] = ptr;
         return result;
@@ -314,6 +413,7 @@ public:
     {
         auto result = std::make_shared<DataContextBuilder<T>>(*this);
         auto name_str = remove_prefix("get_", rname);
+        if (name_str == rname) name_str = remove_prefix("is_", rname);
         if (name_str != remove_prefix("set_", wname))
         {
             throw std::runtime_error("Inconsistent property getter/setter naming!");
