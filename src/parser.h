@@ -9,8 +9,7 @@
 #include "../rapidxml/rapidxml.hpp"
 #include "../easyloggingpp/easylogging++.h"
 
-#include "ui.h"
-#include "containers.h"
+#include "types.h"
 
 inline std::string to_lower(std::string data)
 {
@@ -25,8 +24,8 @@ public:
     
     std::string to_string() const
     {
-        return "Parsing \"" + _line.substr(0, _index - 1) 
-                + "|>>>" + _line.substr(_index - 1) + "\"";
+        return "Parsing \"" + _line.substr(0, _index) 
+                + "|>>>" + _line.substr(_index) + "\"";
     }
     
     bool eof() const { return _index >= _line.size(); }
@@ -60,18 +59,23 @@ public:
     
     std::string get_id() 
     {
-        auto d = get();
-        if (!is_letter(d)) {
+        LOG(INFO) << to_string();
+        char d[2];
+        d[1] = 0;
+        d[0] = get();
+        if (!is_letter(d[0])) {
             std::stringstream ss; 
             ss << "Expected a letter! " << to_string();
             throw std::runtime_error(ss.str());
         }
-        std::string result = &d;
+        std::string result = d;
         while (is_letter(peek()) || is_digit(peek()))
         {
-            d = get();
+            LOG(INFO) << result;
+            d[0] = get();
             result += d;
         }
+        LOG(INFO) << result;
         return result;
     }
     
@@ -380,6 +384,8 @@ namespace type_string_traits
 };
 
 typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
+class IVisualElement;
+class Container;
 
 class Serializer
 {
