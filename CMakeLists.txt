@@ -13,6 +13,7 @@ add_executable(main src/main.cpp
                src/parser.cpp src/parser.h
                src/adaptors.h src/containers.h src/containers.cpp
                src/controls.h src/controls.cpp
+               src/types.h src/bind.h
                )
 target_include_directories(main PUBLIC ${OPENGL_INCLUDE_DIR})
 target_link_libraries(main ${OPENGL_gl_LIBRARY})
