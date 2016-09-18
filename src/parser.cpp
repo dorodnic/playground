@@ -7,6 +7,23 @@
 using namespace std;
 using namespace rapidxml;
 
+std::shared_ptr<IVisualElement> Serializer::deserialize()
+{
+    AttrBag bag;
+    BindingBag bindings;
+    auto res = deserialize(nullptr, _doc.first_node(), bag, bindings);
+    for (auto& def : bindings)
+    {
+        auto a = dynamic_cast<ControlBase*>(def.a);
+        auto b = dynamic_cast<ControlBase*>(res->find_element(def.b_name));
+        if (!a || !b) 
+            throw std::runtime_error("Selected object does not support binding!");
+        auto binding = Binding::bind(a, def.a_prop, b, def.b_prop);
+        a->add_binding(std::move(binding));
+    }
+    return res;
+}
+
 Serializer::Serializer(const char* filename)
 {
     ifstream theFile(filename);
@@ -31,14 +48,15 @@ std::string find_attribute(xml_node<>* node, const std::string& name,
 void Serializer::parse_container(Container* container, 
                                  xml_node<>* node,
                                  const std::string& name, 
-                                 const AttrBag& bag)
+                                 const AttrBag& bag,
+                                 BindingBag& bindings)
 {
     for (auto sub_node = node->first_node(); 
          sub_node; 
          sub_node = sub_node->next_sibling()) {
         try
         {
-            container->add_item(deserialize(container, sub_node, bag));
+            container->add_item(deserialize(container, sub_node, bag, bindings));
         } catch (const exception& ex) {
             LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << node->name() 
                        << name << ")" << endl;
@@ -48,7 +66,8 @@ void Serializer::parse_container(Container* container,
 
 shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
                                                    xml_node<>* node,
-                                                   const AttrBag& bag)
+                                                   const AttrBag& bag,
+                                                   BindingBag& bindings)
 {
     string type = node->name();
     shared_ptr<IVisualElement> res = nullptr;
@@ -74,6 +93,27 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     auto txt_align = parse_text_alignment(txt_align_str);
     
     auto txt_str = find_attribute(node, "text", bag, "");
+    
+    std::unique_ptr<BindingDef> binding;
+    if (starts_with("{bind ", txt_str))
+    {
+        MinimalParser p(txt_str);
+        p.try_get_string("{bind ");
+        auto element_id = p.get_id();
+        p.req('.');
+        auto prop_name = p.get_id();
+        p.req('}');
+        p.req_eof();
+        LOG(INFO) << element_id << " " << prop_name;
+        binding.reset(new BindingDef 
+            {
+                nullptr, // a is unknown at this point, will be filled in later
+                "text", // for now, we know exactly what attribute has the binding
+                element_id,
+                prop_name
+            });
+        txt_str = "";
+    }
 
     auto color_str = find_attribute(node, "color", bag, "gray");
     auto color = parse_color(color_str);
@@ -128,7 +168,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
             name, position, size, align, orientation, nullptr
         ));
         
-        parse_container(panel.get(), node, name, bag);
+        parse_container(panel.get(), node, name, bag, bindings);
 
         res = panel;
     }
@@ -138,7 +178,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
             name, position, size, align
         ));
         
-        parse_container(panel.get(), node, name, bag);
+        parse_container(panel.get(), node, name, bag, bindings);
          
         res = panel;
     }
@@ -148,7 +188,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
             name, position, size, align
         ));
         
-        parse_container(panel.get(), node, name, bag);
+        parse_container(panel.get(), node, name, bag, bindings);
         
         auto selected_item = panel->find_element(selected_str);
         panel->set_focused_child(selected_item);
@@ -168,7 +208,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
             {
                 string sub_name = sub_node->name();
                 if (sub_name == "Break") grid->commit_line();
-                else grid->add_item(deserialize(grid.get(), sub_node, bag));
+                else grid->add_item(deserialize(grid.get(), sub_node, bag, bindings));
             } catch (const exception& ex) {
                 LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                            << " " << name << ")" << endl;
@@ -202,7 +242,7 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
         
         try
         {
-            res = deserialize(parent, sub_node, new_bag);
+            res = deserialize(parent, sub_node, new_bag, bindings);
         } catch (const exception& ex) {
             LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
                        << " " << name << ")" << endl;
@@ -225,6 +265,12 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
         stringstream ss; ss << "Unrecognized Visual Element (" << type 
                             << " " << name << ")";
         throw runtime_error(ss.str());
+    }
+
+    if (binding)
+    {
+        binding->a = res.get();
+        bindings.push_back(*binding);
     }
 
     if (margin)

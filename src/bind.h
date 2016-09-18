@@ -481,7 +481,7 @@ public:
             }
         });
         
-        _b_prop_ptr->set_value(_a_prop_ptr->get_value());
+        _a_prop_ptr->set_value(_b_prop_ptr->get_value());
     }
     
     static std::unique_ptr<Binding> bind(

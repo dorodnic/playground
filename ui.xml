@@ -72,7 +72,7 @@
                     <Slider name="slider_bind_src" />
                     <Break/>
                     <TextBlock text="value:"  />
-                    <TextBlock name="slider_bind_trg" />
+                    <TextBlock text="{bind slider_bind_src.value}" />
                 </Grid>
             </StackPanel>
         </Using>

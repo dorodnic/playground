@@ -83,10 +83,10 @@ void setup_ui(IVisualElement* c)
 	    page->set_focused_child(child);
 	});
 	
-	auto slider = dynamic_cast<ControlBase*>(c->find_element("slider_bind_src"));
+	/*auto slider = dynamic_cast<ControlBase*>(c->find_element("slider_bind_src"));
 	auto text = dynamic_cast<ControlBase*>(c->find_element("slider_bind_trg"));
 	
-	text->add_binding(Binding::bind(slider, "value", text, "text"));
+	text->add_binding(Binding::bind(slider, "value", text, "text"));*/
 }
 
 int main(int argc, char * argv[]) try

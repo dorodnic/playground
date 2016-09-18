@@ -25,7 +25,7 @@ public:
     std::string to_string() const
     {
         return "Parsing \"" + _line.substr(0, _index) 
-                + "|>>>" + _line.substr(_index) + "\"";
+                + "|>>>" + (_index <= _line.size() ? _line.substr(_index) : "") + "\"";
     }
     
     bool eof() const { return _index >= _line.size(); }
@@ -237,7 +237,7 @@ public:
     
     ~MinimalParser()
     {
-        if (_index != _line.size())
+        if (_index < _line.size())
             LOG(WARNING) << "Not everything was parsed! " << to_string();
     }
     
@@ -380,29 +380,37 @@ namespace type_string_traits
     DECLARE_TYPE_NAME(Alignment);
 };
 
-typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
 class IVisualElement;
+struct BindingDef
+{
+    IVisualElement* a;
+    std::string a_prop;
+    std::string b_name;
+    std::string b_prop;
+};
+typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
+typedef std::vector<BindingDef> BindingBag;
+
 class Container;
+
 
 class Serializer
 {
 public:
     Serializer(const char* filename);
     
-    std::shared_ptr<IVisualElement> deserialize()
-    {
-        AttrBag bag;
-        return deserialize(nullptr, _doc.first_node(), bag);
-    }
+    std::shared_ptr<IVisualElement> deserialize();
 private:
     void parse_container(Container* container, 
                          rapidxml::xml_node<>* node, 
                          const std::string& name,
-                         const AttrBag& bag);
+                         const AttrBag& bag,
+                         BindingBag& bindings);
 
     std::shared_ptr<IVisualElement> deserialize(IVisualElement* parent,
                                                 rapidxml::xml_node<>* node,
-                                                const AttrBag& bag);
+                                                const AttrBag& bag,
+                                                BindingBag& bindings);
 
     Size2 parse_size(const std::string& str)
     {
@@ -461,3 +469,17 @@ inline std::string remove_prefix(const std::string& prefix, const std::string& s
     }
 }
 
+inline bool starts_with(const std::string& prefix, const std::string& str)
+{
+    MinimalParser p(str);
+    if (p.try_get_string(prefix))
+    {
+        while (!p.eof()) p.get();
+        return true;
+    }
+    else
+    {
+        while (!p.eof()) p.get();
+        return false;
+    }
+}
