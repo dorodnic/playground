@@ -55,6 +55,7 @@ public:
     virtual void unsubscribe_on_change(void* owner) = 0;
     
     virtual std::shared_ptr<IDataContext> make_data_context() = 0;
+    virtual IDataContext* fetch_self() = 0;
 };
 
 class BindableObjectBase : public IBindableObject
@@ -80,8 +81,15 @@ public:
         _on_change.erase(owner);
     }
     
+    IDataContext* fetch_self() override
+    {
+        if (!_self) _self = make_data_context();
+        return _self.get();
+    }
+    
 private:
     std::map<void*,OnFieldChangeCallback> _on_change;
+    mutable std::shared_ptr<IDataContext> _self = nullptr;
 };
 
 template<class T, class S>
@@ -431,3 +439,64 @@ private:
     std::string _name;
 };
 
+class Binding
+{
+public:
+    Binding(IBindableObject* a, std::string a_prop,
+            IBindableObject* b, std::string b_prop)
+    {
+        _a_dc = a->fetch_self();
+        _b_dc = b->fetch_self();
+        _a = a; _b = b;
+        _a_prop = a_prop;
+        _b_prop = b_prop;
+        
+        _a_prop_ptr = _a_dc->get_property(a_prop);
+        if (!_a_prop_ptr) throw std::runtime_error("Property not found!");
+        
+        _b_prop_ptr = _b_dc->get_property(b_prop);
+        if (!_b_prop_ptr) throw std::runtime_error("Property not found!");
+        
+        _a_prop_ptr->subscribe_on_change(this, [=](IProperty* sender, 
+                                                  const std::string& old_value,
+                                                  const std::string& new_value)
+        {
+            if (!_skip_a)
+            {
+                _skip_b = true;
+                _b_prop_ptr->set_value(new_value);
+                _skip_b = false;
+            }
+        });
+        
+        _b_prop_ptr->subscribe_on_change(this, [=](IProperty* sender, 
+                                                  const std::string& old_value,
+                                                  const std::string& new_value)
+        {
+            if (!_skip_b)
+            {
+                _skip_a = true;
+                _a_prop_ptr->set_value(new_value);
+                _skip_a = false;
+            }
+        });
+    }
+    
+    ~Binding()
+    {
+        _a_prop_ptr->unsubscribe_on_change(this);
+        _b_prop_ptr->unsubscribe_on_change(this);
+    }
+    
+private:
+    IDataContext* _a_dc;
+    IDataContext* _b_dc;
+    IProperty* _a_prop_ptr;
+    IProperty* _b_prop_ptr;
+    IBindableObject* _a;
+    IBindableObject* _b;
+    std::string _a_prop;
+    std::string _b_prop;
+    bool _skip_a = false;
+    bool _skip_b = false;
+};
