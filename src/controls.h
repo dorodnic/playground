@@ -22,6 +22,7 @@ public:
     { 
         _text = text; 
         ControlBase::invalidate_layout();
+        fire_property_change("text");
     }
     
     const std::string& get_text() const { return _text; }
@@ -64,12 +65,16 @@ public:
 
     void render(const Rect& origin) override;
     
-    void set_color(Color3 color) { _color = color; }
+    void set_color(Color3 color) { 
+        _color = color; 
+        fire_property_change("color");
+    }
     const Color3& get_color() const { return _color; }
     
     void set_text(std::string text) 
     { 
         _text_block.set_text(text);
+        fire_property_change("text");
     }
     
     const std::string& get_text() const { return _text_block.get_text(); }
@@ -121,7 +126,10 @@ public:
         ControlBase::focus(on);
     }
     
-    void set_value(float val) { _value = val; }
+    void set_value(float val) { 
+        _value = val; 
+        fire_property_change("value");
+    }
     float get_value() const { return _value; }
         
     std::shared_ptr<IDataContext> make_data_context() override

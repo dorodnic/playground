@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <StackPanel size="*" orientation="vertical" name="samples">
-    <PageView size="*" selected="3" name="page">
+    <PageView size="*" selected="4" name="page">
         <StackPanel size="*" orientation="vertical" name="0">
             <TextBlock text.color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
             <StackPanel orientation="horizontal">
@@ -61,6 +61,18 @@
                     <TextBlock text="big one:"  />
                     <Slider name="S5" value="57" size="300,50" color="33,55,77" text.color="200,180,130" />
                     <Break/>
+                </Grid>
+            </StackPanel>
+        </Using>
+        <Using text.color="white">
+            <StackPanel size="*" orientation="vertical" name="4">
+                <TextBlock text="example of a simple binding:" margin="5" name="4_title" />
+                <Grid orientation="vertical" >
+                    <TextBlock text="slider:"  />
+                    <Slider name="slider_bind_src" />
+                    <Break/>
+                    <TextBlock text="value:"  />
+                    <TextBlock name="slider_bind_trg" />
                 </Grid>
             </StackPanel>
         </Using>

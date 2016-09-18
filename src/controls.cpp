@@ -326,12 +326,12 @@ void Slider::update_mouse_position(Int2 cursor)
                     min_val = i;
                 }
             }
-            _value = min_val;
+            set_value(min_val);
         }
         else
         {
             auto t = (x - x0) / (x1 - x0 + 0.01f);
-            _value = lerp(_min, _max, t);;
+            set_value(lerp(_min, _max, t));
         }
     }
 }

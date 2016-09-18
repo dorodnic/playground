@@ -13,6 +13,8 @@ INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
 
+std::shared_ptr<IDataContext> dc;
+
 void setup_ui(IVisualElement* c)
 {
     auto btn_next = c->find_element("btnNext");
@@ -85,16 +87,18 @@ void setup_ui(IVisualElement* c)
 	auto slider = dynamic_cast<ControlBase*>(c->find_element("slider_bind_src"));
 	if (slider)
 	{
-	    auto dc = slider->make_data_context();
+	    dc = slider->make_data_context();
 	    for (auto& pname : dc->get_property_names())
 	    {
 	        auto pptr = dc->get_property(pname);
-	        pptr->subscribe_on_change(nullptr, [](IProperty* sender, 
-	                                              const std::string& old_value,
-	                                              const std::string& new_value)
+	        pptr->subscribe_on_change(nullptr, [=](IProperty* sender, 
+	                                               const std::string& old_value,
+	                                               const std::string& new_value)
               {
+                auto text = dynamic_cast<TextBlock*>(c->find_element("slider_bind_trg"));
                 LOG(INFO) << sender->get_name() << " changed from " 
                           << old_value << " to " << new_value;
+                text->set_text(new_value);
               });
 	        LOG(INFO) << pptr->get_type() << ", " << pptr->get_name() << ", " << pptr->get_value();
 	    }

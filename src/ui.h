@@ -121,12 +121,16 @@ public:
     const std::string& get_name() const override { return _name; }
     Alignment get_alignment() const override { return _align; }
     
-    void set_enabled(bool on) override { _enabled = on; }
+    void set_enabled(bool on) override { 
+        _enabled = on; 
+        fire_property_change("enabled");
+    }
     bool is_enabled() const override { return _enabled; }
     void set_visible(bool on) override 
     { 
         _visible = on;
         invalidate_layout();
+        fire_property_change("visible");
     }
     
     bool is_visible() const override { return _visible; }

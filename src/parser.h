@@ -59,7 +59,6 @@ public:
     
     std::string get_id() 
     {
-        LOG(INFO) << to_string();
         char d[2];
         d[1] = 0;
         d[0] = get();
@@ -71,11 +70,9 @@ public:
         std::string result = d;
         while (is_letter(peek()) || is_digit(peek()))
         {
-            LOG(INFO) << result;
             d[0] = get();
             result += d;
         }
-        LOG(INFO) << result;
         return result;
     }
     
@@ -459,6 +456,7 @@ inline std::string remove_prefix(const std::string& prefix, const std::string& s
     }
     else
     {
+        while (!p.eof()) p.get();
         return str;
     }
 }
