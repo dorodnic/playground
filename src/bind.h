@@ -480,6 +480,16 @@ public:
                 _skip_a = false;
             }
         });
+        
+        _b_prop_ptr->set_value(_a_prop_ptr->get_value());
+    }
+    
+    static std::unique_ptr<Binding> bind(
+            IBindableObject* a, std::string a_prop,
+            IBindableObject* b, std::string b_prop)
+    {
+        std::unique_ptr<Binding> p(new Binding(a, a_prop, b, b_prop));
+        return std::move(p);
     }
     
     ~Binding()

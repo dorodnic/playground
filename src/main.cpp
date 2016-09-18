@@ -13,7 +13,6 @@ INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
 
-std::shared_ptr<Binding> binding;
 
 void setup_ui(IVisualElement* c)
 {
@@ -87,7 +86,7 @@ void setup_ui(IVisualElement* c)
 	auto slider = dynamic_cast<ControlBase*>(c->find_element("slider_bind_src"));
 	auto text = dynamic_cast<ControlBase*>(c->find_element("slider_bind_trg"));
 	
-	binding = std::make_shared<Binding>(slider, "value", text, "text");
+	text->add_binding(Binding::bind(slider, "value", text, "text"));
 }
 
 int main(int argc, char * argv[]) try

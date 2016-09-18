@@ -158,6 +158,11 @@ public:
                                  ->AddProperty(is_visible, set_visible)
                                  ->AddProperty(is_enabled, set_enabled);
     }
+    
+    void add_binding(std::unique_ptr<Binding> binding)
+    {
+        _bindings.push_back(std::move(binding));
+    }
 
 private:
     Size2 _position;
@@ -168,5 +173,6 @@ private:
     bool _enabled = true;
     bool _visible = true;
     IVisualElement* _parent;
+    std::vector<std::unique_ptr<Binding>> _bindings;
 };
 
