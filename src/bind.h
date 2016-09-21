@@ -99,7 +99,7 @@ public:
     virtual void copy_to(ICopyable* to) = 0;
 };
 
-template<class T, class S>
+template<class S>
 class PropertyBase : public IProperty, public ICopyable
 {
 public:
@@ -127,7 +127,7 @@ public:
     
     void copy_to(ICopyable* to) override
     {
-        auto p = static_cast<PropertyBase<T,S>*>(to);
+        auto p = static_cast<PropertyBase<S>*>(to);
         p->set(get());
     }
     
@@ -175,11 +175,11 @@ private:
 };
 
 template<class T, class S>
-class FieldProperty : public PropertyBase<T, S>
+class FieldProperty : public PropertyBase<S>
 {
 public:
     FieldProperty(IBindableObject* owner, std::string name, S T::* field) 
-        : PropertyBase<T,S>(owner, name), _field(field), 
+        : PropertyBase<S>(owner, name), _field(field), 
           _t(dynamic_cast<T*>(owner))
     {
     }
@@ -205,14 +205,14 @@ private:
 };
 
 template<class T, class S>
-class ReadOnlyProperty : public PropertyBase<T, S>
+class ReadOnlyProperty : public PropertyBase<S>
 {
 public:
     typedef S (T::*TGetter)() const;
 
     ReadOnlyProperty(IBindableObject* owner, std::string name, 
                      TGetter getter) 
-        : PropertyBase<T,S>(owner, name), _getter(getter), 
+        : PropertyBase<S>(owner, name), _getter(getter), 
           _t(dynamic_cast<T*>(owner))
     {
     }
@@ -239,7 +239,7 @@ private:
 };
 
 template<class T, class S>
-class ReadWriteProperty : public PropertyBase<T, S>
+class ReadWriteProperty : public PropertyBase<S>
 {
 public:
     typedef S (T::*TGetter)() const;
@@ -247,7 +247,7 @@ public:
 
     ReadWriteProperty(IBindableObject* owner, std::string name, 
                       TGetter getter, TSetter setter) 
-        : PropertyBase<T,S>(owner, name), _getter(getter), _setter(setter),
+        : PropertyBase<S>(owner, name), _getter(getter), _setter(setter),
           _t(dynamic_cast<T*>(owner))
     {
     }
@@ -275,7 +275,7 @@ private:
 };
 
 template<class T, class S>
-class ReadWritePropertyLambda : public PropertyBase<T, S>
+class ReadWritePropertyLambda : public PropertyBase<S>
 {
 public:
     typedef std::function<S()> TGetter;
@@ -283,7 +283,7 @@ public:
 
     ReadWritePropertyLambda(IBindableObject* owner, std::string name, 
                       TGetter getter, TSetter setter, bool writable) 
-        : PropertyBase<T,S>(owner, name), 
+        : PropertyBase<S>(owner, name), 
           _getter(getter), _setter(setter), _is_writable(writable)
     {
     }
