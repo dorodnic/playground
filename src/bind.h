@@ -32,6 +32,8 @@ public:
     virtual const std::string& get_type() const = 0;
     virtual const std::string& get_name() const = 0;
     
+    virtual bool is_writable() const = 0;
+    
     virtual void subscribe_on_change(void* owner, 
                                      OnPropertyChangeCallback on_change) = 0;
     virtual void unsubscribe_on_change(void* owner) = 0;
@@ -189,6 +191,11 @@ public:
     {
         return (*_t).*_field;
     }
+    
+    bool is_writable() const override
+    {
+        return true;
+    }
 
 private:
     T* _t;
@@ -206,6 +213,12 @@ public:
         : PropertyBase<T,S>(owner, name), _getter(getter), 
           _t(dynamic_cast<T*>(owner))
     {
+    }
+    
+    
+    bool is_writable() const override
+    {
+        return false;
     }
     
     void set(S val) override
@@ -246,6 +259,12 @@ public:
     {
         return ((*_t).*_getter)();
     }
+    
+    
+    bool is_writable() const override
+    {
+        return true;
+    }
 
 private:
     T* _t;
@@ -261,8 +280,9 @@ public:
     typedef std::function<void(S)> TSetter;
 
     ReadWritePropertyLambda(IBindableObject* owner, std::string name, 
-                      TGetter getter, TSetter setter) 
-        : PropertyBase<T,S>(owner, name), _getter(getter), _setter(setter)
+                      TGetter getter, TSetter setter, bool writable) 
+        : PropertyBase<T,S>(owner, name), 
+          _getter(getter), _setter(setter), _is_writable(writable)
     {
     }
     
@@ -276,9 +296,12 @@ public:
         return _getter();
     }
 
+    bool is_writable() const override { return true; }
+
 private:
     TGetter _getter;
     TSetter _setter;
+    bool _is_writable;
 };
 
 
@@ -386,7 +409,8 @@ public:
             ((*t).*w)(s);
         };
         
-        auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>(_owner, name_str, rf, wf);
+        auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>
+                        (_owner, name_str, rf, wf, true);
         ptr->init();
         result->_properties[name_str] = ptr;
         return result;
@@ -407,7 +431,8 @@ public:
             throw std::runtime_error("Property is read-only!");
         };
         
-        auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>(_owner, name_str, rf, wf);
+        auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>
+            (_owner, name_str, rf, wf, false);
         ptr->init();
         result->_properties[name_str] = ptr;
         return result;
@@ -457,31 +482,48 @@ public:
         _b_prop_ptr = _b_dc->get_property(b_prop);
         if (!_b_prop_ptr) throw std::runtime_error("Property not found!");
         
-        _a_prop_ptr->subscribe_on_change(this, [=](IProperty* sender, 
-                                                  const std::string& old_value,
-                                                  const std::string& new_value)
+        if (_b_prop_ptr->is_writable())
         {
-            if (!_skip_a)
+            _a_prop_ptr->subscribe_on_change(this, [=](IProperty* sender, 
+                                                      const std::string& old_value,
+                                                      const std::string& new_value)
             {
-                _skip_b = true;
-                _b_prop_ptr->set_value(new_value);
-                _skip_b = false;
-            }
-        });
+                if (!_skip_a)
+                {
+                    _skip_b = true;
+                    _b_prop_ptr->set_value(new_value);
+                    _skip_b = false;
+                }
+            });
+        }
         
-        _b_prop_ptr->subscribe_on_change(this, [=](IProperty* sender, 
-                                                  const std::string& old_value,
-                                                  const std::string& new_value)
+        if (_a_prop_ptr->is_writable())
         {
-            if (!_skip_b)
+            _b_prop_ptr->subscribe_on_change(this, [=](IProperty* sender, 
+                                                      const std::string& old_value,
+                                                      const std::string& new_value)
             {
-                _skip_a = true;
-                _a_prop_ptr->set_value(new_value);
-                _skip_a = false;
-            }
-        });
+                if (!_skip_b)
+                {
+                    _skip_a = true;
+                    _a_prop_ptr->set_value(new_value);
+                    _skip_a = false;
+                }
+            });
+        }
         
-        _a_prop_ptr->set_value(_b_prop_ptr->get_value());
+        if (_a_prop_ptr->is_writable())
+        {
+            _a_prop_ptr->set_value(_b_prop_ptr->get_value());
+        }
+        else if (_a_prop_ptr->is_writable())
+        {
+            _b_prop_ptr->set_value(_a_prop_ptr->get_value());
+        }
+        else
+        {
+            throw std::runtime_error("Both properties under binding are read-only!");
+        }
     }
     
     static std::unique_ptr<Binding> bind(
