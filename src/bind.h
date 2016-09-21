@@ -10,9 +10,7 @@
 
 class IProperty;
 
-typedef std::function<void(IProperty* prop, 
-                           const std::string& old_value,
-                           const std::string& new_value)> 
+typedef std::function<void(IProperty* prop)> 
         OnPropertyChangeCallback;
         
 typedef std::function<void(const char* field_name)> 
@@ -94,8 +92,14 @@ private:
     mutable std::shared_ptr<IDataContext> _self = nullptr;
 };
 
+class ICopyable : public virtual IVirtualBase
+{
+public:
+    virtual void copy_to(ICopyable* to) = 0;
+};
+
 template<class T, class S>
-class PropertyBase : public IProperty
+class PropertyBase : public IProperty, public ICopyable
 {
 public:
 
@@ -107,12 +111,10 @@ public:
         _owner->subscribe_on_change(this,[this](const char* field){
             if (field == _name)
             {
-                std::string value = get_value();
                 for(auto& evnt : _on_change)
                 {
-                    evnt.second(this, _value, value);
+                    evnt.second(this);
                 }
-                _value = value;
             }
         });
     }
@@ -122,9 +124,10 @@ public:
         _owner->unsubscribe_on_change(this);
     }
     
-    void init()
+    void copy_to(ICopyable* to) override
     {
-        _value = get_value();
+        auto p = static_cast<PropertyBase<T,S>*>(to);
+        p->set(get());
     }
     
     virtual void set(S val) = 0;
@@ -135,10 +138,9 @@ public:
         auto s = type_string_traits::parse(value, (S*)(nullptr));
         auto old_value = get_value();
         set(s);
-        _value = value;
         for(auto& evnt : _on_change)
         {
-            evnt.second(this, old_value, value);
+            evnt.second(this);
         }
     }
     std::string get_value() const override
@@ -169,7 +171,6 @@ private:
     IBindableObject* _owner;
     std::string _name;
     std::string _type;
-    mutable std::string _value;
 };
 
 template<class T, class S>
@@ -369,7 +370,6 @@ public:
         std::string name_str(name);
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<FieldProperty<T, S>>(_owner, name_str, f);
-        ptr->init();
         result->_properties[name] = ptr;
         return result;
     }
@@ -382,7 +382,6 @@ public:
         if (name_str == name) name_str = remove_prefix("is_", name);
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<ReadOnlyProperty<T, S>>(_owner, name_str, f);
-        ptr->init();
         result->_properties[name_str] = ptr;
         return result;
     }
@@ -411,7 +410,6 @@ public:
         
         auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>
                         (_owner, name_str, rf, wf, true);
-        ptr->init();
         result->_properties[name_str] = ptr;
         return result;
     }
@@ -433,7 +431,6 @@ public:
         
         auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>
             (_owner, name_str, rf, wf, false);
-        ptr->init();
         result->_properties[name_str] = ptr;
         return result;
     }
@@ -453,7 +450,6 @@ public:
         }
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<ReadWriteProperty<T, S>>(_owner, name_str, r, w);
-        ptr->init();
         result->_properties[name_str] = ptr;
         return result;
     }
@@ -467,6 +463,30 @@ private:
 class Binding
 {
 public:
+    void a_to_b()
+    {
+        if (_is_direct)
+        {
+            _direct_b->copy_to(_direct_a);
+        }
+        else
+        {
+            _b_prop_ptr->set_value(_a_prop_ptr->get_value());
+        }
+    }
+    
+    void b_to_a()
+    {
+        if (_is_direct)
+        {
+            _direct_a->copy_to(_direct_b);
+        }
+        else
+        {
+            _a_prop_ptr->set_value(_b_prop_ptr->get_value());
+        }
+    }
+
     Binding(IBindableObject* a, std::string a_prop,
             IBindableObject* b, std::string b_prop)
     {
@@ -482,15 +502,21 @@ public:
         _b_prop_ptr = _b_dc->get_property(b_prop);
         if (!_b_prop_ptr) throw std::runtime_error("Property not found!");
         
+        _is_direct = _a_prop_ptr->get_type() == _b_prop_ptr->get_type();
+        if (_is_direct)
+        {
+            _direct_a = dynamic_cast<ICopyable*>(_a_prop_ptr);
+            _direct_b = dynamic_cast<ICopyable*>(_b_prop_ptr);
+        }
+        
         if (_b_prop_ptr->is_writable())
         {
-            _a_prop_ptr->subscribe_on_change(this, [=](IProperty* sender, 
-                                                      const std::string& old_value,
-                                                      const std::string& new_value)
+            _a_prop_ptr->subscribe_on_change(this, [=](IProperty* sender)
             {
                 if (!_skip_a)
                 {
                     _skip_b = true;
+                    auto new_value = _a_prop_ptr->get_value();
                     _b_prop_ptr->set_value(new_value);
                     _skip_b = false;
                 }
@@ -499,13 +525,12 @@ public:
         
         if (_a_prop_ptr->is_writable())
         {
-            _b_prop_ptr->subscribe_on_change(this, [=](IProperty* sender, 
-                                                      const std::string& old_value,
-                                                      const std::string& new_value)
+            _b_prop_ptr->subscribe_on_change(this, [=](IProperty* sender)
             {
                 if (!_skip_b)
                 {
                     _skip_a = true;
+                    auto new_value = _b_prop_ptr->get_value();
                     _a_prop_ptr->set_value(new_value);
                     _skip_a = false;
                 }
@@ -541,10 +566,13 @@ public:
     }
     
 private:
+    bool _is_direct;
     IDataContext* _a_dc;
     IDataContext* _b_dc;
     IProperty* _a_prop_ptr;
     IProperty* _b_prop_ptr;
+    ICopyable* _direct_a;
+    ICopyable* _direct_b;
     IBindableObject* _a;
     IBindableObject* _b;
     std::string _a_prop;
