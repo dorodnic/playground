@@ -17,6 +17,33 @@ inline float mix(float a, float b, float t)
     return a * (1 - t) + b * t;
 }
 
+class stringifier
+{
+public:
+    stringifier() : _ss() {}
+
+    operator std::string() const
+    {
+        return _ss.str();
+    }
+    
+    template<class T>
+    stringifier& operator<<(T&& t) 
+    { 
+        _ss << t;
+        return *this;
+    }
+    
+private:
+    std::stringstream _ss;
+};
+
+inline stringifier str() 
+{
+    stringifier r;
+    return r;
+}
+
 struct Color3 { 
     float r, g, b; 
     

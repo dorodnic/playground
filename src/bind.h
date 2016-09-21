@@ -7,6 +7,7 @@
 #include <map>
 
 #include "parser.h"
+#include "types.h"
 
 class IProperty;
 
@@ -224,7 +225,7 @@ public:
     
     void set(S val) override
     {
-        throw std::runtime_error("Property is read-only!");
+        throw std::runtime_error(str() << "Property " << this->get_name() << " is read-only!");
     }
     
     S get() const override
@@ -337,7 +338,7 @@ public:
         {
             return it->second.get();
         }
-        throw std::runtime_error("Property not found!");
+        throw std::runtime_error(str() << "Property " << name << " not found!");
     }
     IProperty* get_property(const std::string& name)
     {
@@ -397,7 +398,8 @@ public:
         if (name_str == rname) name_str = remove_prefix("is_", rname);
         if (name_str != remove_prefix("set_", wname))
         {
-            throw std::runtime_error("Inconsistent property getter/setter naming!");
+            throw std::runtime_error(str() << "Inconsistent naming for property " 
+                    << name_str << "!");
         }
         result->_property_names.push_back(name_str);
         auto t = dynamic_cast<T*>(_owner); 
@@ -425,8 +427,8 @@ public:
         auto rf = [t, f]() -> S {
             return ((*t).*f)();
         };
-        auto wf = [](S s) {
-            throw std::runtime_error("Property is read-only!");
+        auto wf = [name_str](S s) {
+            throw std::runtime_error(str() << "Property " << name_str << " is read-only!");
         };
         
         auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>
@@ -446,7 +448,8 @@ public:
         if (name_str == rname) name_str = remove_prefix("is_", rname);
         if (name_str != remove_prefix("set_", wname))
         {
-            throw std::runtime_error("Inconsistent property getter/setter naming!");
+            throw std::runtime_error(str() << "Inconsistent naming for property " 
+                    << name_str << "!");
         }
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<ReadWriteProperty<T, S>>(_owner, name_str, r, w);
@@ -497,10 +500,12 @@ public:
         _b_prop = b_prop;
         
         _a_prop_ptr = _a_dc->get_property(a_prop);
-        if (!_a_prop_ptr) throw std::runtime_error("Property not found!");
+        if (!_a_prop_ptr) 
+            throw std::runtime_error(str() << "Property " << a_prop << " not found!");
         
         _b_prop_ptr = _b_dc->get_property(b_prop);
-        if (!_b_prop_ptr) throw std::runtime_error("Property not found!");
+        if (!_b_prop_ptr) 
+            throw std::runtime_error(str() << "Property " << b_prop << " not found!");
         
         _is_direct = _a_prop_ptr->get_type() == _b_prop_ptr->get_type();
         if (_is_direct)
@@ -516,8 +521,7 @@ public:
                 if (!_skip_a)
                 {
                     _skip_b = true;
-                    auto new_value = _a_prop_ptr->get_value();
-                    _b_prop_ptr->set_value(new_value);
+                    a_to_b();
                     _skip_b = false;
                 }
             });
@@ -530,8 +534,7 @@ public:
                 if (!_skip_b)
                 {
                     _skip_a = true;
-                    auto new_value = _b_prop_ptr->get_value();
-                    _a_prop_ptr->set_value(new_value);
+                    b_to_a();
                     _skip_a = false;
                 }
             });
@@ -539,15 +542,15 @@ public:
         
         if (_a_prop_ptr->is_writable())
         {
-            _a_prop_ptr->set_value(_b_prop_ptr->get_value());
+            a_to_b();
         }
         else if (_a_prop_ptr->is_writable())
         {
-            _b_prop_ptr->set_value(_a_prop_ptr->get_value());
+            b_to_a();
         }
         else
         {
-            throw std::runtime_error("Both properties under binding are read-only!");
+            throw std::runtime_error("Both properties under binding can't be read-only!");
         }
     }
     
