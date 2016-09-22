@@ -542,11 +542,11 @@ public:
         
         if (_a_prop_ptr->is_writable())
         {
-            a_to_b();
-        }
-        else if (_a_prop_ptr->is_writable())
-        {
             b_to_a();
+        }
+        else if (_b_prop_ptr->is_writable())
+        {
+            a_to_b();
         }
         else
         {

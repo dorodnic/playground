@@ -101,7 +101,7 @@ int main(int argc, char * argv[]) try
 	try
 	{
 	    LOG(INFO) << "Loading UI...";
-	    Serializer s("ui.xml");
+	    Serializer s("resources/ui.xml");
 	    c.add_item(s.deserialize());
 	    setup_ui(&c);
 	    Rect origin { { 0, 0 }, { 1280, 960 } };
