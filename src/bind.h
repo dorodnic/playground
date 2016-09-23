@@ -97,6 +97,7 @@ class ICopyable : public virtual IVirtualBase
 {
 public:
     virtual void copy_to(ICopyable* to) = 0;
+    virtual void copy_from(ICopyable* from) = 0;
 };
 
 template<class S>
@@ -109,15 +110,18 @@ public:
           _name(name), 
           _type(type_string_traits::type_to_string((S*)(nullptr)))
     {
-        _owner->subscribe_on_change(this,[this](const char* field){
-            if (field == _name)
-            {
-                for(auto& evnt : _on_change)
+        if (_owner)
+        {
+            _owner->subscribe_on_change(this,[this](const char* field){
+                if (field == _name)
                 {
-                    evnt.second(this);
+                    for(auto& evnt : _on_change)
+                    {
+                        evnt.second(this);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
     
     ~PropertyBase()
@@ -127,17 +131,21 @@ public:
     
     void copy_to(ICopyable* to) override
     {
-        auto p = static_cast<PropertyBase<S>*>(to);
-        p->set(get());
+        auto p = dynamic_cast<PropertyBase<S>*>(to);
+        p->set(get((S*)nullptr));
+    }
+    void copy_from(ICopyable* from) override
+    {
+        auto p = dynamic_cast<PropertyBase<S>*>(from);
+        set(p->get((S*)nullptr));
     }
     
     virtual void set(S val) = 0;
-    virtual S get() const = 0;
+    virtual S get(S* token) const = 0;
     
     void set_value(std::string value) override
     {
         auto s = type_string_traits::parse(value, (S*)(nullptr));
-        auto old_value = get_value();
         set(s);
         for(auto& evnt : _on_change)
         {
@@ -146,7 +154,7 @@ public:
     }
     std::string get_value() const override
     {
-        return type_string_traits::to_string(get());
+        return type_string_traits::to_string(get((S*)nullptr));
     }
     const std::string& get_type() const override
     {
@@ -174,6 +182,141 @@ private:
     std::string _type;
 };
 
+class IMultitype : public virtual IVirtualBase
+{
+public:
+    virtual const std::string& get_type(int index) const = 0;
+    virtual void set_value(int index, const std::string& str) = 0;
+    virtual std::string get_value(int index) const = 0;
+};
+
+class ITypeConverter : public virtual IVirtualBase
+{
+public:
+    virtual const std::string& get_from() const = 0;
+    virtual const std::string& get_to() const = 0;
+    virtual void apply(IMultitype& var, bool forward) const = 0;
+    
+    virtual std::unique_ptr<IMultitype> make_state() const = 0;
+};
+
+template<class T, class S>
+class DualVariable : public IMultitype, 
+                     public PropertyBase<T>, 
+                     public PropertyBase<S>
+{
+public:
+    DualVariable() : _from(), _to() {}
+
+    const std::string& get_type(int index) const override
+    {
+        if (index == 0) return PropertyBase<T>::get_type();
+        else if (index == 1) return PropertyBase<S>::get_type();
+        else throw std::runtime_error(str() << "Invalid index" << index);
+    }
+    void set_value(int index, const std::string& val) override
+    {
+        if (index == 0) PropertyBase<T>::set_value(val);
+        else if (index == 1) PropertyBase<S>::set_value(val);
+        else throw std::runtime_error(str() << "Invalid index" << index);
+    }
+    std::string get_value(int index) const override
+    {
+        if (index == 0) return PropertyBase<T>::get_value();
+        else if (index == 1) return PropertyBase<S>::get_value();
+        else throw std::runtime_error(str() << "Invalid index" << index);
+    }
+    
+    void set(S val) override { _to = val; }
+    S get(S*) const override { return _to; }
+    void set(T val) override { _from = val; }
+    T get(T*) const override { return _from; }
+    
+private:
+    T _from;
+    S _to;
+};
+
+template<class T, class S>
+class TypeConverterBase
+{
+public:
+    TypeConverterBase()
+        : _from(type_string_traits::type_to_string((T*)(nullptr))),
+          _to(type_string_traits::type_to_string((S*)(nullptr)))
+    {
+    }
+
+    virtual S convert(const T&) const = 0;
+    virtual T convert(const S&) const = 0;
+    
+    const std::string& get_from() const override { return _from; }
+    const std::string& get_to() const override { return _to; }
+    
+    void apply(IMultitype& var, bool forward) const override
+    {
+        if (forward)
+        {
+            if (var.get_type(0) != get_from()) 
+                throw std::runtime_error(str() << "Converter expected input type "
+                                         << get_from() << " but received " 
+                                         << var.get_type(0) << "!");
+            if (var.get_type(1) != get_to()) 
+                throw std::runtime_error(str() << "Converter expected output type "
+                                         << get_to() << " but received " 
+                                         << var.get_type(1) << "!");
+                                         
+            auto dual = dynamic_cast<DualVariable<T, S>*>(&var);
+            if (dual)
+            {
+                auto t = dual->get((T*)nullptr);
+                auto s = convert(t);
+                dual->set(s);
+            }
+            else
+            {
+                auto t = type_string_traits::parse(var.get_value(0), (T*)(nullptr));
+                auto s = convert(t);
+                var.set_value(1, type_string_traits::to_string(s));
+            }
+        }
+        else
+        {
+            if (var.get_type(1) != get_from()) 
+                throw std::runtime_error(str() << "Converter expected input type "
+                                         << get_from() << " but received " 
+                                         << var.get_type(1) << "!");
+            if (var.get_type(0) != get_to()) 
+                throw std::runtime_error(str() << "Converter expected output type "
+                                         << get_to() << " but received " 
+                                         << var.get_type(0) << "!");
+                                         
+            auto dual = dynamic_cast<DualVariable<S, T>*>(&var);
+            if (dual)
+            {
+                auto s = dual->get((S*)nullptr);
+                auto t = convert(s);
+                dual->set(t);
+            }
+            else
+            {
+                auto s = type_string_traits::parse(var.get_value(1), (S*)(nullptr));
+                auto t = convert(s);
+                var.set_value(0, type_string_traits::to_string(t));
+            }
+        }
+    }
+    
+    std::unique_ptr<IMultitype> make_state() const override
+    {
+        return std::unique_ptr<IMultitype>(new DualVariable<T, S>());
+    }
+    
+private:
+    std::string _from;
+    std::string _to;
+};
+
 template<class T, class S>
 class FieldProperty : public PropertyBase<S>
 {
@@ -189,7 +332,7 @@ public:
         (*_t).*_field = val;
     }
     
-    S get() const override
+    S get(S*) const override
     {
         return (*_t).*_field;
     }
@@ -228,7 +371,7 @@ public:
         throw std::runtime_error(str() << "Property " << this->get_name() << " is read-only!");
     }
     
-    S get() const override
+    S get(S*) const override
     {
         return ((*_t).*_getter)();
     }
@@ -257,7 +400,7 @@ public:
         ((*_t).*_setter)(val);
     }
     
-    S get() const override
+    S get(S*) const override
     {
         return ((*_t).*_getter)();
     }
@@ -293,7 +436,7 @@ public:
         _setter(val);
     }
     
-    S get() const override
+    S get(S*) const override
     {
         return _getter();
     }
@@ -470,11 +613,29 @@ public:
     {
         if (_is_direct)
         {
-            _direct_b->copy_to(_direct_a);
+            _direct_b->copy_from(_direct_a);
         }
         else
         {
-            _b_prop_ptr->set_value(_a_prop_ptr->get_value());
+            if (_converter)
+            {
+                if (_direct_converter_state)
+                {
+                    _direct_b->copy_to(_direct_converter_state);
+                    _converter->apply(*_converter_state, false);
+                    _direct_a->copy_from(_direct_converter_state);
+                }
+                else
+                {
+                    _converter_state->set_value(1, _a_prop_ptr->get_value());
+                    _converter->apply(*_converter_state, false);
+                    _b_prop_ptr->set_value(_converter_state->get_value(0));
+                }
+            }
+            else
+            {
+                _b_prop_ptr->set_value(_a_prop_ptr->get_value());
+            }
         }
     }
     
@@ -482,22 +643,47 @@ public:
     {
         if (_is_direct)
         {
-            _direct_a->copy_to(_direct_b);
+            _direct_a->copy_from(_direct_b);
         }
         else
         {
-            _a_prop_ptr->set_value(_b_prop_ptr->get_value());
+            if (_converter)
+            {
+                if (_direct_converter_state)
+                {
+                    _direct_a->copy_to(_direct_converter_state);
+                    _converter->apply(*_converter_state, true);
+                    _direct_b->copy_from(_direct_converter_state);
+                }
+                else
+                {
+                    _converter_state->set_value(0, _a_prop_ptr->get_value());
+                    _converter->apply(*_converter_state, true);
+                    _b_prop_ptr->set_value(_converter_state->get_value(1));
+                }
+            }
+            else
+            {
+                _a_prop_ptr->set_value(_b_prop_ptr->get_value());
+            }
         }
     }
 
     Binding(IBindableObject* a, std::string a_prop,
-            IBindableObject* b, std::string b_prop)
+            IBindableObject* b, std::string b_prop,
+            std::unique_ptr<ITypeConverter> converter = nullptr)
     {
         _a_dc = a->fetch_self();
         _b_dc = b->fetch_self();
         _a = a; _b = b;
         _a_prop = a_prop;
         _b_prop = b_prop;
+        
+        _converter = std::move(converter);
+        if (_converter)
+        {
+            _converter_state = _converter->make_state();
+        }
         
         _a_prop_ptr = _a_dc->get_property(a_prop);
         if (!_a_prop_ptr) 
@@ -512,6 +698,29 @@ public:
         {
             _direct_a = dynamic_cast<ICopyable*>(_a_prop_ptr);
             _direct_b = dynamic_cast<ICopyable*>(_b_prop_ptr);
+        }
+        
+        if (_converter)
+        {
+            if (_a_prop_ptr->get_type() != _converter->get_from())
+            {
+                throw std::runtime_error(str() << "Binding from type " 
+                      << _a_prop_ptr->get_type() << " received a converter from " 
+                      << _converter->get_from() << "!");
+            }
+            if (_b_prop_ptr->get_type() != _converter->get_to())
+            {
+                throw std::runtime_error(str() << "Binding to type " 
+                      << _b_prop_ptr->get_type() << " received a converter to " 
+                      << _converter->get_to() << "!");
+            }
+            if (_is_direct)
+            {
+                throw std::runtime_error(
+                        str() << "Can't use a converter with binding of same type!");
+            }
+            _direct_converter_state = dynamic_cast<ICopyable*>(_converter_state.get());
+            
         }
         
         if (_b_prop_ptr->is_writable())
@@ -582,4 +791,8 @@ private:
     std::string _b_prop;
     bool _skip_a = false;
     bool _skip_b = false;
+    
+    std::unique_ptr<ITypeConverter> _converter;
+    std::unique_ptr<IMultitype> _converter_state;
+    ICopyable* _direct_converter_state;
 };
