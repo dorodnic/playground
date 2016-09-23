@@ -126,7 +126,7 @@ public:
     
     ~PropertyBase()
     {
-        _owner->unsubscribe_on_change(this);
+        if (_owner) _owner->unsubscribe_on_change(this);
     }
     
     void copy_to(ICopyable* to) override
@@ -206,7 +206,11 @@ class DualVariable : public IMultitype,
                      public PropertyBase<S>
 {
 public:
-    DualVariable() : _from(), _to() {}
+    DualVariable() 
+        : PropertyBase<T>(nullptr, ""), 
+          PropertyBase<S>(nullptr, ""), 
+          _from(), _to() 
+    {}
 
     const std::string& get_type(int index) const override
     {
@@ -227,6 +231,8 @@ public:
         else throw std::runtime_error(str() << "Invalid index" << index);
     }
     
+    bool is_writable() const { return true; }
+    
     void set(S val) override { _to = val; }
     S get(S*) const override { return _to; }
     void set(T val) override { _from = val; }
@@ -238,7 +244,7 @@ private:
 };
 
 template<class T, class S>
-class TypeConverterBase
+class TypeConverterBase : public ITypeConverter
 {
 public:
     TypeConverterBase()
@@ -247,8 +253,8 @@ public:
     {
     }
 
-    virtual S convert(const T&) const = 0;
-    virtual T convert(const S&) const = 0;
+    virtual S convert(T) const = 0;
+    virtual T convert(S) const = 0;
     
     const std::string& get_from() const override { return _from; }
     const std::string& get_to() const override { return _to; }
@@ -282,16 +288,16 @@ public:
         }
         else
         {
-            if (var.get_type(1) != get_from()) 
+            if (var.get_type(0) != get_from()) 
                 throw std::runtime_error(str() << "Converter expected input type "
                                          << get_from() << " but received " 
-                                         << var.get_type(1) << "!");
-            if (var.get_type(0) != get_to()) 
+                                         << var.get_type(0) << "!");
+            if (var.get_type(1) != get_to()) 
                 throw std::runtime_error(str() << "Converter expected output type "
                                          << get_to() << " but received " 
-                                         << var.get_type(0) << "!");
+                                         << var.get_type(1) << "!");
                                          
-            auto dual = dynamic_cast<DualVariable<S, T>*>(&var);
+            auto dual = dynamic_cast<DualVariable<T,S>*>(&var);
             if (dual)
             {
                 auto s = dual->get((S*)nullptr);
@@ -622,13 +628,13 @@ public:
                 if (_direct_converter_state)
                 {
                     _direct_b->copy_to(_direct_converter_state);
-                    _converter->apply(*_converter_state, false);
+                    _converter->apply(*_converter_state, _converter_direction);
                     _direct_a->copy_from(_direct_converter_state);
                 }
                 else
                 {
                     _converter_state->set_value(1, _a_prop_ptr->get_value());
-                    _converter->apply(*_converter_state, false);
+                    _converter->apply(*_converter_state, _converter_direction);
                     _b_prop_ptr->set_value(_converter_state->get_value(0));
                 }
             }
@@ -652,14 +658,14 @@ public:
                 if (_direct_converter_state)
                 {
                     _direct_a->copy_to(_direct_converter_state);
-                    _converter->apply(*_converter_state, true);
+                    _converter->apply(*_converter_state, !_converter_direction);
                     _direct_b->copy_from(_direct_converter_state);
                 }
                 else
                 {
-                    _converter_state->set_value(0, _a_prop_ptr->get_value());
-                    _converter->apply(*_converter_state, true);
-                    _b_prop_ptr->set_value(_converter_state->get_value(1));
+                    _converter_state->set_value(0, _b_prop_ptr->get_value());
+                    _converter->apply(*_converter_state, !_converter_direction);
+                    _a_prop_ptr->set_value(_converter_state->get_value(1));
                 }
             }
             else
@@ -702,17 +708,19 @@ public:
         
         if (_converter)
         {
-            if (_a_prop_ptr->get_type() != _converter->get_from())
+            if ((_b_prop_ptr->get_type() != _converter->get_from()) &&
+                (_a_prop_ptr->get_type() != _converter->get_from()))
             {
-                throw std::runtime_error(str() << "Binding from type " 
-                      << _a_prop_ptr->get_type() << " received a converter from " 
-                      << _converter->get_from() << "!");
+                throw std::runtime_error(str() << "Binding converter must be from either "
+                                         << _b_prop_ptr->get_type() << " or "
+                                         << _a_prop_ptr->get_type());
             }
-            if (_b_prop_ptr->get_type() != _converter->get_to())
+            if ((_a_prop_ptr->get_type() != _converter->get_to()) &&
+                (_b_prop_ptr->get_type() != _converter->get_to()))
             {
-                throw std::runtime_error(str() << "Binding to type " 
-                      << _b_prop_ptr->get_type() << " received a converter to " 
-                      << _converter->get_to() << "!");
+                throw std::runtime_error(str() << "Binding converter must be to either "
+                                         << _b_prop_ptr->get_type() << " or "
+                                         << _a_prop_ptr->get_type());
             }
             if (_is_direct)
             {
@@ -721,6 +729,7 @@ public:
             }
             _direct_converter_state = dynamic_cast<ICopyable*>(_converter_state.get());
             
+            _converter_direction = _a_prop_ptr->get_type() != _converter->get_to();
         }
         
         if (_b_prop_ptr->is_writable())
@@ -765,9 +774,10 @@ public:
     
     static std::unique_ptr<Binding> bind(
             IBindableObject* a, std::string a_prop,
-            IBindableObject* b, std::string b_prop)
+            IBindableObject* b, std::string b_prop,
+            std::unique_ptr<ITypeConverter> converter = nullptr)
     {
-        std::unique_ptr<Binding> p(new Binding(a, a_prop, b, b_prop));
+        std::unique_ptr<Binding> p(new Binding(a, a_prop, b, b_prop, std::move(converter)));
         return std::move(p);
     }
     
@@ -795,4 +805,5 @@ private:
     std::unique_ptr<ITypeConverter> _converter;
     std::unique_ptr<IMultitype> _converter_state;
     ICopyable* _direct_converter_state;
+    bool _converter_direction;
 };
