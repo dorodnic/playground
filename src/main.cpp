@@ -105,8 +105,8 @@ struct test : public BindableObjectBase
 
 struct converter : public TypeConverterBase<int, float>
 {
-    int convert(float f) const override { return static_cast<int>(f); }
-    float convert(int f) const override { return static_cast<float>(f); }
+    int convert(float f) const override { return static_cast<int>(f-1); }
+    float convert(int f) const override { return static_cast<float>(f+1); }
 };
 
 int main(int argc, char * argv[]) try
@@ -122,16 +122,16 @@ int main(int argc, char * argv[]) try
     {
         t.y++;
         t.fire_property_change("y");
-        if (t.y != t.x)
+        if (t.y != t.x + 1)
         {
-            cout << t.x << " != " << t.y << endl;
+            //cout << t.x << " != " << t.y << endl;
         }
         
         t.x++;
         t.fire_property_change("x");
-        if (t.y != t.x)
+        if (t.y != t.x + 1)
         {
-            cout << t.x << " != " << t.y << endl;
+            //cout << t.x << " != " << t.y << endl;
         }
     }
     auto end = std::chrono::steady_clock::now();

@@ -131,17 +131,17 @@ public:
     
     void copy_to(ICopyable* to) override
     {
-        auto p = dynamic_cast<PropertyBase<S>*>(to);
-        p->set(get((S*)nullptr));
+        auto p = static_cast<PropertyBase<S>*>(to);
+        p->set(get());
     }
     void copy_from(ICopyable* from) override
     {
-        auto p = dynamic_cast<PropertyBase<S>*>(from);
-        set(p->get((S*)nullptr));
+        auto p = static_cast<PropertyBase<S>*>(from);
+        set(p->get());
     }
     
     virtual void set(S val) = 0;
-    virtual S get(S* token) const = 0;
+    virtual S get() const = 0;
     
     void set_value(std::string value) override
     {
@@ -154,7 +154,7 @@ public:
     }
     std::string get_value() const override
     {
-        return type_string_traits::to_string(get((S*)nullptr));
+        return type_string_traits::to_string(get());
     }
     const std::string& get_type() const override
     {
@@ -188,6 +188,7 @@ public:
     virtual const std::string& get_type(int index) const = 0;
     virtual void set_value(int index, const std::string& str) = 0;
     virtual std::string get_value(int index) const = 0;
+    virtual ICopyable* get(int index) = 0;
 };
 
 class ITypeConverter : public virtual IVirtualBase
@@ -200,47 +201,64 @@ public:
     virtual std::unique_ptr<IMultitype> make_state() const = 0;
 };
 
+template<class T>
+class InlineVariable : public PropertyBase<T>
+{
+public:
+    InlineVariable() 
+        : PropertyBase<T>(nullptr, ""), 
+          _val()
+    {}
+    
+    bool is_writable() const { return true; }
+    
+    void set(T val) override { _val = val; }
+    T get() const override { return _val; }
+private:
+    T _val;
+};
+
 template<class T, class S>
-class DualVariable : public IMultitype, 
-                     public PropertyBase<T>, 
-                     public PropertyBase<S>
+class DualVariable : public IMultitype
 {
 public:
     DualVariable() 
-        : PropertyBase<T>(nullptr, ""), 
-          PropertyBase<S>(nullptr, ""), 
-          _from(), _to() 
+        : _from(), _to() 
     {}
 
     const std::string& get_type(int index) const override
     {
-        if (index == 0) return PropertyBase<T>::get_type();
-        else if (index == 1) return PropertyBase<S>::get_type();
+        if (index == 0) return _from.get_type();
+        else if (index == 1) return _to.get_type();
         else throw std::runtime_error(str() << "Invalid index" << index);
     }
     void set_value(int index, const std::string& val) override
     {
-        if (index == 0) PropertyBase<T>::set_value(val);
-        else if (index == 1) PropertyBase<S>::set_value(val);
+        if (index == 0) _from.set_value(val);
+        else if (index == 1) _to.set_value(val);
         else throw std::runtime_error(str() << "Invalid index" << index);
     }
     std::string get_value(int index) const override
     {
-        if (index == 0) return PropertyBase<T>::get_value();
-        else if (index == 1) return PropertyBase<S>::get_value();
+        if (index == 0) return _from.get_value();
+        else if (index == 1) return _to.get_value();
         else throw std::runtime_error(str() << "Invalid index" << index);
     }
-    
-    bool is_writable() const { return true; }
-    
-    void set(S val) override { _to = val; }
-    S get(S*) const override { return _to; }
-    void set(T val) override { _from = val; }
-    T get(T*) const override { return _from; }
+    ICopyable* get(int index) override
+    {
+        if (index == 0) return &_from;
+        else if (index == 1) return &_to;
+        else throw std::runtime_error(str() << "Invalid index" << index);
+    }
+
+    InlineVariable<T>& get_from() { return _from; }
+    InlineVariable<S>& get_to() { return _to; }
+    const InlineVariable<T>& get_from() const { return _from; }
+    const InlineVariable<S>& get_to() const { return _to; }
     
 private:
-    T _from;
-    S _to;
+    InlineVariable<T> _from;
+    InlineVariable<S> _to;
 };
 
 template<class T, class S>
@@ -275,9 +293,9 @@ public:
             auto dual = dynamic_cast<DualVariable<T, S>*>(&var);
             if (dual)
             {
-                auto t = dual->get((T*)nullptr);
+                auto t = dual->get_from().get();
                 auto s = convert(t);
-                dual->set(s);
+                dual->get_to().set(s);
             }
             else
             {
@@ -300,9 +318,9 @@ public:
             auto dual = dynamic_cast<DualVariable<T,S>*>(&var);
             if (dual)
             {
-                auto s = dual->get((S*)nullptr);
+                auto s = dual->get_to().get();
                 auto t = convert(s);
-                dual->set(t);
+                dual->get_from().set(t);
             }
             else
             {
@@ -338,7 +356,7 @@ public:
         (*_t).*_field = val;
     }
     
-    S get(S*) const override
+    S get() const override
     {
         return (*_t).*_field;
     }
@@ -377,7 +395,7 @@ public:
         throw std::runtime_error(str() << "Property " << this->get_name() << " is read-only!");
     }
     
-    S get(S*) const override
+    S get() const override
     {
         return ((*_t).*_getter)();
     }
@@ -406,7 +424,7 @@ public:
         ((*_t).*_setter)(val);
     }
     
-    S get(S*) const override
+    S get() const override
     {
         return ((*_t).*_getter)();
     }
@@ -442,7 +460,7 @@ public:
         _setter(val);
     }
     
-    S get(S*) const override
+    S get() const override
     {
         return _getter();
     }
@@ -625,11 +643,11 @@ public:
         {
             if (_converter)
             {
-                if (_direct_converter_state)
+                if (_converter_state->get(0) && _converter_state->get(1))
                 {
-                    _direct_b->copy_to(_direct_converter_state);
+                    _direct_a->copy_to(_converter_state->get(1));
                     _converter->apply(*_converter_state, _converter_direction);
-                    _direct_a->copy_from(_direct_converter_state);
+                    _direct_b->copy_from(_converter_state->get(0));
                 }
                 else
                 {
@@ -655,11 +673,11 @@ public:
         {
             if (_converter)
             {
-                if (_direct_converter_state)
+                if (_converter_state->get(0) && _converter_state->get(1))
                 {
-                    _direct_a->copy_to(_direct_converter_state);
+                    _direct_b->copy_to(_converter_state->get(0));
                     _converter->apply(*_converter_state, !_converter_direction);
-                    _direct_b->copy_from(_direct_converter_state);
+                    _direct_a->copy_from(_converter_state->get(1));
                 }
                 else
                 {
@@ -700,11 +718,8 @@ public:
             throw std::runtime_error(str() << "Property " << b_prop << " not found!");
         
         _is_direct = _a_prop_ptr->get_type() == _b_prop_ptr->get_type();
-        if (_is_direct)
-        {
-            _direct_a = dynamic_cast<ICopyable*>(_a_prop_ptr);
-            _direct_b = dynamic_cast<ICopyable*>(_b_prop_ptr);
-        }
+        _direct_a = dynamic_cast<ICopyable*>(_a_prop_ptr);
+        _direct_b = dynamic_cast<ICopyable*>(_b_prop_ptr);
         
         if (_converter)
         {
@@ -727,7 +742,6 @@ public:
                 throw std::runtime_error(
                         str() << "Can't use a converter with binding of same type!");
             }
-            _direct_converter_state = dynamic_cast<ICopyable*>(_converter_state.get());
             
             _converter_direction = _a_prop_ptr->get_type() != _converter->get_to();
         }
@@ -804,6 +818,5 @@ private:
     
     std::unique_ptr<ITypeConverter> _converter;
     std::unique_ptr<IMultitype> _converter_state;
-    ICopyable* _direct_converter_state;
     bool _converter_direction;
 };
