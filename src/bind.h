@@ -38,7 +38,7 @@ public:
     virtual void unsubscribe_on_change(void* owner) = 0;
 };
 
-class IDataContext : public IVirtualBase
+class ITypeDefinition : public IVirtualBase
 {
 public:
     virtual const std::string& get_type() const = 0;
@@ -55,8 +55,8 @@ public:
                                      OnFieldChangeCallback on_change) = 0;
     virtual void unsubscribe_on_change(void* owner) = 0;
     
-    virtual std::shared_ptr<IDataContext> make_data_context() = 0;
-    virtual IDataContext* fetch_self() = 0;
+    virtual std::shared_ptr<ITypeDefinition> make_data_context() = 0;
+    virtual ITypeDefinition* fetch_self() = 0;
 };
 
 class BindableObjectBase : public IBindableObject
@@ -68,11 +68,11 @@ public:
     void subscribe_on_change(void* owner, 
                              OnFieldChangeCallback on_change) override;
     void unsubscribe_on_change(void* owner) override;
-    IDataContext* fetch_self() override;
+    ITypeDefinition* fetch_self() override;
     
 private:
     std::map<void*,OnFieldChangeCallback> _on_change;
-    mutable std::shared_ptr<IDataContext> _self = nullptr;
+    mutable std::shared_ptr<ITypeDefinition> _self = nullptr;
 };
 
 class ICopyable : public virtual IVirtualBase
@@ -465,7 +465,7 @@ private:
 
 
 #define DefineClass(T) using __Type = T;\
-    return std::make_shared<DataContextBuilder<__Type>>(this, #T) 
+    return std::make_shared<TypeDefinitionBuilder<__Type>>(this, #T) 
     
 #define AddField(F) add(&__Type::F, #F)
 
@@ -473,14 +473,14 @@ private:
 
 #define ExtendClass(T, S) using __Type = T;\
     auto base_ptr = S::make_data_context();\
-    auto base_builder = dynamic_cast<DataContextBuilder<S>*>(base_ptr.get());\
+    auto base_builder = dynamic_cast<TypeDefinitionBuilder<S>*>(base_ptr.get());\
     return base_builder->extend(#T, this)
 
 template<class T>
-class DataContextBuilder : public IDataContext
+class TypeDefinitionBuilder : public ITypeDefinition
 {
 public:
-    DataContextBuilder(IBindableObject* owner, std::string name) 
+    TypeDefinitionBuilder(IBindableObject* owner, std::string name) 
         : _owner(owner), _name(name) {}
         
     const std::string& get_type() const override
@@ -514,17 +514,17 @@ public:
     }
     
     template<class S>
-    std::shared_ptr<DataContextBuilder<S>> extend(const char* name, S* owner) const
+    std::shared_ptr<TypeDefinitionBuilder<S>> extend(const char* name, S* owner) const
     {
-        auto result = std::make_shared<DataContextBuilder<S>>(owner, name);
+        auto result = std::make_shared<TypeDefinitionBuilder<S>>(owner, name);
         result->assign_fields(_property_names, _properties);
         return result;
     }
     
     template<class S>
-    std::shared_ptr<DataContextBuilder<T>> add(S T::* f, const char* name) const
+    std::shared_ptr<TypeDefinitionBuilder<T>> add(S T::* f, const char* name) const
     {
-        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
         std::string name_str(name);
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<FieldProperty<T, S>>(_owner, name_str, f);
@@ -533,9 +533,9 @@ public:
     }
     
     template<class S>
-    std::shared_ptr<DataContextBuilder<T>> add(S (T::*f)() const, const char* name) const
+    std::shared_ptr<TypeDefinitionBuilder<T>> add(S (T::*f)() const, const char* name) const
     {
-        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
         auto name_str = remove_prefix("get_", name);
         if (name_str == name) name_str = remove_prefix("is_", name);
         result->_property_names.push_back(name_str);
@@ -545,12 +545,12 @@ public:
     }
     
     template<class S>
-    std::shared_ptr<DataContextBuilder<T>> add(const S& (T::*r)() const, 
+    std::shared_ptr<TypeDefinitionBuilder<T>> add(const S& (T::*r)() const, 
                                                void (T::*w)(S), 
                                                const char* rname,
                                                const char* wname) const
     {
-        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
         auto name_str = remove_prefix("get_", rname);
         if (name_str == rname) name_str = remove_prefix("is_", rname);
         if (name_str != remove_prefix("set_", wname))
@@ -574,9 +574,9 @@ public:
     }
     
     template<class S>
-    std::shared_ptr<DataContextBuilder<T>> add(const S& (T::*f)() const, const char* name) const
+    std::shared_ptr<TypeDefinitionBuilder<T>> add(const S& (T::*f)() const, const char* name) const
     {
-        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
         auto name_str = remove_prefix("get_", name);
         if (name_str == name) name_str = remove_prefix("is_", name);
         result->_property_names.push_back(name_str);
@@ -595,12 +595,12 @@ public:
     }
     
     template<class S>
-    std::shared_ptr<DataContextBuilder<T>> add(S (T::*r)() const, 
+    std::shared_ptr<TypeDefinitionBuilder<T>> add(S (T::*r)() const, 
                                                void (T::*w)(S), 
                                                const char* rname,
                                                const char* wname) const
     {
-        auto result = std::make_shared<DataContextBuilder<T>>(*this);
+        auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
         auto name_str = remove_prefix("get_", rname);
         if (name_str == rname) name_str = remove_prefix("is_", rname);
         if (name_str != remove_prefix("set_", wname))
@@ -639,8 +639,8 @@ public:
     
 private:
     bool _is_direct;
-    IDataContext* _a_dc;
-    IDataContext* _b_dc;
+    ITypeDefinition* _a_dc;
+    ITypeDefinition* _b_dc;
     IProperty* _a_prop_ptr;
     IProperty* _b_prop_ptr;
     ICopyable* _direct_a;

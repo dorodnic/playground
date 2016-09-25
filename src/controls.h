@@ -29,7 +29,7 @@ public:
     
     const char* get_type() const override { return "TextBlock"; }
     
-    std::shared_ptr<IDataContext> make_data_context() override
+    std::shared_ptr<ITypeDefinition> make_data_context() override
     {
         ExtendClass(TextBlock, ControlBase)
              ->AddProperty(get_text, set_text);
@@ -79,7 +79,7 @@ public:
     
     const std::string& get_text() const { return _text_block.get_text(); }
     
-    std::shared_ptr<IDataContext> make_data_context() override
+    std::shared_ptr<ITypeDefinition> make_data_context() override
     {
         ExtendClass(Button, ControlBase)
              ->AddProperty(get_text, set_text)
@@ -132,7 +132,7 @@ public:
     }
     float get_value() const { return _value; }
         
-    std::shared_ptr<IDataContext> make_data_context() override
+    std::shared_ptr<ITypeDefinition> make_data_context() override
     {
         ExtendClass(Slider, ControlBase)
              ->AddProperty(get_value, set_value);

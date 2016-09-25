@@ -20,7 +20,7 @@ void BindableObjectBase::unsubscribe_on_change(void* owner)
     _on_change.erase(owner);
 }
 
-IDataContext* BindableObjectBase::fetch_self()
+ITypeDefinition* BindableObjectBase::fetch_self()
 {
     if (!_self) _self = make_data_context();
     return _self.get();
