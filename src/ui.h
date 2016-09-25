@@ -147,7 +147,7 @@ public:
     
     std::string to_string() const override { return get_name() + "(" + get_type() + ")"; }
 
-    std::shared_ptr<ITypeDefinition> make_data_context() override
+    std::shared_ptr<ITypeDefinition> make_type_definition() override
     {
         DefineClass(ControlBase)->AddField(get_size)
                                  ->AddField(get_intrinsic_size)

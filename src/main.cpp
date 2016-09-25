@@ -94,7 +94,7 @@ struct context : public BindableObjectBase
 {
     float fps;
 
-    std::shared_ptr<ITypeDefinition> make_data_context() override
+    std::shared_ptr<ITypeDefinition> make_type_definition() override
     {
         DefineClass(context)->AddField(fps);
     }

@@ -22,7 +22,7 @@ void BindableObjectBase::unsubscribe_on_change(void* owner)
 
 ITypeDefinition* BindableObjectBase::fetch_self()
 {
-    if (!_self) _self = make_data_context();
+    if (!_self) _self = make_type_definition();
     return _self.get();
 }
 

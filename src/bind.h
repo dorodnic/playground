@@ -55,7 +55,7 @@ public:
                                      OnFieldChangeCallback on_change) = 0;
     virtual void unsubscribe_on_change(void* owner) = 0;
     
-    virtual std::shared_ptr<ITypeDefinition> make_data_context() = 0;
+    virtual std::shared_ptr<ITypeDefinition> make_type_definition() = 0;
     virtual ITypeDefinition* fetch_self() = 0;
 };
 
@@ -472,7 +472,7 @@ private:
 #define AddProperty(R, W) add(&__Type::R, &__Type::W, #R, #W)
 
 #define ExtendClass(T, S) using __Type = T;\
-    auto base_ptr = S::make_data_context();\
+    auto base_ptr = S::make_type_definition();\
     auto base_builder = dynamic_cast<TypeDefinitionBuilder<S>*>(base_ptr.get());\
     return base_builder->extend(#T, this)
 
