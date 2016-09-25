@@ -90,56 +90,18 @@ void setup_ui(IVisualElement* c)
 	text->add_binding(Binding::bind(slider, "value", text, "text"));*/
 }
 
-struct test : public BindableObjectBase
+struct context : public BindableObjectBase
 {
-    int x;
-    float y;
+    float fps;
 
     std::shared_ptr<IDataContext> make_data_context() override
     {
-        DefineClass(test)
-             ->AddField(x)
-             ->AddField(y);
+        DefineClass(context)->AddField(fps);
     }
-};
-
-struct converter : public TypeConverterBase<int, float>
-{
-    int convert(float f) const override { return static_cast<int>(f-1); }
-    float convert(int f) const override { return static_cast<float>(f+1); }
 };
 
 int main(int argc, char * argv[]) try
 {
-    test t;
-    auto dc = t.make_data_context();
-    
-    auto naive = Binding::bind(&t, "y", &t, "x", 
-        std::unique_ptr<ITypeConverter>(new converter()));
-
-    auto start = std::chrono::steady_clock::now();
-    for (int i = 0; i < 100000; i++)
-    {
-        t.y++;
-        t.fire_property_change("y");
-        if (t.y != t.x + 1)
-        {
-            //cout << t.x << " != " << t.y << endl;
-        }
-        
-        t.x++;
-        t.fire_property_change("x");
-        if (t.y != t.x + 1)
-        {
-            //cout << t.x << " != " << t.y << endl;
-        }
-    }
-    auto end = std::chrono::steady_clock::now();
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    cout << ms << endl;
-
-    return 0;
-
     glfwInit();
     GLFWwindow * win = glfwCreateWindow(1280, 960, "main", 0, 0);
     glfwMakeContextCurrent(win);
