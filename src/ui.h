@@ -44,6 +44,9 @@ public:
     virtual void set_on_click(std::function<void()> on_click,
                               MouseButton button = MouseButton::left) = 0;
     virtual void set_on_double_click(std::function<void()> on_click) = 0;
+    
+    virtual void set_data_context(IBindableObject* dc) = 0;
+    virtual IBindableObject* get_data_context() const = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -163,6 +166,9 @@ public:
     {
         _bindings.push_back(std::move(binding));
     }
+    
+    void set_data_context(IBindableObject* dc) override { _dc = dc; }
+    IBindableObject* get_data_context() const override { return _dc; }
 
 private:
     Size2 _position;
@@ -174,5 +180,6 @@ private:
     bool _visible = true;
     IVisualElement* _parent;
     std::vector<std::unique_ptr<Binding>> _bindings;
+    IBindableObject* _dc;
 };
 

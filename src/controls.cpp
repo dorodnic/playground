@@ -138,6 +138,20 @@ Size2 TextBlock::get_intrinsic_size() const
     return { get_text_width(to_upper(_text)) + 16, 20 };
 }
 
+void TextBlock::set_text(std::string text) 
+{ 
+    if (get_text_width(to_upper(_text)) != get_text_width(to_upper(text)))
+    {
+        _text = text; 
+        ControlBase::invalidate_layout();
+    }
+    else
+    {
+        _text = text;
+    }
+    fire_property_change("text");
+}
+
 void TextBlock::render(const Rect& origin)
 {
     auto c = _color;

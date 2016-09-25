@@ -18,12 +18,7 @@ public:
 
     void render(const Rect& origin) override;
     
-    void set_text(std::string text) 
-    { 
-        _text = text; 
-        ControlBase::invalidate_layout();
-        fire_property_change("text");
-    }
+    void set_text(std::string text);
     
     const std::string& get_text() const { return _text; }
     

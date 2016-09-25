@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <iostream>
+#include <unordered_map>
+#include <string>
 
 enum class Orientation
 {
@@ -16,6 +18,8 @@ inline float mix(float a, float b, float t)
 {
     return a * (1 - t) + b * t;
 }
+
+typedef std::unordered_map<std::string, std::string> PropertyBag;
 
 class stringifier
 {
