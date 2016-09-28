@@ -20,12 +20,6 @@ void BindableObjectBase::unsubscribe_on_change(void* owner)
     _on_change.erase(owner);
 }
 
-ITypeDefinition* BindableObjectBase::fetch_self()
-{
-    if (!_self) _self = make_type_definition();
-    return _self.get();
-}
-
 void Binding::a_to_b()
 {
     if (_is_direct)
@@ -87,8 +81,8 @@ void Binding::b_to_a()
 }
 
 Binding::Binding(TypeFactory& factory,
-                 IBindableObject* a, std::string a_prop,
-                 IBindableObject* b, std::string b_prop,
+                 INotifyPropertyChanged* a, std::string a_prop,
+                 INotifyPropertyChanged* b, std::string b_prop,
                  std::unique_ptr<ITypeConverter> converter)
     : _factory(factory)
 {

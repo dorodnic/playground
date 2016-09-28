@@ -93,11 +93,6 @@ void setup_ui(IVisualElement* c)
 struct context : public BindableObjectBase
 {
     float fps;
-
-    std::shared_ptr<ITypeDefinition> make_type_definition() override
-    {
-        return nullptr;
-    }
 };
 
 template<>

@@ -56,11 +56,11 @@ public:
     const char* get_type() const override { return _element->get_type(); }
     std::string to_string() const override { return _element->to_string(); }
     
-    void set_data_context(IBindableObject* dc) override 
+    void set_data_context(INotifyPropertyChanged* dc) override 
     { 
         _element->set_data_context(dc); 
     }
-    IBindableObject* get_data_context() const override 
+    INotifyPropertyChanged* get_data_context() const override 
     { 
         return _element->get_data_context(); 
     }

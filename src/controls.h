@@ -23,11 +23,6 @@ public:
     const std::string& get_text() const { return _text; }
     
     const char* get_type() const override { return "TextBlock"; }
-    
-    std::shared_ptr<ITypeDefinition> make_type_definition() override
-    {
-        return nullptr;
-    }
 
 private:
     Color3 _color;
@@ -72,11 +67,6 @@ public:
     }
     
     const std::string& get_text() const { return _text_block.get_text(); }
-    
-    std::shared_ptr<ITypeDefinition> make_type_definition() override
-    {
-        return nullptr;
-    }
 
 private:
     Color3 _color;
@@ -123,11 +113,6 @@ public:
         fire_property_change("value");
     }
     float get_value() const { return _value; }
-        
-    std::shared_ptr<ITypeDefinition> make_type_definition() override
-    {
-        return nullptr;
-    }
 
 private:
     float _min;

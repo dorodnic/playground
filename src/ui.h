@@ -45,8 +45,8 @@ public:
                               MouseButton button = MouseButton::left) = 0;
     virtual void set_on_double_click(std::function<void()> on_click) = 0;
     
-    virtual void set_data_context(IBindableObject* dc) = 0;
-    virtual IBindableObject* get_data_context() const = 0;
+    virtual void set_data_context(INotifyPropertyChanged* dc) = 0;
+    virtual INotifyPropertyChanged* get_data_context() const = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -149,19 +149,14 @@ public:
     void update_parent(IVisualElement* new_parent) { _parent = new_parent; }
     
     std::string to_string() const override { return get_name() + "(" + get_type() + ")"; }
-
-    std::shared_ptr<ITypeDefinition> make_type_definition() override
-    {
-
-    }
     
     void add_binding(std::unique_ptr<Binding> binding)
     {
         _bindings.push_back(std::move(binding));
     }
     
-    void set_data_context(IBindableObject* dc) override { _dc = dc; }
-    IBindableObject* get_data_context() const override { return _dc; }
+    void set_data_context(INotifyPropertyChanged* dc) override { _dc = dc; }
+    INotifyPropertyChanged* get_data_context() const override { return _dc; }
 
 private:
     Size2 _position;
@@ -173,7 +168,7 @@ private:
     bool _visible = true;
     IVisualElement* _parent;
     std::vector<std::unique_ptr<Binding>> _bindings;
-    IBindableObject* _dc;
+    INotifyPropertyChanged* _dc;
 };
 
 
