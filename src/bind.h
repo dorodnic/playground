@@ -28,14 +28,23 @@ class IProperty : public IVirtualBase
 public:
     virtual void set_value(std::string value) = 0;
     virtual std::string get_value() const = 0;
-    virtual const std::string& get_type() const = 0;
-    virtual const std::string& get_name() const = 0;
-    
-    virtual bool is_writable() const = 0;
     
     virtual void subscribe_on_change(void* owner, 
                                      OnPropertyChangeCallback on_change) = 0;
     virtual void unsubscribe_on_change(void* owner) = 0;
+};
+
+class IBindableObject;
+
+class IPropertyDefinition : public IVirtualBase
+{
+public:
+    virtual std::unique_ptr<IProperty> create(IBindableObject* owner) const = 0;
+    
+    virtual const std::string& get_type() const = 0;
+    virtual const std::string& get_name() const = 0;
+    
+    virtual bool is_writable() const = 0;
 };
 
 class ITypeDefinition : public IVirtualBase
@@ -43,8 +52,8 @@ class ITypeDefinition : public IVirtualBase
 public:
     virtual const std::string& get_type() const = 0;
 
-    virtual const IProperty* get_property(const std::string& name) const = 0;
-    virtual IProperty* get_property(const std::string& name) = 0;
+    virtual const IPropertyDefinition* get_property(const std::string& name) const = 0;
+    virtual IPropertyDefinition* get_property(const std::string& name) = 0;
     virtual const std::vector<std::string> get_property_names() const = 0;
 };
 
@@ -57,6 +66,32 @@ public:
     
     virtual std::shared_ptr<ITypeDefinition> make_type_definition() = 0;
     virtual ITypeDefinition* fetch_self() = 0;
+};
+
+template<class T>
+struct TypeDefinition
+{
+    std::shared_ptr<ITypeDefinition> make();
+};
+
+template<>
+struct TypeDefinition<int>
+{
+    std::shared_ptr<ITypeDefinition> make() { return nullptr; }
+};
+
+class TypeFactory
+{
+public:
+    TypeFactory() {}
+    
+    void register_type(std::shared_ptr<ITypeDefinition> t);
+    
+    const ITypeDefinition* find(const std::string& name) const;
+    ITypeDefinition* find(const std::string& name);
+    
+private:
+    std::unordered_map<std::string, std::shared_ptr<ITypeDefinition>> _types;
 };
 
 class BindableObjectBase : public IBindableObject
@@ -87,15 +122,13 @@ class PropertyBase : public IProperty, public ICopyable
 {
 public:
 
-    PropertyBase(IBindableObject* owner, std::string name) 
-        : _owner(owner), _on_change(),
-          _name(name), 
-          _type(type_string_traits::type_to_string((S*)(nullptr)))
+    PropertyBase(IBindableObject* owner, const std::string& name) 
+        : _owner(owner), _on_change()
     {
         if (_owner)
         {
-            _owner->subscribe_on_change(this,[this](const char* field){
-                if (field == _name)
+            _owner->subscribe_on_change(this,[this, name](const char* field){
+                if (field == name)
                 {
                     for(auto& evnt : _on_change)
                     {
@@ -138,14 +171,6 @@ public:
     {
         return type_string_traits::to_string(get());
     }
-    const std::string& get_type() const override
-    {
-        return _type; 
-    }
-    const std::string& get_name() const override
-    {
-        return _name;
-    }
     
     void subscribe_on_change(void* owner, 
                              OnPropertyChangeCallback on_change) override
@@ -160,8 +185,48 @@ public:
 private:
     std::map<void*,OnPropertyChangeCallback> _on_change;
     IBindableObject* _owner;
+};
+
+typedef std::function<IProperty*(IBindableObject*, const std::string&)> 
+        PropertyCreator;
+
+template<class S>
+class PropertyDefinition : public IPropertyDefinition
+{
+public:
+    PropertyDefinition(std::string name, bool is_writable,
+                       PropertyCreator creator) 
+        : _name(name), 
+          _creator(creator),
+          _is_writable(is_writable),
+          _type(type_string_traits::type_to_string((S*)(nullptr)))
+    {
+    }
+
+    const std::string& get_type() const override
+    {
+        return _type; 
+    }
+    const std::string& get_name() const override
+    {
+        return _name;
+    }
+   
+    std::unique_ptr<IProperty> create(IBindableObject* owner) const override
+    {
+        return std::unique_ptr<IProperty>(_creator(owner, get_name()));
+    }
+    
+    bool is_writable() const override
+    {
+        return _is_writable;
+    }
+    
+private:
     std::string _name;
     std::string _type;
+    bool _is_writable;
+    PropertyCreator _creator;
 };
 
 class IMultitype : public virtual IVirtualBase
@@ -351,11 +416,6 @@ public:
         return (*_t).*_field;
     }
     
-    bool is_writable() const override
-    {
-        return true;
-    }
-
 private:
     T* _t;
     S T::* _field;
@@ -374,15 +434,9 @@ public:
     {
     }
     
-    
-    bool is_writable() const override
-    {
-        return false;
-    }
-    
     void set(S val) override
     {
-        throw std::runtime_error(str() << "Property " << this->get_name() << " is read-only!");
+        throw std::runtime_error(str() << "Property is read-only!");
     }
     
     S get() const override
@@ -418,12 +472,6 @@ public:
     {
         return ((*_t).*_getter)();
     }
-    
-    
-    bool is_writable() const override
-    {
-        return true;
-    }
 
 private:
     T* _t;
@@ -435,37 +483,35 @@ template<class T, class S>
 class ReadWritePropertyLambda : public PropertyBase<S>
 {
 public:
-    typedef std::function<S()> TGetter;
-    typedef std::function<void(S)> TSetter;
+    typedef std::function<S(IBindableObject*)> TGetter;
+    typedef std::function<void(IBindableObject*,S)> TSetter;
 
     ReadWritePropertyLambda(IBindableObject* owner, std::string name, 
-                      TGetter getter, TSetter setter, bool writable) 
-        : PropertyBase<S>(owner, name), 
-          _getter(getter), _setter(setter), _is_writable(writable)
+                            TGetter getter, TSetter setter) 
+        : PropertyBase<S>(owner, name), _owner(owner),
+          _getter(getter), _setter(setter)
     {
     }
     
     void set(S val) override
     {
-        _setter(val);
+        _setter(_owner, val);
     }
     
     S get() const override
     {
-        return _getter();
+        return _getter(_owner);
     }
-
-    bool is_writable() const override { return true; }
 
 private:
     TGetter _getter;
     TSetter _setter;
-    bool _is_writable;
+    IBindableObject* _owner;
 };
 
 
 #define DefineClass(T) using __Type = T;\
-    return std::make_shared<TypeDefinitionBuilder<__Type>>(this, #T) 
+    return std::make_shared<TypeDefinitionBuilder<__Type>>(#T) 
     
 #define AddField(F) add(&__Type::F, #F)
 
@@ -474,21 +520,21 @@ private:
 #define ExtendClass(T, S) using __Type = T;\
     auto base_ptr = S::make_type_definition();\
     auto base_builder = dynamic_cast<TypeDefinitionBuilder<S>*>(base_ptr.get());\
-    return base_builder->extend(#T, this)
+    return base_builder->extend<T>(#T)
 
 template<class T>
 class TypeDefinitionBuilder : public ITypeDefinition
 {
 public:
-    TypeDefinitionBuilder(IBindableObject* owner, std::string name) 
-        : _owner(owner), _name(name) {}
+    TypeDefinitionBuilder(std::string name) 
+        : _name(name) {}
         
     const std::string& get_type() const override
     {
         return _name;
     }
     
-    const IProperty* get_property(const std::string& name) const 
+    const IPropertyDefinition* get_property(const std::string& name) const 
     {
         auto it = _properties.find(name);
         if (it != _properties.end())
@@ -497,7 +543,7 @@ public:
         }
         throw std::runtime_error(str() << "Property " << name << " not found!");
     }
-    IProperty* get_property(const std::string& name)
+    IPropertyDefinition* get_property(const std::string& name)
     {
         return _properties[name].get();
     }
@@ -507,16 +553,17 @@ public:
     }
     
     void assign_fields(std::vector<std::string> property_names,
-                       std::map<std::string, std::shared_ptr<IProperty>> properties)
+                       std::map<std::string, 
+                       std::shared_ptr<IPropertyDefinition>> properties)
     {
         _property_names = property_names;
         _properties = properties;
     }
     
     template<class S>
-    std::shared_ptr<TypeDefinitionBuilder<S>> extend(const char* name, S* owner) const
+    std::shared_ptr<TypeDefinitionBuilder<S>> extend(const char* name) const
     {
-        auto result = std::make_shared<TypeDefinitionBuilder<S>>(owner, name);
+        auto result = std::make_shared<TypeDefinitionBuilder<S>>(name);
         result->assign_fields(_property_names, _properties);
         return result;
     }
@@ -527,7 +574,10 @@ public:
         auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
         std::string name_str(name);
         result->_property_names.push_back(name_str);
-        auto ptr = std::make_shared<FieldProperty<T, S>>(_owner, name_str, f);
+        auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
+        [f](IBindableObject* owner, const std::string& name){
+            return new FieldProperty<T, S>(owner, name, f);
+        });
         result->_properties[name] = ptr;
         return result;
     }
@@ -539,7 +589,12 @@ public:
         auto name_str = remove_prefix("get_", name);
         if (name_str == name) name_str = remove_prefix("is_", name);
         result->_property_names.push_back(name_str);
-        auto ptr = std::make_shared<ReadOnlyProperty<T, S>>(_owner, name_str, f);
+
+        auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, false,
+        [f](IBindableObject* owner, const std::string& name){
+            return new ReadOnlyProperty<T, S>(owner, name, f);
+        });
+        
         result->_properties[name_str] = ptr;
         return result;
     }
@@ -559,16 +614,20 @@ public:
                     << name_str << "!");
         }
         result->_property_names.push_back(name_str);
-        auto t = dynamic_cast<T*>(_owner); 
-        auto rf = [t, r]() -> S {
+        
+        auto rf = [r](IBindableObject* owner) -> S {
+            auto t = dynamic_cast<T*>(owner); 
             return ((*t).*r)();
         };
-        auto wf = [t, w](S s) {
+        auto wf = [w](IBindableObject* owner, S s) {
+            auto t = dynamic_cast<T*>(owner); 
             ((*t).*w)(s);
         };
         
-        auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>
-                        (_owner, name_str, rf, wf, true);
+        auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
+        [rf, wf](IBindableObject* owner, const std::string& name){
+            return new ReadWritePropertyLambda<T, S>(owner, name, rf, wf);
+        });
         result->_properties[name_str] = ptr;
         return result;
     }
@@ -580,16 +639,19 @@ public:
         auto name_str = remove_prefix("get_", name);
         if (name_str == name) name_str = remove_prefix("is_", name);
         result->_property_names.push_back(name_str);
-        auto t = dynamic_cast<T*>(_owner); 
-        auto rf = [t, f]() -> S {
+        
+        auto rf = [f](IBindableObject* owner) -> S {
+            auto t = dynamic_cast<T*>(owner); 
             return ((*t).*f)();
         };
-        auto wf = [name_str](S s) {
+        auto wf = [name_str](IBindableObject*, S s) {
             throw std::runtime_error(str() << "Property " << name_str << " is read-only!");
         };
         
-        auto ptr = std::make_shared<ReadWritePropertyLambda<T, S>>
-            (_owner, name_str, rf, wf, false);
+        auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, false,
+        [rf, wf](IBindableObject* owner, const std::string& name){
+            return new ReadWritePropertyLambda<T, S>(owner, name, rf, wf);
+        });
         result->_properties[name_str] = ptr;
         return result;
     }
@@ -609,14 +671,16 @@ public:
                     << name_str << "!");
         }
         result->_property_names.push_back(name_str);
-        auto ptr = std::make_shared<ReadWriteProperty<T, S>>(_owner, name_str, r, w);
+        auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
+        [r, w](IBindableObject* owner, const std::string& name){
+            return new ReadWriteProperty<T, S>(owner, name, r, w);
+        });
         result->_properties[name_str] = ptr;
         return result;
     }
 private:
-    mutable IBindableObject* _owner;
     std::vector<std::string> _property_names;
-    std::map<std::string, std::shared_ptr<IProperty>> _properties;
+    std::map<std::string, std::shared_ptr<IPropertyDefinition>> _properties;
     std::string _name;
 };
 
@@ -641,8 +705,10 @@ private:
     bool _is_direct;
     ITypeDefinition* _a_dc;
     ITypeDefinition* _b_dc;
-    IProperty* _a_prop_ptr;
-    IProperty* _b_prop_ptr;
+    std::unique_ptr<IProperty> _a_prop_ptr;
+    std::unique_ptr<IProperty> _b_prop_ptr;
+    IPropertyDefinition* _a_prop_def;
+    IPropertyDefinition* _b_prop_def;
     ICopyable* _direct_a;
     ICopyable* _direct_b;
     IBindableObject* _a;
