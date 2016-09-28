@@ -96,6 +96,15 @@ struct context : public BindableObjectBase
 
     std::shared_ptr<ITypeDefinition> make_type_definition() override
     {
+        return nullptr;
+    }
+};
+
+template<>
+struct TypeDefinition<context>
+{
+    std::shared_ptr<ITypeDefinition> make() 
+    {
         DefineClass(context)->AddField(fps);
     }
 };
@@ -109,10 +118,15 @@ int main(int argc, char * argv[]) try
     // create root-level container for the GUI
 	Panel c(".",{0,0},{1.0f, 1.0f},Alignment::left); 
 	
+	TypeFactory types;
+	types.register_type<Button>();
+	types.register_type<TextBlock>();
+	types.register_type<Slider>();
+	
 	try
 	{
 	    LOG(INFO) << "Loading UI...";
-	    Serializer s("resources/ui.xml");
+	    Serializer s("resources/ui.xml", types);
 	    c.add_item(s.deserialize());
 	    setup_ui(&c);
 	    Rect origin { { 0, 0 }, { 1280, 960 } };

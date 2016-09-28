@@ -152,14 +152,7 @@ public:
 
     std::shared_ptr<ITypeDefinition> make_type_definition() override
     {
-        DefineClass(ControlBase)->AddField(get_size)
-                                 ->AddField(get_intrinsic_size)
-                                 ->AddField(is_focused)
-                                 ->AddField(to_string)
-                                 ->AddField(get_name)
-                                 ->AddField(get_alignment)
-                                 ->AddProperty(is_visible, set_visible)
-                                 ->AddProperty(is_enabled, set_enabled);
+
     }
     
     void add_binding(std::unique_ptr<Binding> binding)
@@ -181,5 +174,22 @@ private:
     IVisualElement* _parent;
     std::vector<std::unique_ptr<Binding>> _bindings;
     IBindableObject* _dc;
+};
+
+
+template<>
+struct TypeDefinition<ControlBase>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        DefineClass(ControlBase)->AddField(get_size)
+                         ->AddField(get_intrinsic_size)
+                         ->AddField(is_focused)
+                         ->AddField(to_string)
+                         ->AddField(get_name)
+                         ->AddField(get_alignment)
+                         ->AddProperty(is_visible, set_visible)
+                         ->AddProperty(is_enabled, set_enabled);
+    }
 };
 

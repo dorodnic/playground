@@ -26,8 +26,7 @@ public:
     
     std::shared_ptr<ITypeDefinition> make_type_definition() override
     {
-        ExtendClass(TextBlock, ControlBase)
-             ->AddProperty(get_text, set_text);
+        return nullptr;
     }
 
 private:
@@ -76,9 +75,7 @@ public:
     
     std::shared_ptr<ITypeDefinition> make_type_definition() override
     {
-        ExtendClass(Button, ControlBase)
-             ->AddProperty(get_text, set_text)
-             ->AddProperty(get_color, set_color);
+        return nullptr;
     }
 
 private:
@@ -129,8 +126,7 @@ public:
         
     std::shared_ptr<ITypeDefinition> make_type_definition() override
     {
-        ExtendClass(Slider, ControlBase)
-             ->AddProperty(get_value, set_value);
+        return nullptr;
     }
 
 private:
@@ -147,3 +143,37 @@ private:
     bool _dragging = false;
     Rect _rect;
 };
+
+template<>
+struct TypeDefinition<Slider>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        ExtendClass(Slider, ControlBase)
+             ->AddProperty(get_value, set_value);
+    }
+};
+
+
+template<>
+struct TypeDefinition<Button>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        ExtendClass(Button, ControlBase)
+             ->AddProperty(get_text, set_text)
+             ->AddProperty(get_color, set_color);
+    }
+};
+
+template<>
+struct TypeDefinition<TextBlock>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        ExtendClass(TextBlock, ControlBase)
+             ->AddProperty(get_text, set_text);
+    }
+};
+             
+

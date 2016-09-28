@@ -86,12 +86,14 @@ void Binding::b_to_a()
     }
 }
 
-Binding::Binding(IBindableObject* a, std::string a_prop,
+Binding::Binding(TypeFactory& factory,
+                 IBindableObject* a, std::string a_prop,
                  IBindableObject* b, std::string b_prop,
                  std::unique_ptr<ITypeConverter> converter)
+    : _factory(factory)
 {
-    _a_dc = a->fetch_self();
-    _b_dc = b->fetch_self();
+    _a_dc = _factory.get_type_of(a);
+    _b_dc = _factory.get_type_of(b);
     _a = a; _b = b;
     _a_prop = a_prop;
     _b_prop = b_prop;
@@ -179,15 +181,6 @@ Binding::Binding(IBindableObject* a, std::string a_prop,
     {
         throw std::runtime_error("Both properties under binding can't be read-only!");
     }
-}
-
-std::unique_ptr<Binding> Binding::bind(
-        IBindableObject* a, std::string a_prop,
-        IBindableObject* b, std::string b_prop,
-        std::unique_ptr<ITypeConverter> converter)
-{
-    std::unique_ptr<Binding> p(new Binding(a, a_prop, b, b_prop, std::move(converter)));
-    return std::move(p);
 }
 
 Binding::~Binding()

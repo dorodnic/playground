@@ -393,11 +393,12 @@ typedef std::vector<BindingDef> BindingBag;
 
 class Container;
 
+class TypeFactory;
 
 class Serializer
 {
 public:
-    Serializer(const char* filename);
+    Serializer(const char* filename, TypeFactory& factory);
     
     std::shared_ptr<IVisualElement> deserialize();
 private:
@@ -449,6 +450,7 @@ private:
     
     std::vector<char> _buffer;
     rapidxml::xml_document<> _doc;
+    TypeFactory& _factory;
 };
 
 

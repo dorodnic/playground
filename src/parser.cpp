@@ -18,13 +18,15 @@ std::shared_ptr<IVisualElement> Serializer::deserialize()
         auto b = dynamic_cast<ControlBase*>(res->find_element(def.b_name));
         if (!a || !b) 
             throw std::runtime_error("Selected object does not support binding!");
-        auto binding = Binding::bind(a, def.a_prop, b, def.b_prop);
+        std::unique_ptr<Binding> binding(new Binding(
+            _factory, a, def.a_prop, b, def.b_prop));
         a->add_binding(std::move(binding));
     }
     return res;
 }
 
-Serializer::Serializer(const char* filename)
+Serializer::Serializer(const char* filename, TypeFactory& factory)
+    : _factory(factory)
 {
     ifstream theFile(filename);
     _buffer = vector<char>((istreambuf_iterator<char>(theFile)), 

@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <typeinfo>
+#include <typeindex>
 
 #include "parser.h"
 #include "types.h"
@@ -85,13 +87,49 @@ class TypeFactory
 public:
     TypeFactory() {}
     
-    void register_type(std::shared_ptr<ITypeDefinition> t);
+    template<class T>
+    void register_type() 
+    {
+        auto ptr = TypeDefinition<T>::make();
+        _types.push_back(ptr);
+        _name_to_type[ptr->get_type()] = ptr.get();
+        _typeid_to_type[typeid(T)] = ptr.get();
+    }
     
-    const ITypeDefinition* find(const std::string& name) const;
-    ITypeDefinition* find(const std::string& name);
+    ITypeDefinition* find_type(const std::string& name)
+    {
+        auto it = _name_to_type.find(name);
+        if (it != _name_to_type.end())
+            return it->second;
+        else
+            return nullptr;
+    }
+    
+    template<class T>
+    ITypeDefinition* get_type_of(T* ptr)
+    {
+        if (ptr)
+        {
+            auto it = _typeid_to_type.find(std::type_index(typeid(*ptr)));
+            if (it != _typeid_to_type.end())
+                return it->second;
+            else
+                return nullptr;
+        }
+        else
+        {
+            auto it = _typeid_to_type.find(std::type_index(typeid(T)));
+            if (it != _typeid_to_type.end())
+                return it->second;
+            else
+                return nullptr;
+        }
+    }
     
 private:
-    std::unordered_map<std::string, std::shared_ptr<ITypeDefinition>> _types;
+    std::vector<std::shared_ptr<ITypeDefinition>> _types;
+    std::unordered_map<std::string, ITypeDefinition*> _name_to_type;
+    std::unordered_map<std::type_index, ITypeDefinition*> _typeid_to_type;
 };
 
 class BindableObjectBase : public IBindableObject
@@ -518,7 +556,7 @@ private:
 #define AddProperty(R, W) add(&__Type::R, &__Type::W, #R, #W)
 
 #define ExtendClass(T, S) using __Type = T;\
-    auto base_ptr = S::make_type_definition();\
+    auto base_ptr = TypeDefinition<S>::make();\
     auto base_builder = dynamic_cast<TypeDefinitionBuilder<S>*>(base_ptr.get());\
     return base_builder->extend<T>(#T)
 
@@ -690,11 +728,7 @@ public:
     void a_to_b();
     void b_to_a();
     
-    Binding(IBindableObject* a, std::string a_prop,
-            IBindableObject* b, std::string b_prop,
-            std::unique_ptr<ITypeConverter> converter = nullptr);
-    
-    static std::unique_ptr<Binding> bind(
+    Binding(TypeFactory& factory,
             IBindableObject* a, std::string a_prop,
             IBindableObject* b, std::string b_prop,
             std::unique_ptr<ITypeConverter> converter = nullptr);
@@ -721,4 +755,5 @@ private:
     std::unique_ptr<ITypeConverter> _converter;
     std::unique_ptr<IMultitype> _converter_state;
     bool _converter_direction;
+    TypeFactory& _factory;
 };
