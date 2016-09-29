@@ -1,9 +1,10 @@
 #pragma once
 #include "ui.h"
 
-typedef std::unordered_map<IVisualElement*, std::pair<int, Size>> SizeMap;
-typedef std::unordered_map<IVisualElement*, Size2> ElementsSizeCache;
-typedef std::vector<std::shared_ptr<IVisualElement>> Elements;
+typedef std::unordered_map<INotifyPropertyChanged*, std::pair<int, Size>> SizeMap;
+typedef std::unordered_map<INotifyPropertyChanged*, Size2> ElementsSizeCache;
+typedef std::vector<std::shared_ptr<INotifyPropertyChanged>> Elements;
+typedef std::vector<IVisualElement*> VisualElements;
 
 class StackPanel;
 
@@ -54,7 +55,7 @@ public:
         if (get_parent()) ControlBase::invalidate_layout();
     }
 
-    virtual void add_item(std::shared_ptr<IVisualElement> item);
+    virtual void add_item(std::shared_ptr<INotifyPropertyChanged> item);
 
     void set_items_change(std::function<void()> on_change)
     {
@@ -66,7 +67,7 @@ public:
         _on_focus_change = on_change;
     }
     
-    const Elements& get_elements() const { return _content; }
+    const VisualElements& get_elements() const { return _visual_elements; }
     const Rect& get_arrangement() const { return _arrangement; }
     
     bool update_layout(const Rect& origin)
@@ -113,6 +114,7 @@ private:
     IVisualElement* _focused = nullptr;
 
     Elements _content;
+    VisualElements _visual_elements;
     Rect _origin;
     Rect _arrangement;
 
@@ -141,7 +143,7 @@ public:
     void update_mouse_position(Int2 cursor) override;
     
     static SizeMap calc_sizes(Orientation orientation,
-                              const Elements& content,
+                              const VisualElements& content,
                               const Rect& arrangement);
 
     SizeMap calc_local_sizes(const Rect& arrangement) const
@@ -174,7 +176,7 @@ private:
     SizeMap _sizes;
     ElementsSizeCache _size_cache;
     ISizeCalculator* _resizer;
-    Orientation _orientation;
+    Orientation _orientation = Orientation::vertical;
 };
 
 template<>
@@ -206,7 +208,7 @@ public:
 
     void render(const Rect& origin) override;
     
-    static SimpleSizeMap calc_size_map(const Elements& content,
+    static SimpleSizeMap calc_size_map(const VisualElements& content,
                                        const Rect& arrangement);
 };
 

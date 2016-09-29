@@ -114,9 +114,15 @@ int main(int argc, char * argv[]) try
 	Panel c(".",{0,0},{1.0f, 1.0f},Alignment::left); 
 	
 	TypeFactory types;
-	types.register_type<Button>();
-	types.register_type<TextBlock>();
-	types.register_type<Slider>();
+	types.register_type(TypeCollection<
+	    Button, 
+	    TextBlock, 
+	    Slider,
+	    Panel,
+	    StackPanel,
+	    Grid,
+	    PageView
+	    >());
 	
 	try
 	{

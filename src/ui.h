@@ -12,7 +12,7 @@
 #include "types.h"
 #include "bind.h"
 
-class IVisualElement
+class IVisualElement : public virtual INotifyPropertyChanged
 {
 public:
     virtual Rect arrange(const Rect& origin) = 0;

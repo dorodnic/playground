@@ -114,17 +114,17 @@ void StackPanel::update_mouse_position(Int2 cursor)
     
     bool found = false;
     for (auto& p : get_elements()) {
-        auto new_origin = calc_new_layout(p.get(), _orientation,
+        auto new_origin = calc_new_layout(p, _orientation,
                                           get_arrangement(),
-                                          _sizes[p.get()],
+                                          _sizes[p],
                                           _size_cache,
                                           sum, false);
 
         if (contains(new_origin, cursor))
         {
-            if (get_focused_child() != p.get())
+            if (get_focused_child() != p)
             {
-                set_focused_child(p.get());
+                set_focused_child(p);
             }
             if (!p->is_focused()) p->set_focused(true);
             p->update_mouse_position(cursor);
@@ -139,7 +139,7 @@ void StackPanel::update_mouse_position(Int2 cursor)
     if (!found) set_focused_child(nullptr);
 }
 
-void Container::add_item(shared_ptr<IVisualElement> item)
+void Container::add_item(shared_ptr<INotifyPropertyChanged> item)
 {
     invalidate_layout();
 
@@ -153,13 +153,17 @@ void Container::add_item(shared_ptr<IVisualElement> item)
 
     _on_items_change();
     
-    _focused = item.get();
-
     _content.push_back(item);
+    auto p = dynamic_cast<IVisualElement*>(item.get());
+    if (p)
+    {
+        _focused = p;
+        _visual_elements.push_back(p);
+    }
 }
 
 SizeMap StackPanel::calc_sizes(Orientation orientation,
-                              const Elements& content,
+                              const VisualElements& content,
                               const Rect& arrangement)
 {
     SizeMap sizes;
@@ -182,10 +186,10 @@ SizeMap StackPanel::calc_sizes(Orientation orientation,
         if ((p_size.*field).is_const()) {
             auto pixels = (p_size.*field).get_pixels();
             sum += pixels;
-            sizes[p.get()].first = pixels;
-            sizes[p.get()].second = p_size.*other;
+            sizes[p].first = pixels;
+            sizes[p].second = p_size.*other;
         } else {
-            greedy.push_back(p.get());
+            greedy.push_back(p);
         }
     }
 
@@ -238,18 +242,19 @@ void StackPanel::render(const Rect& origin)
         LOG(INFO) << "New layout for element " << get_name() << ":";
         for (auto& kvp : _sizes)
         {
-            LOG(INFO) << "\t" << kvp.first->get_name() << " = " 
+            auto ui = dynamic_cast<IVisualElement*>(kvp.first);
+            LOG(INFO) << "\t" << ui->get_name() << " = " 
                 << kvp.second.first << ", " << kvp.second.second;
                 
-            _size_cache[kvp.first] = kvp.first->get_size();
+            _size_cache[kvp.first] = ui->get_size();
         }
     }
 
     auto sum = get_arrangement().position.*ifield;
     for (auto& p : get_elements()) {
-        auto new_origin = calc_new_layout(p.get(), _orientation,
+        auto new_origin = calc_new_layout(p, _orientation,
                                   get_arrangement(),
-                                  _sizes[p.get()],
+                                  _sizes[p],
                                   _size_cache,
                                   sum);
 
@@ -258,9 +263,9 @@ void StackPanel::render(const Rect& origin)
     
     sum = get_arrangement().position.*ifield;
     for (auto& p : get_elements()) {
-        auto new_origin = calc_new_layout(p.get(), _orientation,
+        auto new_origin = calc_new_layout(p, _orientation,
                                   get_arrangement(),
-                                  _sizes[p.get()],
+                                  _sizes[p],
                                   _size_cache,
                                   sum, false);
         if (p->is_focused())
@@ -268,13 +273,13 @@ void StackPanel::render(const Rect& origin)
     }
 }
 
-SimpleSizeMap Panel::calc_size_map(const Elements& content,
+SimpleSizeMap Panel::calc_size_map(const VisualElements& content,
                                    const Rect& arrangement)
 {
     SimpleSizeMap map;
     for (auto& p : content)
     {
-        map[p.get()] = p->arrange(arrangement).size;
+        map[p] = p->arrange(arrangement).size;
     }
     return map;
 }

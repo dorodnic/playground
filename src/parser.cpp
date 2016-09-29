@@ -7,15 +7,16 @@
 using namespace std;
 using namespace rapidxml;
 
-std::shared_ptr<IVisualElement> Serializer::deserialize()
+std::unique_ptr<INotifyPropertyChanged> Serializer::deserialize()
 {
     AttrBag bag;
     BindingBag bindings;
     auto res = deserialize(nullptr, _doc.first_node(), bag, bindings);
+    auto elem = dynamic_cast<IVisualElement*>(res.get());
     for (auto& def : bindings)
     {
         auto a = dynamic_cast<ControlBase*>(def.a);
-        auto b = dynamic_cast<ControlBase*>(res->find_element(def.b_name));
+        auto b = dynamic_cast<ControlBase*>(elem->find_element(def.b_name));
         if (!a || !b) 
             throw std::runtime_error("Selected object does not support binding!");
         std::unique_ptr<Binding> binding(new Binding(
@@ -36,7 +37,7 @@ Serializer::Serializer(const char* filename, TypeFactory& factory)
 }
 
 std::string find_attribute(xml_node<>* node, const std::string& name,
-                           const AttrBag& bag, const std::string& def)
+                           const AttrBag& bag)
 {
     auto attr = node->first_attribute(name.c_str());
     if (attr != nullptr) return attr->value();
@@ -44,7 +45,18 @@ std::string find_attribute(xml_node<>* node, const std::string& name,
     {
         if (p->name() == name) return p->value();
     }
-    return def;
+    return "";
+}
+
+bool has_attribute(xml_node<>* node, const std::string& name, const AttrBag& bag)
+{
+    auto attr = node->first_attribute(name.c_str());
+    if (attr != nullptr) return true;
+    for (auto p : bag)
+    {
+        if (p->name() == name) return true;
+    }
+    return false;
 }
 
 void Serializer::parse_container(Container* container, 
@@ -66,15 +78,36 @@ void Serializer::parse_container(Container* container,
     }
 }
 
-shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
+unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* parent,
                                                    xml_node<>* node,
                                                    const AttrBag& bag,
                                                    BindingBag& bindings)
 {
     string type = node->name();
-    shared_ptr<IVisualElement> res = nullptr;
+    auto name = find_attribute(node, "name", bag);
     
-    auto name = find_attribute(node, "name", bag, "");
+    auto t_def = _factory.find_type(type);
+    if (!t_def)
+    {
+        stringstream ss; ss << "Unrecognized Visual Element (" << type 
+                            << " " << name << ")";
+        throw runtime_error(ss.str());
+    }
+    
+    auto res = t_def->default_construct();
+    
+    for (auto prop_name : t_def->get_property_names())
+    {
+        auto p_def = t_def->get_property(prop_name);
+        if (has_attribute(node, p_def->get_name(), bag))
+        {
+            auto prop_text = find_attribute(node, p_def->get_name(), bag);
+            auto prop = p_def->create(res.get());
+            prop->set_value(prop_text);
+        }
+    }
+    
+    /*auto name = find_attribute(node, "name", bag, "");
     
     auto position_str = find_attribute(node, "position", bag, "");
     auto position = parse_size(position_str);
@@ -129,9 +162,9 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
     auto visible = parse_bool(visible_str);
 
     auto enabled_str = find_attribute(node, "enabled", bag, "true");
-    auto enabled = parse_bool(enabled_str);
+    auto enabled = parse_bool(enabled_str);*/
 
-    if (type == "TextBlock")
+    /*if (type == "TextBlock")
     {                
         res = shared_ptr<TextBlock>(new TextBlock(
             name, txt_str, txt_align, position, size, txt_color
@@ -256,39 +289,32 @@ shared_ptr<IVisualElement> Serializer::deserialize(IVisualElement* parent,
             ss << "Using should not have multiple nested items!";
             throw runtime_error(ss.str());
         }
-    }
+    }*/
     
     // update controls parent before applying any adaptors
     auto control = dynamic_cast<ControlBase*>(res.get());
     if (control) control->update_parent(parent);
-    
-    if (!res)
-    {
-        stringstream ss; ss << "Unrecognized Visual Element (" << type 
-                            << " " << name << ")";
-        throw runtime_error(ss.str());
-    }
 
-    if (binding)
+    /*if (binding)
     {
         binding->a = res.get();
         bindings.push_back(*binding);
-    }
+    }*/
 
-    if (margin)
+    /*if (margin)
     {
         res = shared_ptr<MarginAdaptor>(new MarginAdaptor(
             res, margin
         ));
-    }
+    }*/
     
-    if (!visible) LOG(INFO) << "element " << name << " is invisible!";
+    //if (!visible) LOG(INFO) << "element " << name << " is invisible!";
     
-    res = shared_ptr<VisibilityAdaptor>(new VisibilityAdaptor(
+    /*res = shared_ptr<VisibilityAdaptor>(new VisibilityAdaptor(
             res, visible
         ));
         
-    res->set_enabled(enabled);
+    res->set_enabled(enabled);*/
     
     return res;
 }

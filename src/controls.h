@@ -34,8 +34,8 @@ public:
     
 
 private:
-    Color3 _color;
-    std::string _text;
+    Color3 _color = { 0.5f, 0.5f, 0.5f };
+    std::string _text = "";
 };
 
 class Button : public ControlBase
@@ -86,7 +86,7 @@ public:
     const std::string& get_text() const { return _text_block.get_text(); }
 
 private:
-    Color3 _color;
+    Color3 _color = { 1.0f, 1.0f, 1.0f };
     TextBlock _text_block;
 };
 
@@ -176,14 +176,14 @@ public:
     const Color3& get_text_color() const { return _text_color; }
 
 private:
-    float _min;
-    float _max;
-    float _step;
-    float _value;
-    bool _show_ticks;
-    Orientation _orientation;
-    Color3 _text_color;
-    Color3 _color;
+    float _min = 0.0f;
+    float _max = 100.0f;
+    float _step = 20.0f;
+    float _value = 0.0f;
+    bool _show_ticks = true;
+    Orientation _orientation = Orientation::horizontal;
+    Color3 _text_color = { 1.0f, 1.0f, 1.0f };
+    Color3 _color = { 0.5f, 0.5f, 0.5f };
     
     bool _dragger_ready = false;
     bool _dragging = false;

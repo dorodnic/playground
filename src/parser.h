@@ -392,7 +392,7 @@ typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
 typedef std::vector<BindingDef> BindingBag;
 
 class Container;
-
+class INotifyPropertyChanged;
 class TypeFactory;
 
 class Serializer
@@ -400,7 +400,7 @@ class Serializer
 public:
     Serializer(const char* filename, TypeFactory& factory);
     
-    std::shared_ptr<IVisualElement> deserialize();
+    std::unique_ptr<INotifyPropertyChanged> deserialize();
 private:
     void parse_container(Container* container, 
                          rapidxml::xml_node<>* node, 
@@ -408,7 +408,7 @@ private:
                          const AttrBag& bag,
                          BindingBag& bindings);
 
-    std::shared_ptr<IVisualElement> deserialize(IVisualElement* parent,
+    std::unique_ptr<INotifyPropertyChanged> deserialize(IVisualElement* parent,
                                                 rapidxml::xml_node<>* node,
                                                 const AttrBag& bag,
                                                 BindingBag& bindings);

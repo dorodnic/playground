@@ -76,10 +76,9 @@ struct TypeDefinition
     std::shared_ptr<ITypeDefinition> make();
 };
 
-template<>
-struct TypeDefinition<int>
+template<class... T>
+struct TypeCollection
 {
-    std::shared_ptr<ITypeDefinition> make() { return nullptr; }
 };
 
 class TypeFactory
@@ -94,6 +93,19 @@ public:
         _types.push_back(ptr);
         _name_to_type[ptr->get_type()] = ptr.get();
         _typeid_to_type[typeid(T)] = ptr.get();
+    }
+    
+    template<class T, class... S>
+    void register_type(TypeCollection<T, S...> c) 
+    {
+        register_type<T>();
+        register_type(TypeCollection<S...>());
+    }
+    
+    template<class T>
+    void register_type(TypeCollection<T> c) 
+    {
+        register_type<T>();
     }
     
     ITypeDefinition* find_type(const std::string& name)
@@ -132,7 +144,7 @@ private:
     std::unordered_map<std::type_index, ITypeDefinition*> _typeid_to_type;
 };
 
-class BindableObjectBase : public INotifyPropertyChanged
+class BindableObjectBase : public virtual INotifyPropertyChanged
 {
 public:
     BindableObjectBase();
