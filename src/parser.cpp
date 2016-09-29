@@ -86,6 +86,44 @@ unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* paren
     string type = node->name();
     auto name = find_attribute(node, "name", bag);
     
+    if (type == "Using")
+    {        
+        auto sub_node = node->first_node();
+        
+        AttrBag new_bag;
+        for (auto attr = node->first_attribute(); 
+             attr; 
+             attr = attr->next_attribute()) {
+            new_bag.push_back(attr);
+        }
+        for (auto attr : bag)
+        {
+            auto it = std::find_if(new_bag.begin(), new_bag.end(),
+                        [attr](xml_attribute<>* x) { 
+                            return std::string(x->name()) == attr->name(); 
+                        });
+            if (it == new_bag.end())
+            {
+                new_bag.push_back(attr);
+            }
+        }
+        
+        if (sub_node->next_sibling())
+        {
+            stringstream ss; 
+            ss << "Using should not have multiple nested items!";
+            throw runtime_error(ss.str());
+        }
+        
+        try
+        {
+            return deserialize(parent, sub_node, new_bag, bindings);
+        } catch (const exception& ex) {
+            LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
+                       << " " << name << ")" << endl;
+        }
+    }
+   
     auto t_def = _factory.find_type(type);
     if (!t_def)
     {
