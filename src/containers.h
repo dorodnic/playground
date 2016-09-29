@@ -175,7 +175,7 @@ public:
 private:
     SizeMap _sizes;
     ElementsSizeCache _size_cache;
-    ISizeCalculator* _resizer;
+    ISizeCalculator* _resizer = nullptr;
     Orientation _orientation = Orientation::vertical;
 };
 

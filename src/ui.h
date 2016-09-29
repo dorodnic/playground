@@ -192,16 +192,16 @@ protected:
     ControlBase() {}
 
 private:
-    Size2 _position;
-    Size2 _size;
+    Size2 _position = {0,0};
+    Size2 _size = {0,0};
     bool _focused = false;
-    std::string _name;
-    Alignment _align;
+    std::string _name = "";
+    Alignment _align = Alignment::left;
     bool _enabled = true;
     bool _visible = true;
-    IVisualElement* _parent;
+    IVisualElement* _parent = nullptr;
     std::vector<std::unique_ptr<Binding>> _bindings;
-    INotifyPropertyChanged* _dc;
+    INotifyPropertyChanged* _dc = nullptr;
 };
 
 

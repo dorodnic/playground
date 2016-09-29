@@ -17,7 +17,7 @@ using namespace std;
 
 void setup_ui(IVisualElement* c)
 {
-    auto btn_next = c->find_element("btnNext");
+    /*auto btn_next = c->find_element("btnNext");
 	auto btn_prev = c->find_element("btnPrev");
 	auto page = dynamic_cast<PageView*>(c->find_element("page"));
 	shared_ptr<int> page_id(new int(atoi(page->get_focused_child()->get_name().c_str())));
@@ -82,7 +82,7 @@ void setup_ui(IVisualElement* c)
 	    stringstream ss; ss << *page_id;
 	    auto child = page->find_element(ss.str());
 	    page->set_focused_child(child);
-	});
+	});*/
 	
 	/*auto slider = dynamic_cast<ControlBase*>(c->find_element("slider_bind_src"));
 	auto text = dynamic_cast<ControlBase*>(c->find_element("slider_bind_trg"));
