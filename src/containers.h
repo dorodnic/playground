@@ -268,14 +268,12 @@ public:
                      alignment, orientation),
           _current_line(nullptr)
     {
-        commit_line();
     }
     
     Grid()
         : StackPanel(),
           _current_line(nullptr)
     {
-        commit_line();
     }
     
     const char* get_type() const override { return "Grid"; }

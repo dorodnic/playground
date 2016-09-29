@@ -171,9 +171,9 @@ void TextBlock::render(const Rect& origin)
     auto y_margin = rect.size.y / 2 - text_height / 2;
     auto text_y = rect.position.y + y_margin;
 
-    if (get_alignment() == Alignment::left){
+    if (get_align() == Alignment::left){
         draw_text(rect.position.x + y_margin, text_y, text);
-    } else if (get_alignment() == Alignment::center){
+    } else if (get_align() == Alignment::center){
         draw_text(rect.position.x + rect.size.x / 2 - text_width / 2, 
                   text_y, text);
     } else {

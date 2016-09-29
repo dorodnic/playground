@@ -70,7 +70,10 @@ void Serializer::parse_container(Container* container,
          sub_node = sub_node->next_sibling()) {
         try
         {
-            container->add_item(deserialize(container, sub_node, bag, bindings));
+            string sub_name = sub_node->name();
+            auto grid = dynamic_cast<Grid*>(container);
+            if (sub_name == "Break" && grid) grid->commit_line();
+            else container->add_item(deserialize(container, sub_node, bag, bindings));
         } catch (const exception& ex) {
             LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << node->name() 
                        << " " << name << ")" << endl;
@@ -145,11 +148,35 @@ unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* paren
         }
     }
     
+    // TODO: Run over all attributes and report unused ones
+    
     auto panel = dynamic_cast<Container*>(res.get());
     if (panel)
     {
         std::unique_ptr<BindingDef> binding;
+        
+        auto grid = dynamic_cast<Grid*>(res.get());
+        if (grid) grid->commit_line();
+        
         parse_container(panel, node, name, bag, bindings);
+        
+        if (grid) grid->commit_line();
+    }
+    
+    // update controls parent before applying any adaptors
+    auto control = dynamic_cast<ControlBase*>(res.get());
+    if (control) 
+    {
+        control->update_parent(parent);
+        
+        auto margin_str = find_attribute(node, "margin", bag);
+        margin_str = (margin_str == "" ? "0" : margin_str);
+        auto margin = parse_margin(margin_str);
+        res = unique_ptr<MarginAdaptor>(
+            new MarginAdaptor(std::move(res), margin));
+
+        res = unique_ptr<VisibilityAdaptor>(
+            new VisibilityAdaptor(std::move(res)));
     }
     
     /*auto name = find_attribute(node, "name", bag, "");
@@ -335,22 +362,6 @@ unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* paren
             throw runtime_error(ss.str());
         }
     }*/
-    
-    // update controls parent before applying any adaptors
-    auto control = dynamic_cast<ControlBase*>(res.get());
-    if (control) 
-    {
-        control->update_parent(parent);
-        
-        auto margin_str = find_attribute(node, "margin", bag);
-        margin_str = (margin_str == "" ? "0" : margin_str);
-        auto margin = parse_margin(margin_str);
-        res = unique_ptr<MarginAdaptor>(
-            new MarginAdaptor(std::move(res), margin));
-
-        res = unique_ptr<VisibilityAdaptor>(
-            new VisibilityAdaptor(std::move(res)));
-    }
 
     /*if (binding)
     {

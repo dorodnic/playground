@@ -34,7 +34,7 @@ public:
     
 
 private:
-    Color3 _color = { 0.5f, 0.5f, 0.5f };
+    Color3 _color = { 1.0f, 1.0f, 1.0f };
     std::string _text = "";
 };
 
@@ -57,7 +57,10 @@ public:
         _text_block.update_parent(this);
     }
     
-    Button() {}
+    Button() :
+        _text_block("", "", Alignment::center, {0, 0}, 
+                    { 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f })
+    {}
     
     const char* get_type() const override { return "Button"; }
     
@@ -82,11 +85,17 @@ public:
         _text_block.set_text(text);
         fire_property_change("text");
     }
-    
     const std::string& get_text() const { return _text_block.get_text(); }
+    
+    void set_text_align(Alignment val) 
+    { 
+        _text_block.set_align(val);
+        fire_property_change("text_align");
+    }
+    Alignment get_text_align() const { return _text_block.get_align(); }
 
 private:
-    Color3 _color = { 1.0f, 1.0f, 1.0f };
+    Color3 _color = { 0.4f, 0.4f, 0.4f };
     TextBlock _text_block;
 };
 
@@ -216,7 +225,8 @@ struct TypeDefinition<Button>
         ExtendClass(Button, ControlBase)
              ->AddProperty(get_text, set_text)
              ->AddProperty(get_color, set_color)
-             ->AddProperty(get_text_color, set_text_color);
+             ->AddProperty(get_text_color, set_text_color)
+             ->AddProperty(get_text_align, set_text_align);
     }
 };
 

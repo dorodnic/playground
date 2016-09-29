@@ -325,7 +325,7 @@ void Grid::commit_line()
         _lines.push_back(_current_line);
     }
     _current_line = shared_ptr<StackPanel>(
-        new StackPanel("", {0,0}, {0,0}, get_alignment(),
+        new StackPanel("", {0,0}, {0,0}, get_align(),
         get_orientation() == Orientation::vertical 
             ? Orientation::horizontal : Orientation::vertical,
         this));

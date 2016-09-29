@@ -249,7 +249,7 @@ private:
 namespace type_string_traits
 {
     template<class T>
-    inline T parse(const std::string& str, T* output);
+    inline T parse(const std::string& str, T* output = nullptr);
 
     template<class T>
     inline std::string to_string(T val)

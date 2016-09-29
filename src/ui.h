@@ -31,7 +31,7 @@ public:
     virtual const std::string& get_name() const = 0;
     virtual std::string to_string() const = 0; 
     virtual const char* get_type() const = 0;
-    virtual Alignment get_alignment() const = 0;
+    virtual Alignment get_align() const = 0;
     
     virtual void set_enabled(bool on) = 0;
     virtual bool is_enabled() const = 0;
@@ -146,8 +146,8 @@ public:
         fire_property_change("name"); 
     }
     
-    Alignment get_alignment() const override { return _align; }
-    void set_alignment(Alignment align) 
+    Alignment get_align() const override { return _align; }
+    void set_align(Alignment align) 
     { 
         _align = align; 
         fire_property_change("alignment");
@@ -217,7 +217,7 @@ struct TypeDefinition<ControlBase>
                          ->AddProperty(is_focused, set_focused)
                          ->AddField(to_string)
                          ->AddProperty(get_name, set_name)
-                         ->AddProperty(get_alignment, set_alignment)
+                         ->AddProperty(get_align, set_align)
                          ->AddProperty(is_visible, set_visible)
                          ->AddProperty(is_enabled, set_enabled);
     }

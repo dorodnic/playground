@@ -41,7 +41,7 @@ public:
     void set_focused(bool on) override { _element->set_focused(on); }
     bool is_focused() const override { return _element->is_focused(); }
     const std::string& get_name() const override { return _element->get_name(); }
-    Alignment get_alignment() const override { return _element->get_alignment(); }
+    Alignment get_align() const override { return _element->get_align(); }
     
     void set_enabled(bool on) override { _element->set_enabled(on); }
     bool is_enabled() const override { return _element->is_enabled(); }
