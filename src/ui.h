@@ -26,7 +26,7 @@ public:
     virtual void update_mouse_state(MouseButton button, MouseState state) = 0;
     virtual void update_mouse_scroll(Int2 scroll) = 0;
 
-    virtual void focus(bool on) = 0;
+    virtual void set_focused(bool on) = 0;
     virtual bool is_focused() const = 0;
     virtual const std::string& get_name() const = 0;
     virtual std::string to_string() const = 0; 
@@ -105,6 +105,14 @@ public:
         : _position(position), _size(size), 
           _name(name), _align(alignment), _parent(nullptr)
     {}
+    
+    
+    Size2 get_position() const { return _position; }
+    void set_position(const Size2& val) 
+    { 
+        _position = val; 
+        fire_property_change("position");
+    }
 
     Rect arrange(const Rect& origin) override;
     void invalidate_layout() override 
@@ -116,26 +124,48 @@ public:
     void update_mouse_position(Int2 cursor) override {}
 
     Size2 get_size() const override;
+    void set_size(const Size2& val) 
+    { 
+        _size = val; 
+        fire_property_change("size");
+    }
+    
     Size2 get_intrinsic_size() const override { return _size; };
 
-    void focus(bool on) override { _focused = on; }
+    void set_focused(bool on) override 
+    { 
+        _focused = on; 
+        fire_property_change("focused");
+    }
     bool is_focused() const override { return _focused; }
     
     const std::string& get_name() const override { return _name; }
-    Alignment get_alignment() const override { return _align; }
+    void set_name(const std::string& val) 
+    { 
+        _name = val;
+        fire_property_change("name"); 
+    }
     
-    void set_enabled(bool on) override { 
+    Alignment get_alignment() const override { return _align; }
+    void set_alignment(Alignment align) 
+    { 
+        _align = align; 
+        fire_property_change("alignment");
+    }
+    
+    void set_enabled(bool on) override 
+    { 
         _enabled = on; 
         fire_property_change("enabled");
     }
     bool is_enabled() const override { return _enabled; }
+    
     void set_visible(bool on) override 
     { 
         _visible = on;
         invalidate_layout();
         fire_property_change("visible");
     }
-    
     bool is_visible() const override { return _visible; }
     
     IVisualElement* find_element(const std::string& name) override
@@ -158,6 +188,9 @@ public:
     void set_data_context(INotifyPropertyChanged* dc) override { _dc = dc; }
     INotifyPropertyChanged* get_data_context() const override { return _dc; }
 
+protected:
+    ControlBase() {}
+
 private:
     Size2 _position;
     Size2 _size;
@@ -177,12 +210,14 @@ struct TypeDefinition<ControlBase>
 {
     static std::shared_ptr<ITypeDefinition> make() 
     {
-        DefineClass(ControlBase)->AddField(get_size)
+        DefineClass(ControlBase)
+                         ->AddProperty(get_position, set_position)
+                         ->AddProperty(get_size, set_size)
                          ->AddField(get_intrinsic_size)
-                         ->AddField(is_focused)
+                         ->AddProperty(is_focused, set_focused)
                          ->AddField(to_string)
-                         ->AddField(get_name)
-                         ->AddField(get_alignment)
+                         ->AddProperty(get_name, set_name)
+                         ->AddProperty(get_alignment, set_alignment)
                          ->AddProperty(is_visible, set_visible)
                          ->AddProperty(is_enabled, set_enabled);
     }

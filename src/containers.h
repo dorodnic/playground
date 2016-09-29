@@ -26,6 +26,12 @@ public:
           _on_focus_change([](){})
     {}
     
+    Container()
+        : ControlBase(), 
+          _on_items_change([](){}),
+          _on_focus_change([](){}) 
+    {}
+    
     void update_mouse_position(Int2 cursor) override
     {
         if (_focused)
@@ -93,14 +99,14 @@ public:
         return nullptr;
     }
     
-    void focus(bool on) override
+    void set_focused(bool on) override
     {
         for (auto& e : get_elements())
         {
-            e->focus(on);
+            e->set_focused(on);
         }
         
-        ControlBase::focus(on);
+        ControlBase::set_focused(on);
     }
 
 private:
@@ -127,6 +133,8 @@ public:
           _orientation(orientation),
           _resizer(resizer)
     {}
+    
+    StackPanel() {}
     
     const char* get_type() const override { return "StackPanel"; }
     
@@ -156,6 +164,10 @@ public:
 
     void render(const Rect& origin) override;
     
+    void set_orientation(Orientation val) { 
+        _orientation = val; 
+        fire_property_change("orientation");
+    }
     Orientation get_orientation() const { return _orientation; }
 
 private:
@@ -163,6 +175,17 @@ private:
     ElementsSizeCache _size_cache;
     ISizeCalculator* _resizer;
     Orientation _orientation;
+};
+
+template<>
+struct TypeDefinition<StackPanel>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        ExtendClass(StackPanel, ControlBase)
+             ->AddProperty(get_orientation, set_orientation)
+             ;
+    }
 };
 
 typedef std::unordered_map<IVisualElement*,Int2> SimpleSizeMap;
@@ -187,6 +210,15 @@ public:
                                        const Rect& arrangement);
 };
 
+template<>
+struct TypeDefinition<Panel>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        ExtendClass(Panel, ControlBase);
+    }
+};
+
 class PageView : public Container
 {
 public:
@@ -206,6 +238,15 @@ public:
     void render(const Rect& origin) override;
 };
 
+template<>
+struct TypeDefinition<PageView>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        ExtendClass(PageView, ControlBase);
+    }
+};
+
 class Grid : public StackPanel, public ISizeCalculator
 {
 public:
@@ -216,6 +257,13 @@ public:
           Orientation orientation)
         : StackPanel(name, position, size, 
                      alignment, orientation),
+          _current_line(nullptr)
+    {
+        commit_line();
+    }
+    
+    Grid()
+        : StackPanel(),
           _current_line(nullptr)
     {
         commit_line();
@@ -232,11 +280,19 @@ public:
 
     void commit_line();
 
-
     SizeMap calc_sizes(const StackPanel* sender,
                        const Rect& arrangement) const override;
 
 private:
     std::shared_ptr<StackPanel> _current_line;
     std::vector<std::shared_ptr<StackPanel>> _lines;
+};
+
+template<>
+struct TypeDefinition<Grid>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        ExtendClass(Grid, StackPanel);
+    }
 };

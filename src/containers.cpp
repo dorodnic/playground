@@ -126,13 +126,13 @@ void StackPanel::update_mouse_position(Int2 cursor)
             {
                 set_focused_child(p.get());
             }
-            if (!p->is_focused()) p->focus(true);
+            if (!p->is_focused()) p->set_focused(true);
             p->update_mouse_position(cursor);
             found = true;
         }
         else
         {
-            if (p->is_focused()) p->focus(false);
+            if (p->is_focused()) p->set_focused(false);
         }
     }
     

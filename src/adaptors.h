@@ -27,7 +27,7 @@ public:
         _element->update_mouse_scroll(scroll);
     }
 
-    void focus(bool on) override { _element->focus(on); }
+    void set_focused(bool on) override { _element->set_focused(on); }
     bool is_focused() const override { return _element->is_focused(); }
     const std::string& get_name() const override { return _element->get_name(); }
     Alignment get_alignment() const override { return _element->get_alignment(); }

@@ -6,6 +6,7 @@
 #include <string>
 #include <map>
 #include <typeinfo>
+#include <type_traits>
 #include <typeindex>
 
 #include "parser.h"
@@ -57,6 +58,8 @@ public:
     virtual const IPropertyDefinition* get_property(const std::string& name) const = 0;
     virtual IPropertyDefinition* get_property(const std::string& name) = 0;
     virtual const std::vector<std::string> get_property_names() const = 0;
+    
+    virtual std::unique_ptr<INotifyPropertyChanged> default_construct() const = 0;
 };
 
 class INotifyPropertyChanged : public IVirtualBase
@@ -555,12 +558,44 @@ private:
     auto base_builder = dynamic_cast<TypeDefinitionBuilder<S>*>(base_ptr.get());\
     return base_builder->extend<T>(#T)
 
+
+template<class T, bool is_constructable>
+struct Ctor
+{
+    static T* construct(const std::string& name, T* = nullptr); 
+};
+
+template<class T>
+struct Ctor<T, true>
+{
+    static T* construct(const std::string& name, T* = nullptr)
+    {
+        return new T();
+    }
+};
+
+template<class T>
+struct Ctor<T, false>
+{
+    static T* construct(const std::string& name, T* = nullptr)
+    {
+        throw std::runtime_error(str() << 
+            "Type " << name << " is not default constructible!");
+    }
+};
+
 template<class T>
 class TypeDefinitionBuilder : public ITypeDefinition
 {
 public:
     TypeDefinitionBuilder(std::string name) 
         : _name(name) {}
+        
+    std::unique_ptr<INotifyPropertyChanged> default_construct() const override
+    {
+        return std::unique_ptr<INotifyPropertyChanged>(
+            Ctor<T, std::is_default_constructible<T>::value>::construct(get_type()));
+    }
         
     const std::string& get_type() const override
     {
@@ -666,6 +701,72 @@ public:
     }
     
     template<class S>
+    std::shared_ptr<TypeDefinitionBuilder<T>> add(const S& (T::*r)() const, 
+                                               void (T::*w)(const S&), 
+                                               const char* rname,
+                                               const char* wname) const
+    {
+        auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
+        auto name_str = remove_prefix("get_", rname);
+        if (name_str == rname) name_str = remove_prefix("is_", rname);
+        if (name_str != remove_prefix("set_", wname))
+        {
+            throw std::runtime_error(str() << "Inconsistent naming for property " 
+                    << name_str << "!");
+        }
+        result->_property_names.push_back(name_str);
+        
+        auto rf = [r](INotifyPropertyChanged* owner) -> S {
+            auto t = dynamic_cast<T*>(owner); 
+            return ((*t).*r)();
+        };
+        auto wf = [w](INotifyPropertyChanged* owner, S s) {
+            auto t = dynamic_cast<T*>(owner); 
+            ((*t).*w)(s);
+        };
+        
+        auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
+        [rf, wf](INotifyPropertyChanged* owner, const std::string& name){
+            return new ReadWritePropertyLambda<T, S>(owner, name, rf, wf);
+        });
+        result->_properties[name_str] = ptr;
+        return result;
+    }
+    
+    template<class S>
+    std::shared_ptr<TypeDefinitionBuilder<T>> add(S (T::*r)() const, 
+                                               void (T::*w)(const S&), 
+                                               const char* rname,
+                                               const char* wname) const
+    {
+        auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
+        auto name_str = remove_prefix("get_", rname);
+        if (name_str == rname) name_str = remove_prefix("is_", rname);
+        if (name_str != remove_prefix("set_", wname))
+        {
+            throw std::runtime_error(str() << "Inconsistent naming for property " 
+                    << name_str << "!");
+        }
+        result->_property_names.push_back(name_str);
+        
+        auto rf = [r](INotifyPropertyChanged* owner) -> S {
+            auto t = dynamic_cast<T*>(owner); 
+            return ((*t).*r)();
+        };
+        auto wf = [w](INotifyPropertyChanged* owner, S s) {
+            auto t = dynamic_cast<T*>(owner); 
+            ((*t).*w)(s);
+        };
+        
+        auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
+        [rf, wf](INotifyPropertyChanged* owner, const std::string& name){
+            return new ReadWritePropertyLambda<T, S>(owner, name, rf, wf);
+        });
+        result->_properties[name_str] = ptr;
+        return result;
+    }
+    
+    template<class S>
     std::shared_ptr<TypeDefinitionBuilder<T>> add(const S& (T::*f)() const, const char* name) const
     {
         auto result = std::make_shared<TypeDefinitionBuilder<T>>(*this);
@@ -711,6 +812,7 @@ public:
         result->_properties[name_str] = ptr;
         return result;
     }
+   
 private:
     std::vector<std::string> _property_names;
     std::map<std::string, std::shared_ptr<IPropertyDefinition>> _properties;
