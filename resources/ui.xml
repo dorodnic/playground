@@ -67,12 +67,15 @@
         <Using text_color="white">
             <StackPanel size="*" orientation="vertical" name="4">
                 <TextBlock text="example of a simple binding:" margin="5" name="4_title" />
-                <Grid orientation="vertical" >
+                <Grid orientation="vertical" name="grid_bind" >
                     <TextBlock text="slider:"  />
                     <Slider name="slider_bind_src" />
                     <Break/>
                     <TextBlock text="value:"  />
                     <TextBlock text="{bind slider_bind_src.value}" />
+                    <Break/>
+                    <TextBlock text="grid 4 orientation:"  />
+                    <TextBlock text="{bind grid_bind.orientation}" />
                 </Grid>
             </StackPanel>
         </Using>

@@ -380,10 +380,10 @@ namespace type_string_traits
     DECLARE_TYPE_NAME(Alignment);
 };
 
-class IVisualElement;
+class INotifyPropertyChanged;
 struct BindingDef
 {
-    IVisualElement* a;
+    INotifyPropertyChanged* a;
     std::string a_prop;
     std::string b_name;
     std::string b_prop;
@@ -392,7 +392,7 @@ typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
 typedef std::vector<BindingDef> BindingBag;
 
 class Container;
-class INotifyPropertyChanged;
+class IVisualElement;
 class TypeFactory;
 
 class Serializer

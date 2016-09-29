@@ -143,8 +143,32 @@ unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* paren
         if (has_attribute(node, p_def->get_name(), bag))
         {
             auto prop_text = find_attribute(node, p_def->get_name(), bag);
-            auto prop = p_def->create(res.get());
-            prop->set_value(prop_text);
+            
+            if (starts_with("{bind ", prop_text))
+            {
+                MinimalParser p(prop_text);
+                p.try_get_string("{bind ");
+                auto element_id = p.get_id();
+                p.req('.');
+                auto prop_name = p.get_id();
+                p.req('}');
+                p.req_eof();
+                LOG(INFO) << element_id << " " << prop_name;
+                BindingDef binding
+                    {
+                        res.get(),
+                        p_def->get_name(), 
+                        element_id,
+                        prop_name
+                    };
+                bindings.push_back(binding);
+                 
+            }
+            else
+            {
+                auto prop = p_def->create(res.get());
+                prop->set_value(prop_text);
+            }
         }
     }
     
@@ -361,12 +385,6 @@ unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* paren
             ss << "Using should not have multiple nested items!";
             throw runtime_error(ss.str());
         }
-    }*/
-
-    /*if (binding)
-    {
-        binding->a = res.get();
-        bindings.push_back(*binding);
     }*/
 
     
