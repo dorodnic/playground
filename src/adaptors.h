@@ -4,9 +4,20 @@
 class ElementAdaptor : public IVisualElement
 {
 public:
-    ElementAdaptor(std::shared_ptr<IVisualElement> element)
-        : _element(element)
+    ElementAdaptor(std::unique_ptr<INotifyPropertyChanged> obj)
+        : _obj(std::move(obj)),
+          _element(dynamic_cast<IVisualElement*>(_obj.get()))
     {}
+    
+    void subscribe_on_change(void* owner, 
+                             OnFieldChangeCallback on_change)
+    {
+        _element->subscribe_on_change(owner, on_change);
+    }
+    void unsubscribe_on_change(void* owner) 
+    {
+        _element->unsubscribe_on_change(owner);
+    }
     
     Rect arrange(const Rect& origin) override { return _element->arrange(origin); }
     void invalidate_layout() override { _element->invalidate_layout(); }
@@ -66,15 +77,16 @@ public:
     }
     
 protected:
-    std::shared_ptr<IVisualElement> _element;
+    std::unique_ptr<INotifyPropertyChanged> _obj;
+    IVisualElement* _element;
 };
 
 class MarginAdaptor : public ElementAdaptor
 {
 public:
-    MarginAdaptor(std::shared_ptr<IVisualElement> element,
+    MarginAdaptor(std::unique_ptr<INotifyPropertyChanged> element,
                   Margin margin)
-        : ElementAdaptor(element), _margin(margin)
+        : ElementAdaptor(std::move(element)), _margin(margin)
     {}
     
     Rect arrange(const Rect& origin) override 
@@ -103,9 +115,8 @@ private:
 class VisibilityAdaptor : public ElementAdaptor
 {
 public:
-    VisibilityAdaptor(std::shared_ptr<IVisualElement> element,
-                      bool is_visible)
-        : ElementAdaptor(element)
+    VisibilityAdaptor(std::unique_ptr<INotifyPropertyChanged> element)
+        : ElementAdaptor(std::move(element))
     {}
     
     Rect arrange(const Rect& origin) override 

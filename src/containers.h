@@ -202,6 +202,8 @@ public:
         : Container(name, position, size, alignment)
     {}
     
+    Panel() {}
+    
     const char* get_type() const override { return "Panel"; }
                    
     Size2 get_intrinsic_size() const override;
@@ -229,6 +231,11 @@ public:
              const Size2& size,
              Alignment alignment)
         : Container(name, position, size, alignment)
+    {
+        set_focus_change([this]() { invalidate_layout(); });
+    }
+    
+    PageView() 
     {
         set_focus_change([this]() { invalidate_layout(); });
     }

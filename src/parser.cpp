@@ -73,7 +73,7 @@ void Serializer::parse_container(Container* container,
             container->add_item(deserialize(container, sub_node, bag, bindings));
         } catch (const exception& ex) {
             LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << node->name() 
-                       << name << ")" << endl;
+                       << " " << name << ")" << endl;
         }
     }
 }
@@ -105,6 +105,13 @@ unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* paren
             auto prop = p_def->create(res.get());
             prop->set_value(prop_text);
         }
+    }
+    
+    auto panel = dynamic_cast<Container*>(res.get());
+    if (panel)
+    {
+        std::unique_ptr<BindingDef> binding;
+        parse_container(panel, node, name, bag, bindings);
     }
     
     /*auto name = find_attribute(node, "name", bag, "");
@@ -293,7 +300,19 @@ unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* paren
     
     // update controls parent before applying any adaptors
     auto control = dynamic_cast<ControlBase*>(res.get());
-    if (control) control->update_parent(parent);
+    if (control) 
+    {
+        control->update_parent(parent);
+        
+        auto margin_str = find_attribute(node, "margin", bag);
+        margin_str = (margin_str == "" ? "0" : margin_str);
+        auto margin = parse_margin(margin_str);
+        res = unique_ptr<MarginAdaptor>(
+            new MarginAdaptor(std::move(res), margin));
+
+        res = unique_ptr<VisibilityAdaptor>(
+            new VisibilityAdaptor(std::move(res)));
+    }
 
     /*if (binding)
     {
@@ -301,20 +320,6 @@ unique_ptr<INotifyPropertyChanged> Serializer::deserialize(IVisualElement* paren
         bindings.push_back(*binding);
     }*/
 
-    /*if (margin)
-    {
-        res = shared_ptr<MarginAdaptor>(new MarginAdaptor(
-            res, margin
-        ));
-    }*/
-    
-    //if (!visible) LOG(INFO) << "element " << name << " is invisible!";
-    
-    /*res = shared_ptr<VisibilityAdaptor>(new VisibilityAdaptor(
-            res, visible
-        ));
-        
-    res->set_enabled(enabled);*/
     
     return res;
 }

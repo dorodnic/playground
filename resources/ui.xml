@@ -1,2 +1,108 @@
 <?xml version="1.0"?>
-<Button text="do nothing" size="*" />
+<StackPanel size="*" orientation="vertical" name="samples">
+    <PageView size="*" selected="4" name="page">
+        <StackPanel size="*" orientation="vertical" name="0">
+            <TextBlock text.color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
+            <StackPanel orientation="horizontal">
+                <TextBlock name="txtTestWidth" text="test" text.color="white" />
+                <StackPanel orientation="vertical">
+                    <Button text="do nothing" />
+                    <Button name="btnChangeText" text="click me!" color="blue" text.color="white" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+        <StackPanel size="*" orientation="vertical" name="1">
+            <TextBlock text.color="white" text="this demo provides control over visible and enabled properties" />
+            <StackPanel orientation="horizontal">
+                <Button text="button!" name="btnTestButton" color="200,130,20" enabled="false" margin="5" />
+                <Button name="btnToggleEnabled" text="enable" margin="5" />
+                <Button name="btnToggleVisible" text="hide" margin="5" />
+            </StackPanel>
+        </StackPanel>
+        <StackPanel size="*" orientation="vertical" name="2">
+            <TextBlock text.color="white" text="this demo provides tests how relative widths affect layout" />
+            
+            <Panel margin="10" size="300,300" name="part2_panel" >
+                <Button color="gray" size="*" name="btnBackground" />
+                <StackPanel size="*" orientation="horizontal" name="par2_sp">
+                    <Button color="red" margin="5" size="33%,33%" text="33%" name="btn33" />
+                    <Button color="green" margin="5" size="66%,66%" text="66%" name="btn66" />
+                </StackPanel>
+            </Panel>
+            
+            <Panel margin="10" size="*" name="part2_panel2" >
+                <Button color="gray" size="*" name="btnBackground2" />
+                <StackPanel size="*" orientation="horizontal" name="par2_sp2">
+                    <Button color="red" margin="5" size="33%,33%" text="33%" name="btn33b" />
+                    <Button color="green" margin="5" size="66%,66%" text="66%" name="btn66b" />
+                </StackPanel>
+            </Panel>
+        </StackPanel>
+        <Using text.color="white">
+            <StackPanel size="*" orientation="vertical" name="3">
+                <TextBlock text="sliders are a simple way to get feedback from the user:" margin="5" name="3_title" />
+                <Grid orientation="vertical" >
+                    <TextBlock text="default:"  />
+                    <Slider name="s1" />
+                    <Break/>
+
+                    <TextBlock text="0,1,1:"  />
+                    <Slider name="s2" max="1" step="1" />
+                    <Break/>
+
+                    <TextBlock text="1,5,0:"  />
+                    <Slider name="s3" min="1" max="5" step="0" value="2" />
+                    <Break/>
+                    
+                    <TextBlock text="0,100,1:"  />
+                    <Slider name="s4" step="1" value="57" />
+                    <Break/>
+                    
+                    <TextBlock text="big one:"  />
+                    <Slider name="S5" value="57" size="300,50" color="33,55,77" text.color="200,180,130" />
+                    <Break/>
+                </Grid>
+            </StackPanel>
+        </Using>
+        <Using text.color="white">
+            <StackPanel size="*" orientation="vertical" name="4">
+                <TextBlock text="example of a simple binding:" margin="5" name="4_title" />
+                <Grid orientation="vertical" >
+                    <TextBlock text="slider:"  />
+                    <Slider name="slider_bind_src" />
+                    <Break/>
+                    <TextBlock text="value:"  />
+                    <TextBlock text="{bind slider_bind_src.value}" />
+                </Grid>
+            </StackPanel>
+        </Using>
+    </PageView>
+    <Panel size="*,40">
+        <Button color="gray" size="*" />
+        <StackPanel orientation="horizontal" size="*">
+            <Button name="btnPrev"
+                    text="Prev" 
+                    text.align="center"
+                    text.color="white"
+                    color="Pink"
+                    size="auto,*"
+                    margin="5"
+                    align="left" />
+            <Panel  size="*">
+                <TextBlock name="txtStatus"
+                    text="hello world!" 
+                    text.align="center"
+                    text.color="white"
+                    size="*" />
+            </Panel>
+            <Button name="btnNext"
+                    text="Next" 
+                    text.align="center"
+                    text.color="white"
+                    color="Pink"
+                    margin="5"
+                    size="auto,*"
+                    align="right" />   
+        </StackPanel>
+    </Panel>
+</StackPanel>
