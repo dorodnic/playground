@@ -14,6 +14,7 @@ add_executable(main src/main.cpp
                src/adaptors.h src/containers.h src/containers.cpp
                src/controls.h src/controls.cpp
                src/types.h src/bind.h src/bind.cpp
+               src/serializer.h src/serializer.cpp
                )
 target_include_directories(main PUBLIC ${OPENGL_INCLUDE_DIR})
 target_link_libraries(main ${OPENGL_gl_LIBRARY})

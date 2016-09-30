@@ -1,12 +1,9 @@
 #pragma once
 
-#include <fstream>
-#include <streambuf>
 #include <sstream>
 #include <vector>
 #include <algorithm>
 
-#include "../rapidxml/rapidxml.hpp"
 #include "../easyloggingpp/easylogging++.h"
 
 #include "types.h"
@@ -380,108 +377,5 @@ namespace type_string_traits
     DECLARE_TYPE_NAME(Alignment);
 };
 
-class INotifyPropertyChanged;
-struct BindingDef
-{
-    INotifyPropertyChanged* a;
-    std::string a_prop;
-    std::string b_name;
-    std::string b_prop;
-};
-typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
-typedef std::vector<BindingDef> BindingBag;
-
-class Container;
-class IVisualElement;
-class TypeFactory;
-
-class Serializer
-{
-public:
-    Serializer(const char* filename, TypeFactory& factory);
-    
-    std::unique_ptr<INotifyPropertyChanged> deserialize();
-private:
-    void parse_container(Container* container, 
-                         rapidxml::xml_node<>* node, 
-                         const std::string& name,
-                         const AttrBag& bag,
-                         BindingBag& bindings);
-
-    std::unique_ptr<INotifyPropertyChanged> deserialize(IVisualElement* parent,
-                                                rapidxml::xml_node<>* node,
-                                                const AttrBag& bag,
-                                                BindingBag& bindings);
-
-    Size2 parse_size(const std::string& str)
-    {
-        return type_string_traits::parse(str, (Size2*)nullptr);
-    }
-
-    Color3 parse_color(const std::string& str)
-    {
-        return type_string_traits::parse(str, (Color3*)nullptr);
-    }
-
-    Margin parse_margin(const std::string& str)
-    {
-        return type_string_traits::parse(str, (Margin*)nullptr);
-    }
-    
-    bool parse_bool(const std::string& str)
-    {
-        return type_string_traits::parse(str, (bool*)nullptr);
-    }
-    
-    float parse_float(const std::string& str)
-    {
-        return type_string_traits::parse(str, (float*)nullptr);
-    }
-
-    Orientation parse_orientation(const std::string& str)
-    {
-        return type_string_traits::parse(str, (Orientation*)nullptr);
-    }
-    
-    Alignment parse_text_alignment(const std::string& str)
-    {
-        return type_string_traits::parse(str, (Alignment*)nullptr);
-    }
-    
-    std::vector<char> _buffer;
-    rapidxml::xml_document<> _doc;
-    TypeFactory& _factory;
-};
-
-
-
-inline std::string remove_prefix(const std::string& prefix, const std::string& str)
-{
-    MinimalParser p(str);
-    if (p.try_get_string(prefix))
-    {
-        auto rest = p.rest();
-        while (!p.eof()) p.get();
-        return rest;
-    }
-    else
-    {
-        while (!p.eof()) p.get();
-        return str;
-    }
-}
-
-inline bool starts_with(const std::string& prefix, const std::string& str)
-{
-    MinimalParser p(str);
-    if (p.try_get_string(prefix))
-    {
-        while (!p.eof()) p.get();
-        return true;
-    }
-    else
-    {
-        while (!p.eof()) p.get();
-        return false;
-    }
-}
+std::string remove_prefix(const std::string& prefix, const std::string& str);
+bool starts_with(const std::string& prefix, const std::string& str);

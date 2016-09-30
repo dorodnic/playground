@@ -81,13 +81,16 @@ void Binding::b_to_a()
 }
 
 Binding::Binding(TypeFactory& factory,
-                 INotifyPropertyChanged* a, std::string a_prop,
-                 INotifyPropertyChanged* b, std::string b_prop,
+                 std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
+                 std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
                  std::unique_ptr<ITypeConverter> converter)
     : _factory(factory)
 {
-    _a_dc = _factory.get_type_of(a);
-    _b_dc = _factory.get_type_of(b);
+    auto strong_a = a.lock();
+    auto strong_b = b.lock();
+    
+    _a_dc = _factory.get_type_of(strong_a.get());
+    _b_dc = _factory.get_type_of(strong_b.get());
     _a = a; _b = b;
     _a_prop = a_prop;
     _b_prop = b_prop;
