@@ -14,7 +14,8 @@ INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
 
-void setup_ui(IVisualElement* c, std::shared_ptr<INotifyPropertyChanged> dc)
+void setup_ui(IVisualElement* c, std::shared_ptr<INotifyPropertyChanged> dc,
+                                 std::shared_ptr<INotifyPropertyChanged> dc2)
 {
     auto btn_next = c->find_element("btnNext");
 	auto btn_prev = c->find_element("btnPrev");
@@ -67,14 +68,14 @@ void setup_ui(IVisualElement* c, std::shared_ptr<INotifyPropertyChanged> dc)
 	
 	auto btn_change_dc = c->find_element("btnChangeDC");
 	auto grid = c->find_element("grid_with_dc");
-	btn_change_dc->set_on_click([dc, grid]() {
-	    if (grid->get_data_context() == nullptr)
+	btn_change_dc->set_on_click([dc,dc2, grid]() {
+	    if (grid->get_data_context() == dc2)
 	    {
 	        grid->set_data_context(dc);
 	    }
 	    else
 	    {
-	        grid->set_data_context(nullptr);
+	        grid->set_data_context(dc2);
 	    }
 	});
 	
@@ -107,12 +108,26 @@ struct Context : public BindableObjectBase
     float fps = 5.3f;
 };
 
+struct Context2 : public BindableObjectBase
+{
+    int fps = 0;
+};
+
 template<>
 struct TypeDefinition<Context>
 {
     static std::shared_ptr<ITypeDefinition> make() 
     {
         DefineClass(Context)->AddField(fps);
+    }
+};
+
+template<>
+struct TypeDefinition<Context2>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        DefineClass(Context2)->AddField(fps);
     }
 };
 
@@ -135,17 +150,18 @@ int main(int argc, char * argv[]) try
 	    StackPanel,
 	    Grid,
 	    PageView,
-	    Context
+	    Context, Context2
 	    >());
 	
 	std::shared_ptr<Context> dc(new Context);
+	std::shared_ptr<Context2> dc2(new Context2);
 	
 	try
 	{
 	    LOG(INFO) << "Loading UI...";
 	    Serializer s("resources/ui.xml", types);
 	    c.add_item(s.deserialize());
-	    setup_ui(&c, dc);
+	    setup_ui(&c, dc, dc2);
 	    Rect origin { { 0, 0 }, { 1280, 960 } };
         c.arrange(origin);
         LOG(INFO) << "UI has been succesfully loaded and arranged";
@@ -222,6 +238,8 @@ int main(int argc, char * argv[]) try
         
         dc->fps = sin(cos(frame_number / 200.0));
         dc->fire_property_change("fps");
+        dc2->fps = frame_number;
+        dc2->fire_property_change("fps");
 
         Rect origin { { 0, 0 }, { w, h } };
 

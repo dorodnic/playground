@@ -45,6 +45,13 @@ public:
             else _created(x);
             _was_null = is_null;
         }
+        
+        if (x.get() != last)
+        {
+            _destroyed();
+            _created(x);
+            last = x.get();
+        }
     
         return x.get();
     }
@@ -55,6 +62,7 @@ public:
     
 private:
     mutable bool _was_null = true;
+    mutable INotifyPropertyChanged* last = nullptr;
     std::function<void(std::shared_ptr<INotifyPropertyChanged> x)> _created;
     std::function<void()> _destroyed;
 };

@@ -39,4 +39,5 @@ CMake*
 core
 main
 cmake*
-
+*.log
+logs/

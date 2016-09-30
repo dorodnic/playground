@@ -181,7 +181,7 @@ SizeMap StackPanel::calc_sizes(Orientation orientation,
     for (auto& p : content) {
         auto p_rect = p->arrange(arrangement);
         auto p_size = p->get_size();
-        LOG(INFO) << "child " << p->get_name() << " asked size " << p_size;
+        //LOG(INFO) << "child " << p->get_name() << " asked size " << p_size;
 
         if ((p_size.*field).is_const()) {
             auto pixels = (p_size.*field).get_pixels();
@@ -239,12 +239,12 @@ void StackPanel::render(const Rect& origin)
     {
         _sizes = calc_global_sizes(get_arrangement());
         
-        LOG(INFO) << "New layout for element " << get_name() << ":";
+        //LOG(INFO) << "New layout for element " << get_name() << ":";
         for (auto& kvp : _sizes)
         {
             auto ui = dynamic_cast<IVisualElement*>(kvp.first);
-            LOG(INFO) << "\t" << ui->get_name() << " = " 
-                << kvp.second.first << ", " << kvp.second.second;
+            /*LOG(INFO) << "\t" << ui->get_name() << " = " 
+                << kvp.second.first << ", " << kvp.second.second;*/
                 
             _size_cache[kvp.first] = ui->get_size();
         }
