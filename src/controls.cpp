@@ -1,6 +1,7 @@
 #include "controls.h"
 
 #include <iomanip>
+#include <cmath>
 
 #include "../easyloggingpp/easylogging++.h"
 
@@ -14,7 +15,7 @@ using namespace std;
 
 inline bool float_eq(float a, float b)
 {
-    return abs(a-b) < 0.001f;
+    return std::abs(a-b) < 0.001f;
 }
 
 inline std::string to_upper(std::string data)
@@ -333,7 +334,7 @@ void Slider::update_mouse_position(Int2 cursor)
             {
                 auto t = (i - _min) / (_max - _min + 0.01f);
                 auto marker = (int)lerp(x0, x1, t);
-                auto dist = abs(x - marker);
+                auto dist = std::abs(x - marker);
                 if (dist < min_dist)
                 {
                     min_dist = dist;
