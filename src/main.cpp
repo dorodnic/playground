@@ -1,5 +1,6 @@
 #include <memory>
 #include <chrono>
+#include <cmath>
 
 #include "ui.h"
 #include "serializer.h"
