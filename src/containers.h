@@ -278,7 +278,7 @@ public:
     
     const char* get_type() const override { return "Grid"; }
 
-    virtual void add_item(std::shared_ptr<IVisualElement> item)
+    void add_item(std::shared_ptr<INotifyPropertyChanged> item) override
     {
         auto control = dynamic_cast<ControlBase*>(item.get());
         if (control) control->update_parent(_current_line.get());
