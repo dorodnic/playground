@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <map>
+#include <vector>
 
 #include "../rapidxml/rapidxml.hpp"
 
