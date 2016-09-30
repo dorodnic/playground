@@ -243,6 +243,8 @@ private:
     int _index = 0;
 };
 
+class INotifyPropertyChanged;
+
 namespace type_string_traits
 {
     template<class T>
@@ -254,6 +256,35 @@ namespace type_string_traits
         std::stringstream ss;
         ss << val;
         return ss.str();
+    }
+    
+    template<class T>
+    inline std::string to_string(T* val)
+    {
+        std::stringstream ss;
+        ss << std::hex << "0x" << (unsigned long long)val;
+        return ss.str();
+    }
+    
+    template<class T>
+    inline std::string to_string(std::shared_ptr<T> val)
+    {
+        std::stringstream ss;
+        ss << std::hex << "0x" << (unsigned long long)val.get();
+        return ss.str();
+    }
+    
+    template<class T>
+    inline T* parse(const std::string& str, T** output = nullptr)
+    {
+        return nullptr;
+    }
+    
+    template<class T>
+    inline std::shared_ptr<T> parse(const std::string& str, 
+                                    std::shared_ptr<T>* output = nullptr)
+    {
+        return nullptr;
     }
 
     template<>
@@ -375,6 +406,8 @@ namespace type_string_traits
     DECLARE_TYPE_NAME(Color3);
     DECLARE_TYPE_NAME(Orientation);
     DECLARE_TYPE_NAME(Alignment);
+    DECLARE_TYPE_NAME(INotifyPropertyChanged*);
+    DECLARE_TYPE_NAME(std::shared_ptr<INotifyPropertyChanged>);
 };
 
 std::string remove_prefix(const std::string& prefix, const std::string& str);

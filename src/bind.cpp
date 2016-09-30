@@ -168,11 +168,15 @@ Binding::Binding(TypeFactory& factory,
     
     if (_a_prop_def->is_writable())
     {
+        _skip_a = true;
         b_to_a();
+        _skip_a = false;
     }
     else if (_b_prop_def->is_writable())
     {
+        _skip_b = true;
         a_to_b();
+        _skip_b = true;
     }
     else
     {

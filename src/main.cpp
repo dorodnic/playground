@@ -14,8 +14,7 @@ INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
 
-
-void setup_ui(IVisualElement* c)
+void setup_ui(IVisualElement* c, std::shared_ptr<INotifyPropertyChanged> dc)
 {
     auto btn_next = c->find_element("btnNext");
 	auto btn_prev = c->find_element("btnPrev");
@@ -66,6 +65,19 @@ void setup_ui(IVisualElement* c)
 	    LOG(INFO) << "button was clicked!";
 	});
 	
+	auto btn_change_dc = c->find_element("btnChangeDC");
+	auto grid = c->find_element("grid_with_dc");
+	btn_change_dc->set_on_click([dc, grid]() {
+	    if (grid->get_data_context() == nullptr)
+	    {
+	        grid->set_data_context(dc);
+	    }
+	    else
+	    {
+	        grid->set_data_context(nullptr);
+	    }
+	});
+	
 	btn_next->set_on_click([page_id, page]() {
 	    *page_id = (*page_id + 1) % page->get_elements().size();
 	    LOG(INFO) << "moving to page " << *page_id << " out of " 
@@ -90,19 +102,20 @@ void setup_ui(IVisualElement* c)
 	text->add_binding(Binding::bind(slider, "value", text, "text"));*/
 }
 
-struct context : public BindableObjectBase
+struct Context : public BindableObjectBase
 {
-    float fps;
+    float fps = 5.3f;
 };
 
 template<>
-struct TypeDefinition<context>
+struct TypeDefinition<Context>
 {
-    std::shared_ptr<ITypeDefinition> make() 
+    static std::shared_ptr<ITypeDefinition> make() 
     {
-        DefineClass(context)->AddField(fps);
+        DefineClass(Context)->AddField(fps);
     }
 };
+
 
 int main(int argc, char * argv[]) try
 {
@@ -121,15 +134,18 @@ int main(int argc, char * argv[]) try
 	    Panel,
 	    StackPanel,
 	    Grid,
-	    PageView
+	    PageView,
+	    Context
 	    >());
+	
+	std::shared_ptr<Context> dc(new Context);
 	
 	try
 	{
 	    LOG(INFO) << "Loading UI...";
 	    Serializer s("resources/ui.xml", types);
 	    c.add_item(s.deserialize());
-	    setup_ui(&c);
+	    setup_ui(&c, dc);
 	    Rect origin { { 0, 0 }, { 1280, 960 } };
         c.arrange(origin);
         LOG(INFO) << "UI has been succesfully loaded and arranged";
@@ -186,6 +202,8 @@ int main(int argc, char * argv[]) try
 
         ui_element->update_mouse_state(button_type, mouse_state);
     });
+    
+    int frame_number = 0;
 
     while (!glfwWindowShouldClose(win))
     {
@@ -199,6 +217,11 @@ int main(int argc, char * argv[]) try
         glPushMatrix();
         glfwGetWindowSize(win, &w, &h);
         glOrtho(0, w, h, 0, -1, +1);
+        
+        frame_number++;
+        
+        dc->fps = sin(cos(frame_number / 200.0));
+        dc->fire_property_change("fps");
 
         Rect origin { { 0, 0 }, { w, h } };
 

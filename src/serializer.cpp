@@ -9,8 +9,80 @@
 using namespace std;
 using namespace rapidxml;
 
+
+struct BindingBridge : public BindableObjectBase
+{
+    bool object_exists = false;
+    
+    std::shared_ptr<Binding> binding;
+};
+
+template<>
+struct TypeDefinition<BindingBridge>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        DefineClass(BindingBridge)->AddField(object_exists);
+    }
+};
+
+class BridgeConverter : public TypeConverterBase<
+        std::shared_ptr<INotifyPropertyChanged>, bool>
+{
+public:
+    BridgeConverter(std::function<void(std::shared_ptr<INotifyPropertyChanged> x)> created,
+                    std::function<void()> destroyed)
+        : _created(created), _destroyed(destroyed)
+    {
+    }
+
+    bool convert(std::shared_ptr<INotifyPropertyChanged> x) const override
+    {
+        bool is_null = !x.get();
+        if (_was_null != is_null)
+        {
+            if (is_null) _destroyed();
+            else _created(x);
+            _was_null = is_null;
+        }
+    
+        return x.get();
+    }
+    std::shared_ptr<INotifyPropertyChanged> convert(bool x) const override
+    {
+        return nullptr;
+    }
+    
+private:
+    mutable bool _was_null = true;
+    std::function<void(std::shared_ptr<INotifyPropertyChanged> x)> _created;
+    std::function<void()> _destroyed;
+};
+
+class ExtendedBinding : public Binding
+{
+public:
+    ExtendedBinding(TypeFactory& factory,
+        std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
+        std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
+        std::unique_ptr<ITypeConverter> converter,
+        std::shared_ptr<BindingBridge> bridge)
+        : Binding(factory, a, a_prop, b, b_prop, std::move(converter)),
+          _bridge(bridge)
+    {
+    }
+    
+private:
+    std::shared_ptr<BindingBridge> _bridge;
+};
+
 std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
 {
+    if (!_factory.find_type("BindingBridge"))
+    {
+        _factory.register_type<BindingBridge>();
+    }
+
     AttrBag bag;
     BindingBag bindings;
     ElementsMap elements;
@@ -19,11 +91,56 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
     for (auto& def : bindings)
     {
         auto a_ptr = elements[def.a];
+        auto a = dynamic_cast<ControlBase*>(def.a);
         auto b_ptr = elements[elem->find_element(def.b_name)];
+        
+        std::shared_ptr<Binding> binding;
+        MinimalParser p(def.b_prop);
+        auto prop_name = p.get_id();
+        if (p.peek() == '.')
+        {
+            p.get();
+            auto prop2_name = p.get_id();
             
-        std::unique_ptr<Binding> binding(new Binding(
-            _factory, a_ptr, def.a_prop, b_ptr, def.b_prop));
-        //a_ptr->add_binding(std::move(binding));
+            p.req_eof();
+            
+            std::shared_ptr<BindingBridge> bridge(new BindingBridge());
+            std::weak_ptr<BindingBridge> weak(bridge);
+           
+            auto on_create = [this, weak, a, a_ptr, def, prop2_name]
+                (std::shared_ptr<INotifyPropertyChanged> x)
+            {
+                auto b = weak.lock();
+                if (b)
+                {
+                    b->binding.reset(new Binding(
+                        _factory, a_ptr, def.a_prop, x, prop2_name));
+                    if (a) a->add_binding(b->binding);
+                }
+            };
+            auto on_delete = [this, weak, a](){
+                auto b = weak.lock();
+                if (b)
+                {
+                    if (a) a->remove_binding(b->binding);
+                    b->binding = nullptr;
+                }
+            };
+            
+            std::unique_ptr<ITypeConverter> converter(
+                new BridgeConverter(on_create, on_delete));
+            
+            binding.reset(new ExtendedBinding(
+                _factory, bridge, "object_exists", b_ptr, prop_name, 
+                std::move(converter), bridge));
+        }
+        else
+        {
+            binding.reset(new Binding(
+                _factory, a_ptr, def.a_prop, b_ptr, def.b_prop));
+        }
+
+        if (a) a->add_binding(binding);
     }
     return res;
 }
@@ -84,6 +201,34 @@ void Serializer::parse_container(Container* container,
                        << " " << name << ")" << endl;
         }
     }
+}
+
+void parse_binding(const std::string& prop_text, 
+                   IPropertyDefinition* p_def,
+                   INotifyPropertyChanged* ptr,
+                   BindingBag& bindings)
+{
+    MinimalParser p(prop_text);
+    p.try_get_string("{bind ");
+    auto element_id = p.get_id();
+    p.req('.');
+    auto prop_name = p.get_id();
+    while (p.peek() == '.')
+    {
+        p.get();
+        prop_name += "." + p.get_id();
+    }
+    p.req('}');
+    p.req_eof();
+    LOG(INFO) << "Parsing binding to " << element_id << "." << prop_name;
+    BindingDef binding
+        {
+            ptr,
+            p_def->get_name(), 
+            element_id,
+            prop_name
+        };
+    bindings.push_back(binding);
 }
 
 shared_ptr<INotifyPropertyChanged> Serializer::deserialize(
@@ -153,23 +298,7 @@ shared_ptr<INotifyPropertyChanged> Serializer::deserialize(
             
             if (starts_with("{bind ", prop_text))
             {
-                MinimalParser p(prop_text);
-                p.try_get_string("{bind ");
-                auto element_id = p.get_id();
-                p.req('.');
-                auto prop_name = p.get_id();
-                p.req('}');
-                p.req_eof();
-                LOG(INFO) << element_id << " " << prop_name;
-                BindingDef binding
-                    {
-                        res.get(),
-                        p_def->get_name(), 
-                        element_id,
-                        prop_name
-                    };
-                bindings.push_back(binding);
-                 
+                parse_binding(prop_text, p_def, res.get(), bindings);
             }
             else
             {

@@ -45,8 +45,8 @@ public:
                               MouseButton button = MouseButton::left) = 0;
     virtual void set_on_double_click(std::function<void()> on_click) = 0;
     
-    virtual void set_data_context(INotifyPropertyChanged* dc) = 0;
-    virtual INotifyPropertyChanged* get_data_context() const = 0;
+    virtual void set_data_context(std::shared_ptr<INotifyPropertyChanged> dc) = 0;
+    virtual std::shared_ptr<INotifyPropertyChanged> get_data_context() const = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -176,17 +176,34 @@ public:
     
     IVisualElement* get_parent() { return _parent; }
     const IVisualElement* get_parent() const { return _parent; }
-    void update_parent(IVisualElement* new_parent) { _parent = new_parent; }
+    void update_parent(IVisualElement* new_parent) 
+    {
+        _parent = new_parent; 
+        fire_property_change("parent");
+    }
     
     std::string to_string() const override { return get_name() + "(" + get_type() + ")"; }
     
-    void add_binding(std::unique_ptr<Binding> binding)
+    void add_binding(std::shared_ptr<Binding> binding)
     {
-        _bindings.push_back(std::move(binding));
+        _bindings.push_back(binding);
     }
     
-    void set_data_context(INotifyPropertyChanged* dc) override { _dc = dc; }
-    INotifyPropertyChanged* get_data_context() const override { return _dc; }
+    void remove_binding(std::shared_ptr<Binding> binding)
+    {
+        _bindings.erase(std::remove(_bindings.begin(), _bindings.end(), binding), 
+                        _bindings.end()); 
+    }
+    
+    void set_data_context(std::shared_ptr<INotifyPropertyChanged> dc) override 
+    {
+        _dc = dc; 
+        fire_property_change("data_context");
+    }
+    std::shared_ptr<INotifyPropertyChanged> get_data_context() const override 
+    { 
+        return _dc; 
+    }
 
 protected:
     ControlBase() {}
@@ -200,8 +217,8 @@ private:
     bool _enabled = true;
     bool _visible = true;
     IVisualElement* _parent = nullptr;
-    std::vector<std::unique_ptr<Binding>> _bindings;
-    INotifyPropertyChanged* _dc = nullptr;
+    std::vector<std::shared_ptr<Binding>> _bindings;
+    std::shared_ptr<INotifyPropertyChanged> _dc = nullptr;
 };
 
 
@@ -219,7 +236,8 @@ struct TypeDefinition<ControlBase>
                          ->AddProperty(get_name, set_name)
                          ->AddProperty(get_align, set_align)
                          ->AddProperty(is_visible, set_visible)
-                         ->AddProperty(is_enabled, set_enabled);
+                         ->AddProperty(is_enabled, set_enabled)
+                         ->AddProperty(get_data_context, set_data_context);
     }
 };
 

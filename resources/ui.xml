@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <StackPanel size="*" orientation="vertical" name="samples">
-    <PageView size="*" selected="4" name="page">
+    <PageView size="*" selected="5" name="page">
         <StackPanel size="*" orientation="vertical" name="0">
             <TextBlock text_color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
             <StackPanel orientation="horizontal">
@@ -79,6 +79,16 @@
                 </Grid>
             </StackPanel>
         </Using>
+        <StackPanel size="*" orientation="vertical" name="5">
+                <TextBlock text="binding to data context:" margin="5" name="5_title" />
+                <Grid orientation="vertical" name="grid_with_dc" >
+                    <TextBlock text="value:"  />
+                    <TextBlock text="{bind grid_with_dc.data_context.fps}" />
+                    <Break/>
+                    <TextBlock />
+                    <Button text="changed DC" name="btnChangeDC" />
+                </Grid>
+            </StackPanel>
     </PageView>
     <Panel size="*,40">
         <Button color="gray" size="*" />

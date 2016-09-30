@@ -67,11 +67,11 @@ public:
     const char* get_type() const override { return _element->get_type(); }
     std::string to_string() const override { return _element->to_string(); }
     
-    void set_data_context(INotifyPropertyChanged* dc) override 
+    void set_data_context(std::shared_ptr<INotifyPropertyChanged> dc) override 
     { 
         _element->set_data_context(dc); 
     }
-    INotifyPropertyChanged* get_data_context() const override 
+    std::shared_ptr<INotifyPropertyChanged> get_data_context() const override 
     { 
         return _element->get_data_context(); 
     }

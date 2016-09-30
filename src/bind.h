@@ -285,7 +285,6 @@ private:
 class IMultitype : public virtual IVirtualBase
 {
 public:
-    virtual const std::string& get_type(int index) const = 0;
     virtual void set_value(int index, const std::string& str) = 0;
     virtual std::string get_value(int index) const = 0;
     virtual ICopyable* get(int index) = 0;
@@ -306,7 +305,7 @@ class InlineVariable : public PropertyBase<T>
 {
 public:
     InlineVariable() 
-        : PropertyBase<T>(nullptr, ""), 
+        : PropertyBase<T>(std::shared_ptr<INotifyPropertyChanged>(nullptr), ""), 
           _val()
     {}
     
@@ -326,12 +325,6 @@ public:
         : _from(), _to() 
     {}
 
-    const std::string& get_type(int index) const override
-    {
-        if (index == 0) return _from.get_type();
-        else if (index == 1) return _to.get_type();
-        else throw std::runtime_error(str() << "Invalid index" << index);
-    }
     void set_value(int index, const std::string& val) override
     {
         if (index == 0) _from.set_value(val);
@@ -380,16 +373,7 @@ public:
     void apply(IMultitype& var, bool forward) const override
     {
         if (forward)
-        {
-            if (var.get_type(0) != get_from()) 
-                throw std::runtime_error(str() << "Converter expected input type "
-                                         << get_from() << " but received " 
-                                         << var.get_type(0) << "!");
-            if (var.get_type(1) != get_to()) 
-                throw std::runtime_error(str() << "Converter expected output type "
-                                         << get_to() << " but received " 
-                                         << var.get_type(1) << "!");
-                                         
+        {                                         
             auto dual = dynamic_cast<DualVariable<T, S>*>(&var);
             if (dual)
             {
@@ -405,16 +389,7 @@ public:
             }
         }
         else
-        {
-            if (var.get_type(0) != get_from()) 
-                throw std::runtime_error(str() << "Converter expected input type "
-                                         << get_from() << " but received " 
-                                         << var.get_type(0) << "!");
-            if (var.get_type(1) != get_to()) 
-                throw std::runtime_error(str() << "Converter expected output type "
-                                         << get_to() << " but received " 
-                                         << var.get_type(1) << "!");
-                                         
+        {                                         
             auto dual = dynamic_cast<DualVariable<T,S>*>(&var);
             if (dual)
             {
