@@ -17,6 +17,7 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       sudo apt-get install -qq build-essential xorg-dev libglu1-mesa-dev libglew-dev libglm-dev;
       sudo apt-get install -qq cmake;
+      sudo apt-get install -qq g++-5;
 
       cmake --version;
 
