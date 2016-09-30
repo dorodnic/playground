@@ -1,9 +1,25 @@
 os:
   - linux
 
+sudo: false
 language: cpp
 
-sudo: required
+cache:
+  apt: true
+
+matrix:
+  include:
+    - env: CXX=g++-5 CC=gcc-5
+      addons:
+        apt:
+          packages:
+            - g++-5
+          sources: &sources
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise
+            - llvm-toolchain-precise-3.7
+            - llvm-toolchain-precise-3.6
+
 dist: trusty
 
 before_install:
