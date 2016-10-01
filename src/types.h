@@ -46,7 +46,7 @@ private:
 inline stringifier str() 
 {
     stringifier r;
-    return r;
+    return std::move(r);
 }
 
 struct Color3 { 
