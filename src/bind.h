@@ -641,7 +641,7 @@ public:
         std::string name_str(name);
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
-        [f](std::weak_ptr<INotifyPropertyChanged> owner, const std::string& name){
+        [f](auto owner, auto name){
             return new FieldProperty<T, S>(owner, name, f);
         });
         result->_properties[name] = ptr;
@@ -657,8 +657,7 @@ public:
         result->_property_names.push_back(name_str);
 
         auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, false,
-        [f](std::weak_ptr<INotifyPropertyChanged> owner, 
-            const std::string& name){
+        [f](auto owner, auto name){
             return new ReadOnlyProperty<T, S>(owner, name, f);
         });
         
@@ -682,19 +681,19 @@ public:
         }
         result->_property_names.push_back(name_str);
         
-        auto rf = [r](std::weak_ptr<INotifyPropertyChanged> owner) -> S {
+        auto rf = [r](auto owner) -> S {
             auto strong = owner.lock();
             auto t = static_cast<T*>(strong.get()); 
             return ((*t).*r)();
         };
-        auto wf = [w](std::weak_ptr<INotifyPropertyChanged> owner, S s) {
+        auto wf = [w](auto owner, S s) {
             auto strong = owner.lock();
             auto t = static_cast<T*>(strong.get()); 
             ((*t).*w)(s);
         };
         
         auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
-        [rf, wf](std::weak_ptr<INotifyPropertyChanged> owner, const std::string& name){
+        [rf, wf](auto owner, auto name){
             return new ReadWritePropertyLambda<T, S>(owner, name, rf, wf);
         });
         result->_properties[name_str] = ptr;
@@ -717,19 +716,19 @@ public:
         }
         result->_property_names.push_back(name_str);
         
-        auto rf = [r](std::weak_ptr<INotifyPropertyChanged> owner) -> S {
+        auto rf = [r](auto owner) -> S {
             auto strong = owner.lock();
             auto t = static_cast<T*>(strong.get()); 
             return ((*t).*r)();
         };
-        auto wf = [w](std::weak_ptr<INotifyPropertyChanged> owner, S s) {
+        auto wf = [w](auto owner, S s) {
             auto strong = owner.lock();
             auto t = static_cast<T*>(strong.get()); 
             ((*t).*w)(s);
         };
         
         auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
-        [rf, wf](std::weak_ptr<INotifyPropertyChanged> owner, const std::string& name){
+        [rf, wf](auto owner, auto name){
             return new ReadWritePropertyLambda<T, S>(owner, name, rf, wf);
         });
         result->_properties[name_str] = ptr;
@@ -752,20 +751,19 @@ public:
         }
         result->_property_names.push_back(name_str);
         
-        auto rf = [r](std::weak_ptr<INotifyPropertyChanged> owner) -> S {
+        auto rf = [r](auto owner) -> S {
             auto strong = owner.lock();
             auto t = static_cast<T*>(strong.get()); 
             return ((*t).*r)();
         };
-        auto wf = [w](std::weak_ptr<INotifyPropertyChanged> owner, S s) {
+        auto wf = [w](auto owner, S s) {
             auto strong = owner.lock();
             auto t = static_cast<T*>(strong.get()); 
             ((*t).*w)(s);
         };
         
         auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
-        [rf, wf](std::weak_ptr<INotifyPropertyChanged> owner, 
-                 const std::string& name){
+        [rf, wf](auto owner, auto name){
             return new ReadWritePropertyLambda<T, S>(owner, name, rf, wf);
         });
         result->_properties[name_str] = ptr;
@@ -780,18 +778,17 @@ public:
         if (name_str == name) name_str = remove_prefix("is_", name);
         result->_property_names.push_back(name_str);
         
-        auto rf = [f](std::weak_ptr<INotifyPropertyChanged> owner) -> S {
+        auto rf = [f](auto owner) -> S {
             auto strong = owner.lock();
             auto t = static_cast<T*>(strong.get()); 
             return ((*t).*f)();
         };
-        auto wf = [name_str](std::weak_ptr<INotifyPropertyChanged>, S s) {
+        auto wf = [name_str](auto owner, S s) {
             throw std::runtime_error(str() << "Property " << name_str << " is read-only!");
         };
         
         auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, false,
-        [rf, wf](std::weak_ptr<INotifyPropertyChanged> owner, 
-                 const std::string& name){
+        [rf, wf](auto owner, auto name){
             return new ReadWritePropertyLambda<T, S>(owner, name, rf, wf);
         });
         result->_properties[name_str] = ptr;
@@ -814,8 +811,7 @@ public:
         }
         result->_property_names.push_back(name_str);
         auto ptr = std::make_shared<PropertyDefinition<S>>(name_str, true,
-        [r, w](std::weak_ptr<INotifyPropertyChanged> owner, 
-               const std::string& name){
+        [r, w](auto owner, auto name){
             return new ReadWriteProperty<T, S>(owner, name, r, w);
         });
         result->_properties[name_str] = ptr;
