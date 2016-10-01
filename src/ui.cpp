@@ -9,7 +9,7 @@ using namespace std;
 
 #include "../stb/stb_easy_font.h"
 
-void MouseClickHandler::update_mouse_state(MouseButton button, MouseState state)
+void ControlBase::update_mouse_state(MouseButton button, MouseState state)
 {
     auto now = chrono::high_resolution_clock::now();
     auto curr = _state[button];
@@ -41,8 +41,13 @@ void MouseClickHandler::update_mouse_state(MouseButton button, MouseState state)
     _last_update[button] = now;
 }
 
-MouseClickHandler::MouseClickHandler()
-    : _on_double_click([this](){ _on_click[MouseButton::left](); })
+ControlBase::ControlBase(std::string name,
+                const Size2& position,
+                const Size2& size,
+                Alignment alignment)
+        : _position(position), _size(size), 
+          _name(name), _align(alignment), _parent(nullptr),
+          _on_double_click([this](){ _on_click[MouseButton::left](); })
 {
     _state[MouseButton::left] = _state[MouseButton::right] =
     _state[MouseButton::middle] = MouseState::up;

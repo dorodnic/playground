@@ -10,13 +10,17 @@ public:
     {}
     
     void subscribe_on_change(void* owner, 
-                             OnFieldChangeCallback on_change)
+                             OnFieldChangeCallback on_change) override
     {
         _element->subscribe_on_change(owner, on_change);
     }
-    void unsubscribe_on_change(void* owner) 
+    void unsubscribe_on_change(void* owner) override 
     {
         _element->unsubscribe_on_change(owner);
+    }
+    void fire_property_change(const char* prop) override
+    {
+        _element->fire_property_change(prop);
     }
     
     Rect arrange(const Rect& origin) override { return _element->arrange(origin); }

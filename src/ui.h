@@ -12,7 +12,7 @@
 #include "types.h"
 #include "bind.h"
 
-class IVisualElement : public virtual INotifyPropertyChanged
+class IVisualElement : public INotifyPropertyChanged
 {
 public:
     virtual Rect arrange(const Rect& origin) = 0;
@@ -53,11 +53,14 @@ public:
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
-class MouseClickHandler : public virtual IVisualElement
+class ControlBase : public IVisualElement
 {
 public:
-    MouseClickHandler();
-
+    ControlBase(std::string name,
+                const Size2& position,
+                const Size2& size,
+                Alignment alignment);
+    
     void update_mouse_state(MouseButton button, MouseState state) override;
     
     void update_mouse_scroll(Int2 scroll) override { // TODO
@@ -81,31 +84,6 @@ public:
         else
             return false;
     }
-
-private:
-    std::map<MouseButton, MouseState> _state;
-    std::map<MouseButton, TimePoint> _last_update;
-    std::map<MouseButton, TimePoint> _last_click;
-
-    std::map<MouseButton, std::function<void()>> _on_click;
-    std::function<void()> _on_double_click;
-
-    const int CLICK_TIME_MS = 200;
-};
-
-class ControlBase : public virtual IVisualElement,
-                    public MouseClickHandler,
-                    public BindableObjectBase
-{
-public:
-    ControlBase(std::string name,
-                const Size2& position,
-                const Size2& size,
-                Alignment alignment)
-        : _position(position), _size(size), 
-          _name(name), _align(alignment), _parent(nullptr)
-    {}
-    
     
     Size2 get_position() const { return _position; }
     void set_position(const Size2& val) 
@@ -204,6 +182,20 @@ public:
     { 
         return _dc; 
     }
+    
+    void fire_property_change(const char* property_name) override
+    {
+        _base.fire_property_change(property_name);
+    }
+    void subscribe_on_change(void* owner, 
+                             OnFieldChangeCallback on_change) override
+    {
+        _base.subscribe_on_change(owner, on_change);
+    }
+    void unsubscribe_on_change(void* owner) override
+    {
+        _base.unsubscribe_on_change(owner);
+    }
 
 protected:
     ControlBase() {}
@@ -219,6 +211,16 @@ private:
     IVisualElement* _parent = nullptr;
     std::vector<std::shared_ptr<Binding>> _bindings;
     std::shared_ptr<INotifyPropertyChanged> _dc = nullptr;
+    BindableObjectBase _base;
+    
+    std::map<MouseButton, MouseState> _state;
+    std::map<MouseButton, TimePoint> _last_update;
+    std::map<MouseButton, TimePoint> _last_click;
+
+    std::map<MouseButton, std::function<void()>> _on_click;
+    std::function<void()> _on_double_click;
+
+    const int CLICK_TIME_MS = 200;
 };
 
 

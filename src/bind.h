@@ -66,6 +66,8 @@ public:
 class INotifyPropertyChanged : public IVirtualBase
 {
 public:
+    virtual void fire_property_change(const char* prop) = 0;
+
     virtual void subscribe_on_change(void* owner, 
                                      OnFieldChangeCallback on_change) = 0;
     virtual void unsubscribe_on_change(void* owner) = 0;
@@ -145,12 +147,12 @@ private:
     std::unordered_map<std::type_index, ITypeDefinition*> _typeid_to_type;
 };
 
-class BindableObjectBase : public virtual INotifyPropertyChanged
+class BindableObjectBase : public INotifyPropertyChanged
 {
 public:
     BindableObjectBase();
     
-    void fire_property_change(const char* property_name);
+    void fire_property_change(const char* property_name) override;
     void subscribe_on_change(void* owner, 
                              OnFieldChangeCallback on_change) override;
     void unsubscribe_on_change(void* owner) override;
@@ -159,7 +161,7 @@ private:
     std::map<void*,OnFieldChangeCallback> _on_change;
 };
 
-class ICopyable : public virtual IVirtualBase
+class ICopyable : public IVirtualBase
 {
 public:
     virtual void copy_to(ICopyable* to) = 0;
@@ -282,7 +284,7 @@ private:
     PropertyCreator _creator;
 };
 
-class IMultitype : public virtual IVirtualBase
+class IMultitype : public IVirtualBase
 {
 public:
     virtual void set_value(int index, const std::string& str) = 0;
@@ -290,7 +292,7 @@ public:
     virtual ICopyable* get(int index) = 0;
 };
 
-class ITypeConverter : public virtual IVirtualBase
+class ITypeConverter : public IVirtualBase
 {
 public:
     virtual const std::string& get_from() const = 0;
@@ -374,7 +376,7 @@ public:
     {
         if (forward)
         {                                         
-            auto dual = dynamic_cast<DualVariable<T, S>*>(&var);
+            auto dual = static_cast<DualVariable<T, S>*>(&var);
             if (dual)
             {
                 auto t = dual->get_from().get();
@@ -390,7 +392,7 @@ public:
         }
         else
         {                                         
-            auto dual = dynamic_cast<DualVariable<T,S>*>(&var);
+            auto dual = static_cast<DualVariable<T,S>*>(&var);
             if (dual)
             {
                 auto s = dual->get_to().get();
@@ -433,7 +435,7 @@ public:
         : PropertyBase<S>(owner, name), _field(field)
     {
         auto s = owner.lock();
-        _t = dynamic_cast<T*>(s.get());
+        _t = static_cast<T*>(s.get());
     }
     
     void set(S val) override
@@ -462,7 +464,7 @@ public:
         : PropertyBase<S>(owner, name), _getter(getter)
     {
         auto s = owner.lock();
-        _t = dynamic_cast<T*>(s.get());
+        _t = static_cast<T*>(s.get());
     }
     
     void set(S val) override
@@ -492,7 +494,7 @@ public:
         : PropertyBase<S>(owner, name), _getter(getter), _setter(setter)
     {
         auto s = owner.lock();
-        _t = dynamic_cast<T*>(s.get());
+        _t = static_cast<T*>(s.get());
     }
     
     void set(S val) override
@@ -682,12 +684,12 @@ public:
         
         auto rf = [r](std::weak_ptr<INotifyPropertyChanged> owner) -> S {
             auto strong = owner.lock();
-            auto t = dynamic_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(strong.get()); 
             return ((*t).*r)();
         };
         auto wf = [w](std::weak_ptr<INotifyPropertyChanged> owner, S s) {
             auto strong = owner.lock();
-            auto t = dynamic_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(strong.get()); 
             ((*t).*w)(s);
         };
         
@@ -717,12 +719,12 @@ public:
         
         auto rf = [r](std::weak_ptr<INotifyPropertyChanged> owner) -> S {
             auto strong = owner.lock();
-            auto t = dynamic_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(strong.get()); 
             return ((*t).*r)();
         };
         auto wf = [w](std::weak_ptr<INotifyPropertyChanged> owner, S s) {
             auto strong = owner.lock();
-            auto t = dynamic_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(strong.get()); 
             ((*t).*w)(s);
         };
         
@@ -752,12 +754,12 @@ public:
         
         auto rf = [r](std::weak_ptr<INotifyPropertyChanged> owner) -> S {
             auto strong = owner.lock();
-            auto t = dynamic_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(strong.get()); 
             return ((*t).*r)();
         };
         auto wf = [w](std::weak_ptr<INotifyPropertyChanged> owner, S s) {
             auto strong = owner.lock();
-            auto t = dynamic_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(strong.get()); 
             ((*t).*w)(s);
         };
         
@@ -778,11 +780,12 @@ public:
         if (name_str == name) name_str = remove_prefix("is_", name);
         result->_property_names.push_back(name_str);
         
-        auto rf = [f](INotifyPropertyChanged* owner) -> S {
-            auto t = dynamic_cast<T*>(owner); 
+        auto rf = [f](std::weak_ptr<INotifyPropertyChanged> owner) -> S {
+            auto strong = owner.lock();
+            auto t = static_cast<T*>(strong.get()); 
             return ((*t).*f)();
         };
-        auto wf = [name_str](INotifyPropertyChanged*, S s) {
+        auto wf = [name_str](std::weak_ptr<INotifyPropertyChanged>, S s) {
             throw std::runtime_error(str() << "Property " << name_str << " is read-only!");
         };
         
