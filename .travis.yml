@@ -31,5 +31,5 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       uname -a;
       cmake .;
-	  make;
+      make;
     fi
