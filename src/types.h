@@ -22,34 +22,22 @@ inline float mix(float a, float b, float t)
 
 typedef std::unordered_map<std::string, std::string> PropertyBag;
 
-class stringifier
+struct str
 {
-public:
-    stringifier() : _ss() {}
-	
-	stringifier(stringifier&& other) : _ss(std::move(other._ss)) {}
-
     operator std::string() const
     {
         return _ss.str();
     }
     
     template<class T>
-    stringifier& operator<<(T&& t) 
+    str& operator<<(T&& t) 
     { 
         _ss << t;
         return *this;
     }
     
-private:
-    std::stringstream _ss;
+    std::ostringstream _ss;
 };
-
-inline stringifier str() 
-{
-    stringifier r;
-    return std::move(r);
-}
 
 struct Color3 { 
     float r, g, b; 
