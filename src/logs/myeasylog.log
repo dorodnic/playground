@@ -1,3 +1,0 @@
-2016-09-11 13:53:30,960 INFO  [default] Loading UI...
-2016-09-11 13:53:30,964 FATAL [default] CRASH HANDLED; Application has crashed due to [SIGSEGV] signal
-2016-09-11 13:53:30,964 WARN  [default] Aborting application. Reason: Fatal log at [/home/dorodnic/Desktop/git/playground/src/../easyloggingpp/easylogging++.h:5627]
