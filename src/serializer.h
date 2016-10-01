@@ -29,7 +29,7 @@ class TypeFactory;
 class Serializer
 {
 public:
-    Serializer(const char* filename, TypeFactory& factory);
+    Serializer(const char* filename, std::shared_ptr<TypeFactory> factory = nullptr);
     
     std::shared_ptr<INotifyPropertyChanged> deserialize();
 private:
@@ -41,13 +41,13 @@ private:
                          ElementsMap& elements);
 
     std::shared_ptr<INotifyPropertyChanged> deserialize(IVisualElement* parent,
-                                                rapidxml::xml_node<>* node,
-                                                const AttrBag& bag,
-                                                BindingBag& bindings,
-                                                ElementsMap& elements);
+                                                        rapidxml::xml_node<>* node,
+                                                        const AttrBag& bag,
+                                                        BindingBag& bindings,
+                                                        ElementsMap& elements);
 
     std::vector<char> _buffer;
     rapidxml::xml_document<> _doc;
-    TypeFactory& _factory;
+    std::shared_ptr<TypeFactory> _factory;
 };
 

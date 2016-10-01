@@ -86,7 +86,7 @@
                     <TextBlock text="{bind grid_with_dc.data_context.counter.count}" />
                     <Break/>
                     <TextBlock />
-                    <TextBlock text="bound to grid_with_dc.data_context.counter.count"  />
+                    <TextBlock text="bound to grid_with_dc . data_context . counter . count"  />
                     <Break/>
                     <TextBlock text="data context:"  />
                     <TextBlock text="{bind grid_with_dc.data_context.name}" />
@@ -94,14 +94,17 @@
                     <TextBlock text="counter:"  />
                     <TextBlock text="{bind grid_with_dc.data_context.counter.name}" />
                     <Break/>
+                    <TextBlock text="fps:"  />
+                    <TextBlock text="{bind grid_with_dc.data_context.fps}" />
+                    <Break/>
                     <TextBlock text="controls:" />
-                    <Button text="changed DC to possitive" color="blue" name="btnChangeDCtoPlus" margin="2" />
+                    <Button text="changed DC to possitive" color="yellow" name="btnChangeDCtoPlus" margin="2" />
                     <Break/>
                     <TextBlock />
-                    <Button text="changed DC to negative" color="blue" name="btnChangeDCtoMinus" margin="2" />
+                    <Button text="changed DC to negative" color="yellow" name="btnChangeDCtoMinus" margin="2" />
                     <Break/>
                     <TextBlock />
-                    <Button text="changed DC to null" color="blue" name="btnChangeDCtoNull" margin="2" />
+                    <Button text="changed DC to null" color="yellow" name="btnChangeDCtoNull" margin="2" />
                     <Break/>
                     <TextBlock />
                     <Button text="changed DC.counter to null" color="green" name="btnChangeCounterToNull" margin="2" />

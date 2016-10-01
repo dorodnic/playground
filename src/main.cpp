@@ -29,6 +29,11 @@ struct FloatCounter : public BindableObjectBase
         fire_property_change("count");
     }
     
+    std::shared_ptr<ITypeDefinition> make_type_definition() const override
+    {
+        DefineClass(FloatCounter)->AddField(count)->AddField(name);
+    }
+    
     int _sign;
     std::string name;
 };
@@ -45,6 +50,11 @@ struct IntCounter : public BindableObjectBase
     {
         count += _sign;
         fire_property_change("count");
+    }
+    
+    std::shared_ptr<ITypeDefinition> make_type_definition() const override
+    {
+        DefineClass(IntCounter)->AddField(count)->AddField(name);
     }
     
     int _sign;
@@ -82,13 +92,46 @@ struct Context : public BindableObjectBase
         fire_property_change("counter");
     }
     
+    void update_fps()
+    {
+        auto now = std::chrono::high_resolution_clock::now();
+
+        _frame_times.erase(std::remove_if(_frame_times.begin(), _frame_times.end(), 
+        [now](auto tp){
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - tp);
+            return ms.count() >= 1000;
+        }), _frame_times.end());
+        
+        _frame_times.push_back(now);
+        
+        if (_frame_times.size() != fps)
+        {
+            fps = _frame_times.size();
+            //fire_property_change("fps");
+        }
+    }
+    
     void update()
     {
         floats_counter->update();
         ints_counter->update();
+        
+        update_fps();
+    }
+    
+    std::shared_ptr<ITypeDefinition> make_type_definition() const override
+    {
+        DefineClass(Context)
+            ->AddField(counter)
+            ->AddField(name)
+            ->AddField(fps);
     }
     
     std::string name;
+    
+    std::vector<std::chrono::high_resolution_clock::time_point> _frame_times;
+    
+    int fps = 0;
 };
 
 void setup_ui(IVisualElement* c, shared_ptr<INotifyPropertyChanged> dcPlus,
@@ -192,39 +235,7 @@ void setup_ui(IVisualElement* c, shared_ptr<INotifyPropertyChanged> dcPlus,
 	    auto child = page->find_element(ss.str());
 	    page->set_focused_child(child);
 	});
-	
-	/*auto slider = dynamic_cast<ControlBase*>(c->find_element("slider_bind_src"));
-	auto text = dynamic_cast<ControlBase*>(c->find_element("slider_bind_trg"));
-	
-	text->add_binding(Binding::bind(slider, "value", text, "text"));*/
 }
-
-template<>
-struct TypeDefinition<IntCounter>
-{
-    static std::shared_ptr<ITypeDefinition> make() 
-    {
-        DefineClass(IntCounter)->AddField(count)->AddField(name);
-    }
-};
-
-template<>
-struct TypeDefinition<FloatCounter>
-{
-    static std::shared_ptr<ITypeDefinition> make() 
-    {
-        DefineClass(FloatCounter)->AddField(count)->AddField(name);
-    }
-};
-
-template<>
-struct TypeDefinition<Context>
-{
-    static std::shared_ptr<ITypeDefinition> make() 
-    {
-        DefineClass(Context)->AddField(counter)->AddField(name);
-    }
-};
 
 int main(int argc, char * argv[]) try
 {
@@ -235,25 +246,13 @@ int main(int argc, char * argv[]) try
     // create root-level container for the GUI
 	Panel c(".",{0,0},{1.0f, 1.0f},Alignment::left); 
 	
-	TypeFactory types;
-	types.register_type(TypeCollection<
-	    Button, 
-	    TextBlock, 
-	    Slider,
-	    Panel,
-	    StackPanel,
-	    Grid,
-	    PageView,
-	    Context, IntCounter, FloatCounter
-	    >());
-	
 	std::shared_ptr<Context> dcPlus(new Context(1));
 	std::shared_ptr<Context> dcMinus(new Context(-1));
 	
 	try
 	{
 	    LOG(INFO) << "Loading UI...";
-	    Serializer s("resources/ui.xml", types);
+	    Serializer s("resources/ui.xml");
 	    c.add_item(s.deserialize());
 	    setup_ui(&c, dcPlus, dcMinus);
 	    Rect origin { { 0, 0 }, { 1280, 960 } };
@@ -313,8 +312,6 @@ int main(int argc, char * argv[]) try
         ui_element->update_mouse_state(button_type, mouse_state);
     });
     
-    int frame_number = 0;
-
     while (!glfwWindowShouldClose(win))
     {
         glfwPollEvents();
@@ -327,8 +324,6 @@ int main(int argc, char * argv[]) try
         glPushMatrix();
         glfwGetWindowSize(win, &w, &h);
         glOrtho(0, w, h, 0, -1, +1);
-        
-        frame_number++;
         
         dcPlus->update();
         dcMinus->update();

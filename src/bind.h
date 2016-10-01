@@ -71,6 +71,11 @@ public:
     virtual void subscribe_on_change(void* owner, 
                                      OnFieldChangeCallback on_change) = 0;
     virtual void unsubscribe_on_change(void* owner) = 0;
+    
+    virtual std::shared_ptr<ITypeDefinition> make_type_definition() const
+    {
+        return nullptr;
+    }
 };
 
 template<class T>
@@ -94,8 +99,8 @@ public:
     {
         auto ptr = TypeDefinition<T>::make();
         _types.push_back(ptr);
-        _name_to_type[ptr->get_type()] = ptr.get();
-        _typeid_to_type[typeid(T)] = ptr.get();
+        _name_to_type[ptr->get_type()] = ptr;
+        _typeid_to_type[typeid(T)] = ptr;
     }
     
     template<class T, class... S>
@@ -111,7 +116,7 @@ public:
         register_type<T>();
     }
     
-    ITypeDefinition* find_type(const std::string& name)
+    std::shared_ptr<ITypeDefinition> find_type(const std::string& name)
     {
         auto it = _name_to_type.find(name);
         if (it != _name_to_type.end())
@@ -121,7 +126,7 @@ public:
     }
     
     template<class T>
-    ITypeDefinition* get_type_of(T* ptr)
+    std::shared_ptr<ITypeDefinition> get_type_of(T* ptr)
     {
         if (ptr)
         {
@@ -153,8 +158,8 @@ public:
     
 private:
     std::vector<std::shared_ptr<ITypeDefinition>> _types;
-    std::unordered_map<std::string, ITypeDefinition*> _name_to_type;
-    std::unordered_map<std::type_index, ITypeDefinition*> _typeid_to_type;
+    std::unordered_map<std::string, std::shared_ptr<ITypeDefinition>> _name_to_type;
+    std::unordered_map<std::type_index, std::shared_ptr<ITypeDefinition>> _typeid_to_type;
 };
 
 class BindableObjectBase : public INotifyPropertyChanged
@@ -840,7 +845,7 @@ public:
     void a_to_b();
     void b_to_a();
     
-    Binding(TypeFactory& factory,
+    Binding(std::shared_ptr<TypeFactory> factory,
             std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
             std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
             std::unique_ptr<ITypeConverter> converter = nullptr);
@@ -849,8 +854,8 @@ public:
     
 private:
     bool _is_direct;
-    ITypeDefinition* _a_dc;
-    ITypeDefinition* _b_dc;
+    std::shared_ptr<ITypeDefinition> _a_dc;
+    std::shared_ptr<ITypeDefinition> _b_dc;
     std::unique_ptr<IProperty> _a_prop_ptr;
     std::unique_ptr<IProperty> _b_prop_ptr;
     IPropertyDefinition* _a_prop_def;
@@ -867,6 +872,6 @@ private:
     std::unique_ptr<ITypeConverter> _converter;
     std::unique_ptr<IMultitype> _converter_state;
     bool _converter_direction;
-    TypeFactory& _factory;
+    std::shared_ptr<TypeFactory> _factory;
     std::string _id;
 };

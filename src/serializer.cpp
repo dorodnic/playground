@@ -39,12 +39,12 @@ public:
     bool convert(std::shared_ptr<INotifyPropertyChanged> x) const override
     {
         bool is_null = !x.get();
-        if (_was_null != is_null)
+        /*if (_was_null != is_null)
         {
             if (is_null) _destroyed();
             else _created(x);
             _was_null = is_null;
-        }
+        }*/
         
         if (x.get() != last)
         {
@@ -70,7 +70,7 @@ private:
 class ExtendedBinding : public Binding
 {
 public:
-    ExtendedBinding(TypeFactory& factory,
+    ExtendedBinding(std::shared_ptr<TypeFactory> factory,
         std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
         std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
         std::unique_ptr<ITypeConverter> converter,
@@ -85,7 +85,7 @@ private:
 };
 
 std::unique_ptr<Binding> create_multilevel_binding(
-    TypeFactory* factory,
+    std::shared_ptr<TypeFactory> factory,
     std::shared_ptr<INotifyPropertyChanged> a_ptr,
     std::shared_ptr<INotifyPropertyChanged> b_ptr,
     const std::string& a_prop,
@@ -125,21 +125,35 @@ std::unique_ptr<Binding> create_multilevel_binding(
             new BridgeConverter(on_create, on_delete));
         
         binding.reset(new ExtendedBinding(
-            *factory, bridge, "object_exists", b_ptr, prop_name, 
+            factory, bridge, "object_exists", b_ptr, prop_name, 
             std::move(converter), bridge));
     }
     else
     {
-        binding.reset(new Binding(*factory, a_ptr, a_prop, b_ptr, b_prop));
+        binding.reset(new Binding(factory, a_ptr, a_prop, b_ptr, b_prop));
     }
     return binding;
 }
 
 std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
 {
-    if (!_factory.find_type("BindingBridge"))
+    if (!_factory.get())
     {
-        _factory.register_type<BindingBridge>();
+        _factory = make_shared<TypeFactory>();
+	    _factory->register_type(TypeCollection<
+	        Button, 
+	        TextBlock, 
+	        Slider,
+	        Panel,
+	        StackPanel,
+	        Grid,
+	        PageView
+	        >());
+    }
+
+    if (!_factory->find_type("BindingBridge"))
+    {
+        _factory->register_type<BindingBridge>();
     }
 
     AttrBag bag;
@@ -157,14 +171,15 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
             << def.a_prop << " from " << def.b_name << "." << def.b_prop;
 
         auto binding = create_multilevel_binding(
-            &_factory, a_ptr, b_ptr, def.a_prop, def.b_prop);
+                        _factory, a_ptr, b_ptr, def.a_prop, def.b_prop);
 
         if (a) a->add_binding(std::move(binding));
     }
     return res;
 }
 
-Serializer::Serializer(const char* filename, TypeFactory& factory)
+Serializer::Serializer(const char* filename, 
+                       std::shared_ptr<TypeFactory> factory)
     : _factory(factory)
 {
     ifstream theFile(filename);
@@ -298,7 +313,7 @@ shared_ptr<INotifyPropertyChanged> Serializer::deserialize(
         }
     }
    
-    auto t_def = _factory.find_type(type);
+    auto t_def = _factory->find_type(type);
     if (!t_def)
     {
         stringstream ss; ss << "Unrecognized Visual Element (" << type 
@@ -359,190 +374,6 @@ shared_ptr<INotifyPropertyChanged> Serializer::deserialize(
         res = shared_ptr<VisibilityAdaptor>(
             new VisibilityAdaptor(res));
     }
-    
-    /*auto name = find_attribute(node, "name", bag, "");
-    
-    auto position_str = find_attribute(node, "position", bag, "");
-    auto position = parse_size(position_str);
-    
-    auto size_str = find_attribute(node, "size", bag, "auto");
-    auto size = parse_size(size_str);
-    
-    auto margin_str = find_attribute(node, "margin", bag, "0");
-    auto margin = parse_margin(margin_str);
-    
-    auto align_str = find_attribute(node, "align", bag, "left");
-    auto align = parse_text_alignment(align_str);
-    
-    auto txt_color_str = find_attribute(node, "text.color", bag, "black");
-    auto txt_color = parse_color(txt_color_str);
-
-    auto txt_align_str = find_attribute(node, "text.align", bag, "left");
-    auto txt_align = parse_text_alignment(txt_align_str);
-    
-    auto txt_str = find_attribute(node, "text", bag, "");
-    
-    std::unique_ptr<BindingDef> binding;
-    if (starts_with("{bind ", txt_str))
-    {
-        MinimalParser p(txt_str);
-        p.try_get_string("{bind ");
-        auto element_id = p.get_id();
-        p.req('.');
-        auto prop_name = p.get_id();
-        p.req('}');
-        p.req_eof();
-        LOG(INFO) << element_id << " " << prop_name;
-        binding.reset(new BindingDef 
-            {
-                nullptr, // a is unknown at this point, will be filled in later
-                "text", // for now, we know exactly what attribute has the binding
-                element_id,
-                prop_name
-            });
-        txt_str = "";
-    }
-
-    auto color_str = find_attribute(node, "color", bag, "gray");
-    auto color = parse_color(color_str);
-    
-    auto ori_str = find_attribute(node, "orientation", bag, "vertical");
-    auto orientation = parse_orientation(ori_str);
-
-    auto selected_str = find_attribute(node, "selected", bag, "\\");
-    
-    auto visible_str = find_attribute(node, "visible", bag, "true");
-    auto visible = parse_bool(visible_str);
-
-    auto enabled_str = find_attribute(node, "enabled", bag, "true");
-    auto enabled = parse_bool(enabled_str);*/
-
-    /*if (type == "TextBlock")
-    {                
-        res = shared_ptr<TextBlock>(new TextBlock(
-            name, txt_str, txt_align, position, size, txt_color
-        ));
-    }
-    else if (type == "Button")
-    {
-        if (find_attribute(node, "text.align", bag, "\\") == "\\") 
-            txt_align = Alignment::center; // override default for buttons
-    
-        res = shared_ptr<Button>(new Button(
-            name, txt_str, txt_align, txt_color, 
-            align, position, size, color
-        ));
-    }
-    else if (type == "Slider")
-    {
-        auto min_str = find_attribute(node, "min", bag, "0");
-        auto max_str = find_attribute(node, "max", bag, "100");
-        auto step_str = find_attribute(node, "step", bag, "20");
-        auto value_str = find_attribute(node, "value", bag, "0");
-        
-        auto min = parse_float(min_str);
-        auto max = parse_float(max_str);
-        auto step = parse_float(step_str);
-        auto value = parse_float(value_str);
-    
-        res = shared_ptr<Slider>(new Slider(
-            name, align, position, size, color, txt_color, 
-            orientation, min, max, step, value
-        ));
-    }
-    else if (type == "StackPanel")
-    {
-        auto panel = shared_ptr<StackPanel>(new StackPanel(
-            name, position, size, align, orientation, nullptr
-        ));
-        
-        parse_container(panel.get(), node, name, bag, bindings);
-
-        res = panel;
-    }
-    else if (type == "Panel")
-    {                
-        auto panel = shared_ptr<Panel>(new Panel(
-            name, position, size, align
-        ));
-        
-        parse_container(panel.get(), node, name, bag, bindings);
-         
-        res = panel;
-    }
-    else if (type == "PageView")
-    {                
-        auto panel = shared_ptr<PageView>(new PageView(
-            name, position, size, align
-        ));
-        
-        parse_container(panel.get(), node, name, bag, bindings);
-        
-        auto selected_item = panel->find_element(selected_str);
-        panel->set_focused_child(selected_item);
-        
-        res = panel;
-    }
-    else if (type == "Grid")
-    {
-        auto grid = shared_ptr<Grid>(new Grid(
-            name, position, size, align, orientation
-        ));
-        
-        for (auto sub_node = node->first_node(); 
-             sub_node; 
-             sub_node = sub_node->next_sibling()) {
-            try
-            {
-                string sub_name = sub_node->name();
-                if (sub_name == "Break") grid->commit_line();
-                else grid->add_item(deserialize(grid.get(), sub_node, bag, bindings));
-            } catch (const exception& ex) {
-                LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
-                           << " " << name << ")" << endl;
-            }
-        }
-        
-        grid->commit_line();
-        res = grid;
-    }
-    else if (type == "Using")
-    {        
-        auto sub_node = node->first_node();
-        
-        AttrBag new_bag;
-        for (auto attr = node->first_attribute(); 
-             attr; 
-             attr = attr->next_attribute()) {
-            new_bag.push_back(attr);
-        }
-        for (auto attr : bag)
-        {
-            auto it = std::find_if(new_bag.begin(), new_bag.end(),
-                        [attr](xml_attribute<>* x) { 
-                            return std::string(x->name()) == attr->name(); 
-                        });
-            if (it == new_bag.end())
-            {
-                new_bag.push_back(attr);
-            }
-        }
-        
-        try
-        {
-            res = deserialize(parent, sub_node, new_bag, bindings);
-        } catch (const exception& ex) {
-            LOG(ERROR) << "Parsing Error: " << ex.what() << " (" << type 
-                       << " " << name << ")" << endl;
-        }
-        
-        if (sub_node->next_sibling())
-        {
-            stringstream ss; 
-            ss << "Using should not have multiple nested items!";
-            throw runtime_error(ss.str());
-        }
-    }*/
     
     return res;
 }
