@@ -3,10 +3,9 @@
 #include <cmath>
 
 #include "ui.h"
-#include "serializer.h"
 #include "controls.h"
 #include "containers.h"
-#include "bind.h"
+#include "serializer.h"
 
 #define GLFW_INCLUDE_GLU
 #include <GLFW/glfw3.h>

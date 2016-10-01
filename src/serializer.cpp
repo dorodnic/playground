@@ -2,6 +2,7 @@
 #include "controls.h"
 #include "containers.h"
 #include "adaptors.h"
+#include "nonvisual.h"
 
 #include <fstream>
 #include <streambuf>
@@ -141,7 +142,8 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
 	        Panel,
 	        StackPanel,
 	        Grid,
-	        PageView
+	        PageView,
+	        Timer
 	        >());
     }
 
@@ -160,6 +162,8 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
         auto a_ptr = elements[def.a];
         auto a = dynamic_cast<ControlBase*>(def.a);
         auto b_ptr = elements[elem->find_element(def.b_name)];
+        auto adaptor = dynamic_cast<VisualAdaptor*>(b_ptr.get());
+        if (adaptor) b_ptr = adaptor->get();
         
         LOG(INFO) << "Creating binding to " << a->to_string() << "." 
             << def.a_prop << " from " << def.b_name << "." << def.b_prop;
@@ -351,10 +355,15 @@ shared_ptr<INotifyPropertyChanged> Serializer::deserialize(
         if (grid) grid->commit_line();
     }
     
+    auto control = dynamic_cast<ControlBase*>(res.get());
+    
+    if (!control)
+    {
+        res = shared_ptr<VisualAdaptor>(new VisualAdaptor(res, name));
+    }
+    
     elements[res.get()] = res; // update address mapping before applying adaptors
     
-    // update controls parent before applying any adaptors
-    auto control = dynamic_cast<ControlBase*>(res.get());
     if (control) 
     {
         control->update_parent(parent);
@@ -362,11 +371,9 @@ shared_ptr<INotifyPropertyChanged> Serializer::deserialize(
         auto margin_str = find_attribute(node, "margin", bag);
         margin_str = (margin_str == "" ? "0" : margin_str);
         auto margin = type_string_traits::parse(margin_str, (Margin*)nullptr);
-        res = shared_ptr<MarginAdaptor>(
-            new MarginAdaptor(res, margin));
+        res = shared_ptr<MarginAdaptor>(new MarginAdaptor(res, margin));
 
-        res = shared_ptr<VisibilityAdaptor>(
-            new VisibilityAdaptor(res));
+        res = shared_ptr<VisibilityAdaptor>(new VisibilityAdaptor(res));
     }
     
     return res;

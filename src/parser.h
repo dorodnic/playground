@@ -405,6 +405,7 @@ namespace type_string_traits
     
     DECLARE_TYPE_NAME(int);
     DECLARE_TYPE_NAME(bool);
+    DECLARE_TYPE_NAME(const char*);
     DECLARE_TYPE_NAME(std::string);
     DECLARE_TYPE_NAME(float);
     DECLARE_TYPE_NAME(Size);

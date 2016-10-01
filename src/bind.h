@@ -76,6 +76,8 @@ public:
     {
         return nullptr;
     }
+    
+    virtual void update() {}
 };
 
 template<class T>

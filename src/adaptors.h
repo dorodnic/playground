@@ -85,6 +85,100 @@ protected:
     IVisualElement* _element;
 };
 
+class VisualAdaptor : public IVisualElement
+{
+public:
+    VisualAdaptor(std::shared_ptr<INotifyPropertyChanged> obj, 
+                  std::string name)
+        : _obj(obj), _name(name)
+    {
+        if (!obj.get())
+        {
+            _type = "INotifyPropertyChanged";
+        }
+        else
+        {
+            _type = typeid(*obj).name();
+        }
+    }
+    
+    std::shared_ptr<INotifyPropertyChanged> get() const
+    {
+        return _obj;
+    }
+    
+    void subscribe_on_change(void* owner, 
+                             OnFieldChangeCallback on_change) override
+    {
+        _obj->subscribe_on_change(owner, on_change);
+    }
+    void unsubscribe_on_change(void* owner) override 
+    {
+        _obj->unsubscribe_on_change(owner);
+    }
+    void fire_property_change(const char* prop) override
+    {
+        _obj->fire_property_change(prop);
+    }
+    
+    Rect arrange(const Rect& origin) override { return Rect(); }
+    void invalidate_layout() override { }
+    void render(const Rect& origin) override { _obj->update(); }
+    Size2 get_size() const override { return Size2(); }
+    Size2 get_intrinsic_size() const override { return Size2(); }
+
+    void update_mouse_position(Int2 cursor) override {}
+    void update_mouse_state(MouseButton button, MouseState state) override {}
+    void update_mouse_scroll(Int2 scroll) override {}
+
+    void set_focused(bool on) override { }
+    bool is_focused() const override { return false; }
+    const std::string& get_name() const override { return _name; }
+    Alignment get_align() const override { return Alignment::left; }
+    
+    void set_enabled(bool on) override { }
+    bool is_enabled() const override { return false; }
+    
+    void set_visible(bool on) override { }
+    bool is_visible() const override { return false; }
+    
+    IVisualElement* find_element(const std::string& name) override
+    {
+        if (name == _name) 
+        {
+            return this;
+        }
+        else return nullptr;
+    }
+    
+    void set_on_click(std::function<void()> on_click,
+                      MouseButton button = MouseButton::left) override {}
+    void set_on_double_click(std::function<void()> on_click) override {}
+    
+    const char* get_type() const override { return _type.c_str(); }
+    std::string to_string() const override { return _type; }
+    
+    void set_data_context(std::shared_ptr<INotifyPropertyChanged> dc) override {}
+    std::shared_ptr<INotifyPropertyChanged> get_data_context() const override 
+    {
+        return nullptr;
+    }
+    
+private:
+    std::shared_ptr<INotifyPropertyChanged> _obj;
+    std::string _name;
+    std::string _type;
+};
+
+template<>
+struct TypeDefinition<VisualAdaptor>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        DefineClass(VisualAdaptor)->AddField(get_type)->AddField(get_name);
+    }
+};
+
 class MarginAdaptor : public ElementAdaptor
 {
 public:
