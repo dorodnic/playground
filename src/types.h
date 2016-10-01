@@ -26,6 +26,8 @@ class stringifier
 {
 public:
     stringifier() : _ss() {}
+	
+	stringifier(stringifier&& other) : _ss(std::move(other._ss)) {}
 
     operator std::string() const
     {
