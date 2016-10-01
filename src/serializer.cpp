@@ -39,12 +39,6 @@ public:
     bool convert(std::shared_ptr<INotifyPropertyChanged> x) const override
     {
         bool is_null = !x.get();
-        /*if (_was_null != is_null)
-        {
-            if (is_null) _destroyed();
-            else _created(x);
-            _was_null = is_null;
-        }*/
         
         if (x.get() != last)
         {

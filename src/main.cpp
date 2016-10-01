@@ -196,24 +196,30 @@ void setup_ui(IVisualElement* c, shared_ptr<INotifyPropertyChanged> dcPlus,
 	
 	auto grid = c->find_element("grid_with_dc");
 	btn_change_dc_to_plus->set_on_click([dcPlus, grid]() {
+	    LOG(INFO) << "Setting DC to plus";
 	    grid->set_data_context(dcPlus);
 	});
 	btn_change_dc_to_minus->set_on_click([dcMinus, grid]() {
+	    LOG(INFO) << "Setting DC to minus";
 	    grid->set_data_context(dcMinus);
 	});
 	btn_change_dc_to_null->set_on_click([grid]() {
+	    LOG(INFO) << "Setting DC to null";
 	    grid->set_data_context(nullptr);
 	});
 	
 	btn_change_counter_to_floats->set_on_click([grid]() {
+	    LOG(INFO) << "Setting DC.counter to float";
 	    auto dc = dynamic_cast<Context*>(grid->get_data_context().get());
 	    if (dc) dc->set_float_mode();
 	});
 	btn_change_counter_to_ints->set_on_click([grid]() {
+	    LOG(INFO) << "Setting DC.counter to int";
 	    auto dc = dynamic_cast<Context*>(grid->get_data_context().get());
 	    if (dc) dc->set_int_mode();
 	});
 	btn_change_counter_to_null->set_on_click([grid]() {
+	    LOG(INFO) << "Setting DC.counter to null";
 	    auto dc = dynamic_cast<Context*>(grid->get_data_context().get());
 	    if (dc) dc->set_null();
 	});

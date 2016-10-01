@@ -850,7 +850,7 @@ public:
             std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
             std::unique_ptr<ITypeConverter> converter = nullptr);
             
-    ~Binding();
+    virtual ~Binding();
     
 private:
     bool _is_direct;
