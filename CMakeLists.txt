@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE Debug)
 
+find_package(OpenGL REQUIRED)
+
 # Find glfw header
 find_path(GLFW_INCLUDE_DIR NAMES GLFW/glfw3.h
 	PATHS /usr/X11R6/include
@@ -35,4 +37,4 @@ add_executable(main src/main.cpp
                src/types.h src/bind.h src/bind.cpp
                src/serializer.h src/serializer.cpp
                )
-target_link_libraries(main ${GLFW_LIBRARIES})
+target_link_libraries(main ${GLFW_LIBRARIES} ${OPENGL_gl_LIBRARY})
