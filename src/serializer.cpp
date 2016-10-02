@@ -48,8 +48,8 @@ public:
         
         if (x.get() != last)
         {
-            _destroyed();
-            _created(x);
+            if (last) _destroyed();
+            if (x.get()) _created(x);
             last = x.get();
         }
     
@@ -152,6 +152,9 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
         auto a_ptr = elements[def.a];
         auto a = dynamic_cast<ControlBase*>(def.a);
         auto b_ptr = elements[elem->find_element(def.b_name)];
+        
+        LOG(INFO) << "Creating binding to " << a->to_string() << "." 
+            << def.a_prop << " from " << def.b_name << "." << def.b_prop;
 
         auto binding = create_multilevel_binding(
             &_factory, a_ptr, b_ptr, def.a_prop, def.b_prop);

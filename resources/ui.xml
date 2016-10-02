@@ -101,10 +101,10 @@
                     <Button text="changed DC to negative" color="blue" name="btnChangeDCtoMinus" margin="2" />
                     <Break/>
                     <TextBlock />
-                    <Button text="changed DC to null" color="blue" name="btnChangeCounterToNull" margin="2" />
+                    <Button text="changed DC to null" color="blue" name="btnChangeDCtoNull" margin="2" />
                     <Break/>
                     <TextBlock />
-                    <Button text="changed DC.counter to null" color="green" name="btnChangeDCtoNull" margin="2" />
+                    <Button text="changed DC.counter to null" color="green" name="btnChangeCounterToNull" margin="2" />
                     <Break/>
                     <TextBlock />
                     <Button text="changed DC.counter to ints" color="green" name="btnChangeDCtoInts" margin="2" />

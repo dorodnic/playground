@@ -192,7 +192,7 @@ public:
     }
 
 protected:
-    ControlBase() {}
+    ControlBase();
 
 private:
     Size2 _position = {0,0};

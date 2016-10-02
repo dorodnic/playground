@@ -1,5 +1,7 @@
 #include "bind.h"
 
+#include "../easyloggingpp/easylogging++.h"
+
 BindableObjectBase::BindableObjectBase() : _on_change() {}
 
 void BindableObjectBase::fire_property_change(const char* property_name)
@@ -95,6 +97,11 @@ Binding::Binding(TypeFactory& factory,
     _a_prop = a_prop;
     _b_prop = b_prop;
     
+    _id = str() << "binding from object of type " << typeid(*strong_a).name() 
+              << ", property " << a_prop << " to object of type " << typeid(*strong_b).name() 
+              << ", property " << b_prop;
+    LOG(INFO) << "Created " << _id;
+    
     _converter = std::move(converter);
     if (_converter)
     {
@@ -188,4 +195,6 @@ Binding::~Binding()
 {
     _a_prop_ptr->unsubscribe_on_change(this);
     _b_prop_ptr->unsubscribe_on_change(this);
+    
+    LOG(INFO) << "Removed " << _id;
 }

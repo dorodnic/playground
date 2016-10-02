@@ -45,9 +45,16 @@ ControlBase::ControlBase(std::string name,
                 const Size2& position,
                 const Size2& size,
                 Alignment alignment)
-        : _position(position), _size(size), 
-          _name(name), _align(alignment), _parent(nullptr),
-          _on_double_click([this](){ _on_click[MouseButton::left](); })
+        : ControlBase()
+{
+    _position = position;
+    _size = size;
+    _name = name;
+    _align = alignment;
+}
+
+ControlBase::ControlBase()
+        : _on_double_click([this](){ _on_click[MouseButton::left](); })
 {
     _state[MouseButton::left] = _state[MouseButton::right] =
     _state[MouseButton::middle] = MouseState::up;

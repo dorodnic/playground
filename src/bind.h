@@ -868,4 +868,5 @@ private:
     std::unique_ptr<IMultitype> _converter_state;
     bool _converter_direction;
     TypeFactory& _factory;
+    std::string _id;
 };
