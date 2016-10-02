@@ -15,8 +15,84 @@ INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
 
-void setup_ui(IVisualElement* c, std::shared_ptr<INotifyPropertyChanged> dc,
-                                 std::shared_ptr<INotifyPropertyChanged> dc2)
+struct FloatCounter : public BindableObjectBase
+{
+    FloatCounter(int sign) 
+        : _sign(sign), 
+          name((sign > 0) ? "positive float" : "negative float") {}
+    
+    float count = 0.0f;
+
+    void update()
+    {
+        count += _sign * 0.22f;
+        fire_property_change("count");
+    }
+    
+    int _sign;
+    std::string name;
+};
+
+struct IntCounter : public BindableObjectBase
+{
+    IntCounter(int sign) 
+        : _sign(sign), 
+          name((sign > 0) ? "positive int" : "negative int") {}
+    
+    int count = 0;
+
+    void update()
+    {
+        count += _sign;
+        fire_property_change("count");
+    }
+    
+    int _sign;
+    std::string name;
+};
+
+struct Context : public BindableObjectBase
+{
+    Context(int sign) 
+        : floats_counter(new FloatCounter(sign)),
+          ints_counter(new IntCounter(sign)),
+          counter(nullptr),
+          name((sign > 0) ? "positive DC" : "negative DC") {}
+
+    std::shared_ptr<INotifyPropertyChanged> counter;
+    
+    std::shared_ptr<FloatCounter> floats_counter;
+    std::shared_ptr<IntCounter> ints_counter;
+    
+    void set_int_mode()
+    {
+        counter = ints_counter;
+        fire_property_change("counter");
+    }
+    
+    void set_float_mode()
+    {
+        counter = floats_counter;
+        fire_property_change("counter");
+    }
+    
+    void set_null()
+    {
+        counter = nullptr;
+        fire_property_change("counter");
+    }
+    
+    void update()
+    {
+        floats_counter->update();
+        ints_counter->update();
+    }
+    
+    std::string name;
+};
+
+void setup_ui(IVisualElement* c, shared_ptr<INotifyPropertyChanged> dcPlus,
+                                 shared_ptr<INotifyPropertyChanged> dcMinus)
 {
     auto btn_next = c->find_element("btnNext");
 	auto btn_prev = c->find_element("btnPrev");
@@ -67,17 +143,36 @@ void setup_ui(IVisualElement* c, std::shared_ptr<INotifyPropertyChanged> dc,
 	    LOG(INFO) << "button was clicked!";
 	});
 	
-	auto btn_change_dc = c->find_element("btnChangeDC");
+	auto btn_change_dc_to_null = c->find_element("btnChangeDCtoNull");	
+	auto btn_change_dc_to_plus = c->find_element("btnChangeDCtoPlus");
+	auto btn_change_dc_to_minus = c->find_element("btnChangeDCtoMinus");
+	
+	auto btn_change_counter_to_floats = c->find_element("btnChangeDCtoFloats");
+	auto btn_change_counter_to_ints = c->find_element("btnChangeDCtoInts");
+	auto btn_change_counter_to_null = c->find_element("btnChangeCounterToNull");
+	
 	auto grid = c->find_element("grid_with_dc");
-	btn_change_dc->set_on_click([dc,dc2, grid]() {
-	    if (grid->get_data_context() == dc2)
-	    {
-	        grid->set_data_context(dc);
-	    }
-	    else
-	    {
-	        grid->set_data_context(dc2);
-	    }
+	btn_change_dc_to_plus->set_on_click([dcPlus, grid]() {
+	    grid->set_data_context(dcPlus);
+	});
+	btn_change_dc_to_minus->set_on_click([dcMinus, grid]() {
+	    grid->set_data_context(dcMinus);
+	});
+	btn_change_dc_to_null->set_on_click([grid]() {
+	    grid->set_data_context(nullptr);
+	});
+	
+	btn_change_counter_to_floats->set_on_click([grid]() {
+	    auto dc = dynamic_cast<Context*>(grid->get_data_context().get());
+	    if (dc) dc->set_float_mode();
+	});
+	btn_change_counter_to_ints->set_on_click([grid]() {
+	    auto dc = dynamic_cast<Context*>(grid->get_data_context().get());
+	    if (dc) dc->set_int_mode();
+	});
+	btn_change_counter_to_null->set_on_click([grid]() {
+	    auto dc = dynamic_cast<Context*>(grid->get_data_context().get());
+	    if (dc) dc->set_null();
 	});
 	
 	btn_next->set_on_click([page_id, page]() {
@@ -104,14 +199,22 @@ void setup_ui(IVisualElement* c, std::shared_ptr<INotifyPropertyChanged> dc,
 	text->add_binding(Binding::bind(slider, "value", text, "text"));*/
 }
 
-struct Context : public BindableObjectBase
+template<>
+struct TypeDefinition<IntCounter>
 {
-    float fps = 5.3f;
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        DefineClass(IntCounter)->AddField(count)->AddField(name);
+    }
 };
 
-struct Context2 : public BindableObjectBase
+template<>
+struct TypeDefinition<FloatCounter>
 {
-    int fps = 0;
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        DefineClass(FloatCounter)->AddField(count)->AddField(name);
+    }
 };
 
 template<>
@@ -119,19 +222,9 @@ struct TypeDefinition<Context>
 {
     static std::shared_ptr<ITypeDefinition> make() 
     {
-        DefineClass(Context)->AddField(fps);
+        DefineClass(Context)->AddField(counter)->AddField(name);
     }
 };
-
-template<>
-struct TypeDefinition<Context2>
-{
-    static std::shared_ptr<ITypeDefinition> make() 
-    {
-        DefineClass(Context2)->AddField(fps);
-    }
-};
-
 
 int main(int argc, char * argv[]) try
 {
@@ -151,18 +244,18 @@ int main(int argc, char * argv[]) try
 	    StackPanel,
 	    Grid,
 	    PageView,
-	    Context, Context2
+	    Context, IntCounter, FloatCounter
 	    >());
 	
-	std::shared_ptr<Context> dc(new Context);
-	std::shared_ptr<Context2> dc2(new Context2);
+	std::shared_ptr<Context> dcPlus(new Context(1));
+	std::shared_ptr<Context> dcMinus(new Context(-1));
 	
 	try
 	{
 	    LOG(INFO) << "Loading UI...";
 	    Serializer s("resources/ui.xml", types);
 	    c.add_item(s.deserialize());
-	    setup_ui(&c, dc, dc2);
+	    setup_ui(&c, dcPlus, dcMinus);
 	    Rect origin { { 0, 0 }, { 1280, 960 } };
         c.arrange(origin);
         LOG(INFO) << "UI has been succesfully loaded and arranged";
@@ -237,10 +330,8 @@ int main(int argc, char * argv[]) try
         
         frame_number++;
         
-        dc->fps = sin(cos(frame_number / 200.0));
-        dc->fire_property_change("fps");
-        dc2->fps = frame_number;
-        dc2->fire_property_change("fps");
+        dcPlus->update();
+        dcMinus->update();
 
         Rect origin { { 0, 0 }, { w, h } };
 

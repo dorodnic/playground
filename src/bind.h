@@ -129,7 +129,12 @@ public:
             if (it != _typeid_to_type.end())
                 return it->second;
             else
-                return nullptr;
+            {
+                auto type_name = typeid(*ptr).name();
+                throw std::runtime_error(str() << 
+                    "Could not find reflection data for object of type " <<
+                    type_name << ". Make sure the type is registered");         
+            }
         }
         else
         {
@@ -137,7 +142,12 @@ public:
             if (it != _typeid_to_type.end())
                 return it->second;
             else
-                return nullptr;
+            {
+                auto type_name = typeid(T).name();
+                throw std::runtime_error(str() << 
+                    "Could not find reflection data for object of type " <<
+                    type_name << ". Make sure the type is registered");         
+            }
         }
     }
     

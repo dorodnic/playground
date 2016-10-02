@@ -80,13 +80,38 @@
             </StackPanel>
         </Using>
         <StackPanel size="*" orientation="vertical" name="5">
-                <TextBlock text="binding to data context:" margin="5" name="5_title" />
+                <TextBlock text="binding resonds to changes within the property structure:" margin="5" name="5_title" />
                 <Grid orientation="vertical" name="grid_with_dc" >
                     <TextBlock text="value:"  />
-                    <TextBlock text="{bind grid_with_dc.data_context.fps}" />
+                    <TextBlock text="{bind grid_with_dc.data_context.counter.count}" />
                     <Break/>
                     <TextBlock />
-                    <Button text="changed DC" name="btnChangeDC" />
+                    <TextBlock text="bound to grid_with_dc.data_context.counter.count"  />
+                    <Break/>
+                    <TextBlock text="data context:"  />
+                    <TextBlock text="{bind grid_with_dc.data_context.name}" />
+                    <Break/>
+                    <TextBlock text="counter:"  />
+                    <TextBlock text="{bind grid_with_dc.data_context.counter.name}" />
+                    <Break/>
+                    <TextBlock text="controls:" />
+                    <Button text="changed DC to possitive" color="blue" name="btnChangeDCtoPlus" margin="2" />
+                    <Break/>
+                    <TextBlock />
+                    <Button text="changed DC to negative" color="blue" name="btnChangeDCtoMinus" margin="2" />
+                    <Break/>
+                    <TextBlock />
+                    <Button text="changed DC to null" color="blue" name="btnChangeCounterToNull" margin="2" />
+                    <Break/>
+                    <TextBlock />
+                    <Button text="changed DC.counter to null" color="green" name="btnChangeDCtoNull" margin="2" />
+                    <Break/>
+                    <TextBlock />
+                    <Button text="changed DC.counter to ints" color="green" name="btnChangeDCtoInts" margin="2" />
+                    <Break/>
+                    <TextBlock />
+                    <Button text="changed DC.counter to floats" color="green" name="btnChangeDCtoFloats" margin="2" />
+                    
                 </Grid>
             </StackPanel>
     </PageView>
