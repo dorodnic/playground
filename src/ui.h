@@ -162,15 +162,9 @@ public:
     
     std::string to_string() const override { return get_name() + "(" + get_type() + ")"; }
     
-    void add_binding(std::shared_ptr<Binding> binding)
+    void add_binding(std::unique_ptr<Binding> binding)
     {
-        _bindings.push_back(binding);
-    }
-    
-    void remove_binding(std::shared_ptr<Binding> binding)
-    {
-        _bindings.erase(std::remove(_bindings.begin(), _bindings.end(), binding), 
-                        _bindings.end()); 
+        _bindings.push_back(std::move(binding));
     }
     
     void set_data_context(std::shared_ptr<INotifyPropertyChanged> dc) override 
@@ -209,7 +203,7 @@ private:
     bool _enabled = true;
     bool _visible = true;
     IVisualElement* _parent = nullptr;
-    std::vector<std::shared_ptr<Binding>> _bindings;
+    std::vector<std::unique_ptr<Binding>> _bindings;
     std::shared_ptr<INotifyPropertyChanged> _dc = nullptr;
     BindableObjectBase _base;
     

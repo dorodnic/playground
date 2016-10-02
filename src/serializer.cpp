@@ -84,6 +84,57 @@ private:
     std::shared_ptr<BindingBridge> _bridge;
 };
 
+std::unique_ptr<Binding> create_multilevel_binding(
+    TypeFactory* factory,
+    std::shared_ptr<INotifyPropertyChanged> a_ptr,
+    std::shared_ptr<INotifyPropertyChanged> b_ptr,
+    const std::string& a_prop,
+    const std::string& b_prop
+    )
+{
+    std::unique_ptr<Binding> binding;
+    MinimalParser p(b_prop);
+    auto prop_name = p.get_id();
+    if (p.peek() == '.')
+    {
+        p.get();
+        auto prop_rest = p.rest();
+        p.req_eof();
+        
+        std::shared_ptr<BindingBridge> bridge(new BindingBridge());
+        std::weak_ptr<BindingBridge> weak(bridge);
+       
+        auto on_create = [factory, weak, a_ptr, a_prop, prop_rest](auto x)
+        {
+            auto b = weak.lock();
+            if (b)
+            {
+                b->binding = create_multilevel_binding(
+                    factory, a_ptr, x, a_prop, prop_rest);
+            }
+        };
+        auto on_delete = [weak](){
+            auto b = weak.lock();
+            if (b)
+            {
+                b->binding = nullptr;
+            }
+        };
+        
+        std::unique_ptr<ITypeConverter> converter(
+            new BridgeConverter(on_create, on_delete));
+        
+        binding.reset(new ExtendedBinding(
+            *factory, bridge, "object_exists", b_ptr, prop_name, 
+            std::move(converter), bridge));
+    }
+    else
+    {
+        binding.reset(new Binding(*factory, a_ptr, a_prop, b_ptr, b_prop));
+    }
+    return binding;
+}
+
 std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
 {
     if (!_factory.find_type("BindingBridge"))
@@ -101,54 +152,11 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
         auto a_ptr = elements[def.a];
         auto a = dynamic_cast<ControlBase*>(def.a);
         auto b_ptr = elements[elem->find_element(def.b_name)];
-        
-        std::shared_ptr<Binding> binding;
-        MinimalParser p(def.b_prop);
-        auto prop_name = p.get_id();
-        if (p.peek() == '.')
-        {
-            p.get();
-            auto prop2_name = p.get_id();
-            
-            p.req_eof();
-            
-            std::shared_ptr<BindingBridge> bridge(new BindingBridge());
-            std::weak_ptr<BindingBridge> weak(bridge);
-           
-            auto on_create = [this, weak, a, a_ptr, def, prop2_name]
-                (std::shared_ptr<INotifyPropertyChanged> x)
-            {
-                auto b = weak.lock();
-                if (b)
-                {
-                    b->binding.reset(new Binding(
-                        _factory, a_ptr, def.a_prop, x, prop2_name));
-                    if (a) a->add_binding(b->binding);
-                }
-            };
-            auto on_delete = [this, weak, a](){
-                auto b = weak.lock();
-                if (b)
-                {
-                    if (a) a->remove_binding(b->binding);
-                    b->binding = nullptr;
-                }
-            };
-            
-            std::unique_ptr<ITypeConverter> converter(
-                new BridgeConverter(on_create, on_delete));
-            
-            binding.reset(new ExtendedBinding(
-                _factory, bridge, "object_exists", b_ptr, prop_name, 
-                std::move(converter), bridge));
-        }
-        else
-        {
-            binding.reset(new Binding(
-                _factory, a_ptr, def.a_prop, b_ptr, def.b_prop));
-        }
 
-        if (a) a->add_binding(binding);
+        auto binding = create_multilevel_binding(
+            &_factory, a_ptr, b_ptr, def.a_prop, def.b_prop);
+
+        if (a) a->add_binding(std::move(binding));
     }
     return res;
 }

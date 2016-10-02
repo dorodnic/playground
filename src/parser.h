@@ -232,6 +232,13 @@ public:
         return { left, top, right, bottom };
     }
     
+    auto rest()
+    {
+        std::string r;
+        while (!eof()) r += get();
+        return r;
+    }
+    
     ~MinimalParser()
     {
         if (_index < _line.size())
