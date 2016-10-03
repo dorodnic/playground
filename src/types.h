@@ -6,6 +6,11 @@
 #include <string>
 #include <sstream>
 
+#ifdef WIN32
+   #undef min
+   #undef max
+#endif
+
 enum class Orientation
 {
     vertical,
@@ -72,6 +77,7 @@ inline std::ostream & operator << (std::ostream & o, const Color3& c)
     o << (int)(255 * c.r) << "," 
       << (int)(255 * c.g) << "," 
       << (int)(255 * c.b);
+    return o;
 }
 
 class Size
@@ -118,6 +124,7 @@ inline std::ostream & operator << (std::ostream & o, const Size& r)
     if (r.is_auto()) o << "auto";
     else if (r.is_const()) o << r.get_pixels() << "px";
     else o << (int)(r.get_percents() * 100) << "%";
+    return o;
 }
 
 inline Size2 Auto() { return { Size::Auto(), Size::Auto() }; }

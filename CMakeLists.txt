@@ -7,28 +7,6 @@ set(CMAKE_BUILD_TYPE Debug)
 
 find_package(OpenGL REQUIRED)
 
-# Find glfw header
-find_path(GLFW_INCLUDE_DIR NAMES GLFW/glfw3.h
-	PATHS /usr/X11R6/include
-		  /usr/include/X11
-		  /opt/graphics/OpenGL/include
-		  /opt/graphics/OpenGL/contrib/libglfw
-		  /usr/local/include
-		  /usr/include/GL
-		  /usr/include
-)
-# Find glfw library
-find_library(GLFW_LIBRARIES NAMES glfw glfw3
-		PATHS /usr/lib64
-			  /usr/lib
-			  /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}
-			  /usr/local/lib64
-			  /usr/local/lib
-			  /usr/local/lib/${CMAKE_LIBRARY_ARCHITECTURE}
-			  /usr/X11R6/lib
-)
-include_directories(${GLFW_INCLUDE_DIR})
-
 add_executable(main src/main.cpp 
                src/ui.cpp src/ui.h 
                src/parser.cpp src/parser.h
@@ -37,4 +15,31 @@ add_executable(main src/main.cpp
                src/types.h src/bind.h src/bind.cpp
                src/serializer.h src/serializer.cpp
                )
-target_link_libraries(main ${GLFW_LIBRARIES} ${OPENGL_gl_LIBRARY})
+
+if(WIN32)
+    add_subdirectory(glfw)
+	target_link_libraries(main glfw3 ${OPENGL_gl_LIBRARY})
+else()
+    # Find glfw header
+	find_path(GLFW_INCLUDE_DIR NAMES GLFW/glfw3.h
+		PATHS /usr/X11R6/include
+			  /usr/include/X11
+			  /opt/graphics/OpenGL/include
+			  /opt/graphics/OpenGL/contrib/libglfw
+			  /usr/local/include
+			  /usr/include/GL
+			  /usr/include
+	)
+	# Find glfw library
+	find_library(GLFW_LIBRARIES NAMES glfw glfw3
+			PATHS /usr/lib64
+				  /usr/lib
+				  /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}
+				  /usr/local/lib64
+				  /usr/local/lib
+				  /usr/local/lib/${CMAKE_LIBRARY_ARCHITECTURE}
+				  /usr/X11R6/lib
+	)
+	include_directories(${GLFW_INCLUDE_DIR})
+	target_link_libraries(main ${GLFW_LIBRARIES} ${OPENGL_gl_LIBRARY})
+endif()

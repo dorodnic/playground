@@ -106,7 +106,7 @@ struct Context : public BindableObjectBase
         if (_frame_times.size() != fps)
         {
             fps = _frame_times.size();
-            //fire_property_change("fps");
+            fire_property_change("fps");
         }
     }
     
