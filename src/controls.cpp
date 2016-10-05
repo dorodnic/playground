@@ -141,14 +141,17 @@ Size2 TextBlock::get_intrinsic_size() const
 
 void TextBlock::set_text(std::string text) 
 { 
-    if (get_text_width(to_upper(_text)) != get_text_width(to_upper(text)))
+    auto new_width = get_text_width(to_upper(text));
+    auto width = get_size().x;
+    if ((get_text_width(to_upper(_text)) == new_width) ||
+        (width.is_const() && width.get_pixels() > new_width))
     {
         _text = text; 
-        ControlBase::invalidate_layout();
     }
     else
     {
         _text = text;
+        ControlBase::invalidate_layout();
     }
     fire_property_change("text");
 }
