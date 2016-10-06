@@ -6,6 +6,7 @@
 #include "controls.h"
 #include "containers.h"
 #include "serializer.h"
+#include "font.h"
 
 #define GLFW_INCLUDE_GLU
 #include <GLFW/glfw3.h>
@@ -275,6 +276,11 @@ int main(int argc, char * argv[]) try
                 { 1.0f, 0.2f, 0.2f }
 	        )));
 	}
+	
+	Font f("resources/fonts/v.fnt");
+	TextMesh m(f, "Hello World!");
+	
+	LOG(INFO) << m.get_width() << " x " << m.get_height();
 
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {

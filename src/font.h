@@ -2,8 +2,26 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
+class Font;
 
+class TextMesh
+{
+public:
+    int get_vertex_count() const { return _vertex_positions.size() / 2; }
+    
+    int get_width() const { return _width; }
+    int get_height() const { return _height; }
+    
+    TextMesh(const Font& font, const std::string& text);
+
+private:
+    std::vector<float> _vertex_positions;
+    std::vector<float> _texture_coords;
+    int _width;
+    int _height;
+};
 
 struct FontCharacter
 {
@@ -20,12 +38,16 @@ struct FontCharacter
 class Font
 {
 public:
-    static Font load(const std::string& filename);
+    explicit Font(const std::string& filename);
     
-    
+    const FontCharacter* lookup(char c) const {
+        auto it = _chars.find(c);
+        if (it != _chars.end()) return &it->second;
+        else return nullptr;
+    }
     
 private:
-    std::vector<FontCharacter> _chars;
+    std::unordered_map<char, FontCharacter> _chars;
     std::unordered_map<std::string, int> _kerning;
     int _texture_id;
 };

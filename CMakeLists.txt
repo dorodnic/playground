@@ -14,6 +14,7 @@ add_executable(main src/main.cpp
                src/controls.h src/controls.cpp
                src/types.h src/bind.h src/bind.cpp
                src/serializer.h src/serializer.cpp
+               src/font.h src/font.cpp
                )
 
 if(WIN32)

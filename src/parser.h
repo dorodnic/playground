@@ -54,6 +54,27 @@ public:
                (c >= 'A' && c <= 'Z') || (c == '_');
     }
     
+    auto get_line()
+    {
+        std::string result = "";
+        while((peek() != '\n') && (peek() != '\r'))
+        {
+            result += get();
+        }
+        while((peek() == '\n') || (peek() == '\r'))
+        {
+            get();
+        }
+
+        return result;
+    }
+    
+    void get_spacing()
+    {
+        req(' ');
+        while(peek() == ' ') get();
+    }
+    
     std::string get_id() 
     {
         char d[2];
@@ -88,7 +109,7 @@ public:
         return true;
     }
     
-    int get_int() 
+    int get_uint() 
     {
         auto d = get();
         if (!is_digit(d)) {
@@ -103,6 +124,16 @@ public:
             num = num * 10 + (d - '0');
         }
         return num;
+    }
+    
+    int get_int()
+    {
+        if (peek() == '-') 
+        {
+            get();
+            return -get_uint();
+        }
+        else return get_uint();
     }
     
     float get_float() 
