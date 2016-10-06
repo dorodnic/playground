@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include <sstream>
+#include <fstream>
 
 #ifdef WIN32
    #undef min
@@ -79,6 +80,21 @@ inline std::ostream & operator << (std::ostream & o, const Color3& c)
       << (int)(255 * c.b);
     return o;
 }
+
+inline std::string read_all_text(const std::string& filename)
+{
+    std::ifstream stream(filename, std::ios::in);
+    if(!stream.is_open())
+    {
+        throw std::runtime_error(str() << "File '" << filename << "' not found!");
+    }
+    
+    auto buffer = std::vector<char>((std::istreambuf_iterator<char>(stream)), 
+                                     std::istreambuf_iterator<char>());
+    buffer.push_back('\0');
+    return std::string(buffer.data());
+}
+
 
 class Size
 {

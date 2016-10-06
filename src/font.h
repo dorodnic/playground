@@ -14,6 +14,16 @@ public:
     int get_width() const { return _width; }
     int get_height() const { return _height; }
     
+    int get_size() const { return _vertex_positions.size() * sizeof(float); }
+    
+    float* get_vertex_positions() { return _vertex_positions.data(); }
+    float* get_texture_coords() { return _texture_coords.data(); }
+    
+    void get_vertex(int i, float& x, float& y) { 
+        x = _vertex_positions[i * 2];
+        y = _vertex_positions[i * 2 + 1];
+    }
+    
     TextMesh(const Font& font, const std::string& text);
 
 private:

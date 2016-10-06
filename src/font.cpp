@@ -24,10 +24,11 @@ int get_param(const std::string& param, MinimalParser& line, int line_number)
 
 TextMesh::TextMesh(const Font& font, const std::string& text)
 {
-    auto x = 0;
+    auto x = 200;
+    auto y = 200;
     
-    _vertex_positions.resize(text.size() * 4);
-    _texture_coords.resize(text.size() * 4);
+    _vertex_positions.reserve(text.size() * 8);
+    _texture_coords.reserve(text.size() * 8);
     
     auto min_y = 1000;
     auto max_y = -1000;
@@ -37,7 +38,7 @@ TextMesh::TextMesh(const Font& font, const std::string& text)
         auto c = text[i];
         auto& fc = *font.lookup(c);
         auto x0 = x + fc.xoffset;
-        auto y0 = fc.yoffset;
+        auto y0 = y + fc.yoffset;
         auto x1 = x0 + fc.width;
         auto y1 = y0 + fc.height;
         
@@ -49,11 +50,19 @@ TextMesh::TextMesh(const Font& font, const std::string& text)
         _vertex_positions.push_back(x0);
         _vertex_positions.push_back(y0);
         _vertex_positions.push_back(x1);
+        _vertex_positions.push_back(y0);
+        _vertex_positions.push_back(x1);
+        _vertex_positions.push_back(y1);
+        _vertex_positions.push_back(x0);
         _vertex_positions.push_back(y1);
         
         _texture_coords.push_back(fc.x);
         _texture_coords.push_back(fc.y);
         _texture_coords.push_back(fc.x + fc.width);
+        _texture_coords.push_back(fc.y);
+        _texture_coords.push_back(fc.x + fc.width);
+        _texture_coords.push_back(fc.y + fc.height);
+        _texture_coords.push_back(fc.x);
         _texture_coords.push_back(fc.y + fc.height);
         
         x += fc.xadvance;
@@ -82,7 +91,6 @@ Font::Font(const std::string& filename)
         if (line.eof()) continue;
         
         auto id = line.get_id();
-        LOG(INFO) << ls;
         if (id == "char")
         {
             auto id = get_param("id", line, line_number);

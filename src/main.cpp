@@ -9,6 +9,7 @@
 #include "font.h"
 
 #define GLFW_INCLUDE_GLU
+#define GL_GLEXT_PROTOTYPES
 #include <GLFW/glfw3.h>
 
 INITIALIZE_EASYLOGGINGPP
@@ -243,6 +244,79 @@ void setup_ui(IVisualElement* c, shared_ptr<INotifyPropertyChanged> dcPlus,
 	});
 }
 
+GLuint load_shaders(const char* vertex_shader_file, 
+                    const char* fragment_shader_file)
+{
+	// Create the shaders
+	GLuint vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
+
+
+	auto vertex_shader_code = read_all_text(vertex_shader_file);
+    auto fragment_shader_code = read_all_text(fragment_shader_file);
+
+    LOG(INFO) << "Compiling shader " << vertex_shader_file << "...";
+    
+	char const * vertex_source_ptr = vertex_shader_code.c_str();
+	int length = vertex_shader_code.size();
+	glShaderSource(vertex_shader_id, 1, &vertex_source_ptr, &length);
+	glCompileShader(vertex_shader_id);
+
+	// Check Vertex Shader
+	GLint result;
+	int log_length;
+	
+	glGetShaderiv(vertex_shader_id, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(vertex_shader_id, GL_INFO_LOG_LENGTH, &log_length);
+	if ((result == GL_FALSE) && (log_length > 0)){
+		std::vector<char> error_message(log_length+1);
+		glGetShaderInfoLog(vertex_shader_id, log_length, NULL, &error_message[0]);
+		LOG(ERROR) << &error_message[0];
+		return 0;
+	}
+
+    LOG(INFO) << "Compiling shader " << fragment_shader_file << "...";
+    
+	char const * fragment_source_ptr = fragment_shader_code.c_str();
+	glShaderSource(fragment_shader_id, 1, &fragment_source_ptr, NULL);
+	glCompileShader(fragment_shader_id);
+
+    glGetShaderiv(fragment_shader_id, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(fragment_shader_id, GL_INFO_LOG_LENGTH, &log_length);
+	if ((result == GL_FALSE) && (log_length > 0)){
+		std::vector<char> error_message(log_length+1);
+		glGetShaderInfoLog(fragment_shader_id, log_length, NULL, &error_message[0]);
+		LOG(ERROR) << &error_message[0];
+		return 0;
+	}
+
+    LOG(INFO) << "Linking program...";
+    
+	GLuint program_id = glCreateProgram();
+	glAttachShader(program_id, vertex_shader_id);
+	glAttachShader(program_id, fragment_shader_id);
+	glLinkProgram(program_id);
+
+    glGetProgramiv(program_id, GL_COMPILE_STATUS, &result);
+	glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &log_length);
+	if ((result == GL_FALSE) && (log_length > 0)){
+		std::vector<char> error_message(log_length+1);
+		glGetProgramInfoLog(fragment_shader_id, log_length, NULL, &error_message[0]);
+		LOG(ERROR) << &error_message[0];
+		return 0;
+	}
+	
+	glDetachShader(program_id, vertex_shader_id);
+	glDetachShader(program_id, fragment_shader_id);
+	
+	glDeleteShader(vertex_shader_id);
+	glDeleteShader(fragment_shader_id);
+	
+	LOG(INFO) << "Success!";
+
+	return program_id;
+}
+
 int main(int argc, char * argv[]) try
 {
     glfwInit();
@@ -281,6 +355,9 @@ int main(int argc, char * argv[]) try
 	TextMesh m(f, "Hello World!");
 	
 	LOG(INFO) << m.get_width() << " x " << m.get_height();
+	
+	auto program_id = load_shaders("resources/shaders/font_vertex.c",
+	                               "resources/shaders/font_fragment.c");
 
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {
@@ -323,6 +400,34 @@ int main(int argc, char * argv[]) try
         ui_element->update_mouse_state(button_type, mouse_state);
     });
     
+    static const GLfloat g_vertex_buffer_data[] = {
+       -100.0f, -100.0f, 0.0f,
+       100.0f, -100.0f, 0.0f,
+       0.0f,  100.0f, 0.0f,
+    };
+    
+    GLuint vao, vbo;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glGenBuffers(1, &vbo);
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, m.get_size(), m.get_vertex_positions(), GL_STATIC_DRAW);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+    //glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    
+    /*glVertexAttribPointer(
+       0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+       3,                  // size
+       GL_FLOAT,           // type
+       GL_FALSE,           // normalized?
+       0,                  // stride
+       (void*)0            // array buffer offset
+    );*/
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    
     while (!glfwWindowShouldClose(win))
     {
         glfwPollEvents();
@@ -342,10 +447,35 @@ int main(int argc, char * argv[]) try
         Rect origin { { 0, 0 }, { w, h } };
 
         c.render(origin);
+        
+        glUseProgram(program_id);
+        
+        /*glBegin(GL_QUADS);
+        for (auto i = 0; i < m.get_vertex_count(); i++)
+        {
+            float x;
+            float y;
+            m.get_vertex(i, x, y);
+            LOG(INFO) << "Vertex " << x << ", " << y;
+            glVertex3f(x, y, 0);
+        }
+        glEnd();*/
+        
+        glBindVertexArray(vao);
+        
+        //glDrawArrays(GL_TRIANGLES, 0, 3);
+        
+        glDrawArrays(GL_QUADS, 0, m.get_vertex_count());
+        //glDrawElements(GL_QUADS, m.get_vertex_count(), GL_FLOAT, 0);
+
+        glUseProgram(0);
 
         glPopMatrix();
         glfwSwapBuffers(win);
     }
+
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &vao);
 
     glfwDestroyWindow(win);
     glfwTerminate();
