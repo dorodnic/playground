@@ -22,11 +22,49 @@ int get_param(const std::string& param, MinimalParser& line, int line_number)
     return line.get_int();
 }
 
+int Font::get_kerning(char a, char b) const
+{
+	char buff[3];
+	buff[0] = a;
+	buff[1] = b;
+	buff[2] = '\0';
+	std::string s(buff);
+	auto it = _kerning.find(s);
+	if (it != _kerning.end())
+	{
+		return it->second;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 TextMesh::TextMesh(const Font& font, const std::string& text)
 {
+	/*_vertex_positions.push_back(0);
+	_vertex_positions.push_back(0);
+	_vertex_positions.push_back(1);
+	_vertex_positions.push_back(0);
+	_vertex_positions.push_back(1);
+	_vertex_positions.push_back(1);
+	_vertex_positions.push_back(0);
+	_vertex_positions.push_back(1);
+	
+	_texture_coords.push_back(0);
+	_texture_coords.push_back(0);
+	_texture_coords.push_back(1);
+	_texture_coords.push_back(0);
+	_texture_coords.push_back(1);
+	_texture_coords.push_back(1);
+	_texture_coords.push_back(0);
+	_texture_coords.push_back(1);*/
+	
     auto x = 200;
     auto y = 200;
 	auto scale = 0.001f;
+	
+	auto tex_scale = 1.0f / font.get_size();
     
     _vertex_positions.reserve(text.size() * 8);
     _texture_coords.reserve(text.size() * 8);
@@ -39,7 +77,7 @@ TextMesh::TextMesh(const Font& font, const std::string& text)
         auto c = text[i];
         auto& fc = *font.lookup(c);
         auto x0 = x + fc.xoffset;
-        auto y0 = y + fc.yoffset;
+        auto y0 = y - fc.yoffset;
         auto x1 = x0 + fc.width;
         auto y1 = y0 + fc.height;
         
@@ -49,24 +87,29 @@ TextMesh::TextMesh(const Font& font, const std::string& text)
         max_y = std::max(max_y, y1);
         
         _vertex_positions.push_back(x0 * scale);
-        _vertex_positions.push_back(-y0 * scale);
+        _vertex_positions.push_back(y0 * scale);
         _vertex_positions.push_back(x1 * scale);
-        _vertex_positions.push_back(-y0 * scale);
+        _vertex_positions.push_back(y0 * scale);
         _vertex_positions.push_back(x1 * scale);
-        _vertex_positions.push_back(-y1 * scale);
+        _vertex_positions.push_back(y1 * scale);
         _vertex_positions.push_back(x0 * scale);
-        _vertex_positions.push_back(-y1 * scale);
+        _vertex_positions.push_back(y1 * scale);
         
-        _texture_coords.push_back(fc.x);
-        _texture_coords.push_back(fc.y);
-        _texture_coords.push_back(fc.x + fc.width);
-        _texture_coords.push_back(fc.y);
-        _texture_coords.push_back(fc.x + fc.width);
-        _texture_coords.push_back(fc.y + fc.height);
-        _texture_coords.push_back(fc.x);
-        _texture_coords.push_back(fc.y + fc.height);
-        
+		_texture_coords.push_back(tex_scale * fc.x);
+        _texture_coords.push_back(tex_scale * (fc.y + fc.height));
+		_texture_coords.push_back(tex_scale * (fc.x + fc.width));
+        _texture_coords.push_back(tex_scale * (fc.y + fc.height));
+		_texture_coords.push_back(tex_scale * (fc.x + fc.width));
+        _texture_coords.push_back(tex_scale * fc.y);
+        _texture_coords.push_back(tex_scale * fc.x);
+        _texture_coords.push_back(tex_scale * fc.y);
+
         x += fc.xadvance;
+		
+		if (i+1 < text.size())
+		{
+			x += font.get_kerning(text[i], text[i+1]);
+		}
     }
     
     _width = x;
@@ -119,6 +162,13 @@ Font::Font(const std::string& filename)
             std::string combined = str() << (char)first << (char)second;
             _kerning[combined] = amount;
         }
+		else if (id == "common")
+		{
+			get_param("lineHeight", line, line_number);
+			get_param("base", line, line_number);
+			_size = get_param("scaleW", line, line_number);
+			line.rest();
+		}
         else
         {
             line.rest();

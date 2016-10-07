@@ -55,9 +55,14 @@ public:
         if (it != _chars.end()) return &it->second;
         else return nullptr;
     }
+	
+	int get_kerning(char a, char b) const;
+	
+	int get_size() const { return _size; }
     
 private:
     std::unordered_map<char, FontCharacter> _chars;
     std::unordered_map<std::string, int> _kerning;
     int _texture_id;
+	int _size;
 };
