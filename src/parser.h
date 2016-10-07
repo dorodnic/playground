@@ -93,6 +93,20 @@ public:
         }
         return result;
     }
+	
+	std::string get_string_literal() 
+    {
+        req('"');
+		std::string result = "";
+		bool escape = false;
+		while (peek() != '"' || escape)
+		{
+			escape = (peek() == '\\');
+			result += get();
+		}
+		req('"');
+		return result;
+    }
     
     std::string rest() const
     {
@@ -196,7 +210,6 @@ public:
         
         req(',');
         auto y = get_size();
-        req_eof();
         return { x, y };
     }
     
@@ -231,7 +244,6 @@ public:
         auto g = get_int();
         req(',');
         auto b = get_int();
-        req_eof();
         
         return { clamp(r / 255.0f, 0.0f, 1.0f),
                  clamp(g / 255.0f, 0.0f, 1.0f),
@@ -258,7 +270,6 @@ public:
         auto right = get_int();
         req(',');
         auto bottom = get_int();
-        req_eof();
         
         return { left, top, right, bottom };
     }

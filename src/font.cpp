@@ -22,6 +22,30 @@ int get_param(const std::string& param, MinimalParser& line, int line_number)
     return line.get_int();
 }
 
+std::string get_string_param(const std::string& param, MinimalParser& line, int line_number)
+{
+    line.get_spacing();
+    auto term = line.get_id();
+    if (term != param) 
+        throw std::runtime_error(str() << "Error parsing font file!"
+        << " At line " << line_number << " identifier " << param << " expected,"
+        << "got " << term << "!");
+    line.req('=');
+    return line.get_string_literal();
+}
+
+Margin get_margin_param(const std::string& param, MinimalParser& line, int line_number)
+{
+    line.get_spacing();
+    auto term = line.get_id();
+    if (term != param) 
+        throw std::runtime_error(str() << "Error parsing font file!"
+        << " At line " << line_number << " identifier " << param << " expected,"
+        << "got " << term << "!");
+    line.req('=');
+    return line.get_margin();
+}
+
 int Font::get_kerning(char a, char b) const
 {
 	char buff[3];
@@ -79,7 +103,7 @@ TextMesh::TextMesh(const Font& font, const std::string& text)
         auto x0 = x + fc.xoffset;
         auto y0 = y - fc.yoffset;
         auto x1 = x0 + fc.width;
-        auto y1 = y0 + fc.height;
+        auto y1 = y0 - fc.height;
         
         min_y = std::min(min_y, y0);
         min_y = std::min(min_y, y1);
@@ -96,15 +120,21 @@ TextMesh::TextMesh(const Font& font, const std::string& text)
         _vertex_positions.push_back(y1 * scale);
         
 		_texture_coords.push_back(tex_scale * fc.x);
-        _texture_coords.push_back(tex_scale * (fc.y + fc.height));
-		_texture_coords.push_back(tex_scale * (fc.x + fc.width));
-        _texture_coords.push_back(tex_scale * (fc.y + fc.height));
+        _texture_coords.push_back(tex_scale * fc.y);
+		
 		_texture_coords.push_back(tex_scale * (fc.x + fc.width));
         _texture_coords.push_back(tex_scale * fc.y);
-        _texture_coords.push_back(tex_scale * fc.x);
-        _texture_coords.push_back(tex_scale * fc.y);
+		
+		
+		
+		_texture_coords.push_back(tex_scale * (fc.x + fc.width));
+        _texture_coords.push_back(tex_scale * (fc.y + fc.height));
+		
+		_texture_coords.push_back(tex_scale * fc.x);
+        _texture_coords.push_back(tex_scale * (fc.y + fc.height));
+        
 
-        x += fc.xadvance;
+        x += fc.xadvance - font.get_advance_adjustment();
 		
 		if (i+1 < text.size())
 		{
@@ -164,10 +194,30 @@ Font::Font(const std::string& filename)
         }
 		else if (id == "common")
 		{
+			
+			//common lineHeight=99 base=56 scaleW=1024 scaleH=1024 pages=1 packed=0
+			
 			get_param("lineHeight", line, line_number);
 			get_param("base", line, line_number);
 			_size = get_param("scaleW", line, line_number);
 			line.rest();
+		}
+		else if (id == "info")
+		{
+			//info face="Bitstream Vera Sans" size=60 bold=0 italic=0 charset="" unicode=0 stretchH=100 smooth=1 aa=1 padding=15,15,15,15 spacing=-2,-2
+			get_string_param("face", line, line_number);
+			get_param("size", line, line_number);
+			get_param("bold", line, line_number);
+			get_param("italic", line, line_number);
+			get_string_param("charset", line, line_number);
+			get_param("unicode", line, line_number);
+			get_param("stretchH", line, line_number);
+			get_param("smooth", line, line_number);
+			get_param("aa", line, line_number);
+			
+			auto margin = get_margin_param("padding", line, line_number);
+			auto spacing = get_margin_param("spacing", line, line_number);
+			_advance_adjustment = margin.left + margin.right + spacing.left + spacing.right;
 		}
         else
         {

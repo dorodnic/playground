@@ -59,10 +59,13 @@ public:
 	int get_kerning(char a, char b) const;
 	
 	int get_size() const { return _size; }
+	
+	int get_advance_adjustment() const { return _advance_adjustment; }
     
 private:
     std::unordered_map<char, FontCharacter> _chars;
     std::unordered_map<std::string, int> _kerning;
     int _texture_id;
 	int _size;
+	int _advance_adjustment;
 };
