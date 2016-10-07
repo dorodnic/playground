@@ -8,7 +8,13 @@
 #include "serializer.h"
 #include "font.h"
 
+#ifdef WIN32
+	#define USEGLEW
+	#include <GL/glew.h>
+#endif
+
 #define GLFW_INCLUDE_GLU
+#define GLFW_INCLUDE_GLEXT
 #define GL_GLEXT_PROTOTYPES
 #include <GLFW/glfw3.h>
 
@@ -297,11 +303,22 @@ GLuint load_shaders(const char* vertex_shader_file,
 	glAttachShader(program_id, fragment_shader_id);
 	glLinkProgram(program_id);
 
-    glGetProgramiv(program_id, GL_COMPILE_STATUS, &result);
+    glGetProgramiv(program_id, GL_LINK_STATUS, &result);
 	glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &log_length);
 	if ((result == GL_FALSE) && (log_length > 0)){
 		std::vector<char> error_message(log_length+1);
-		glGetProgramInfoLog(fragment_shader_id, log_length, NULL, &error_message[0]);
+		glGetProgramInfoLog(program_id, log_length, NULL, &error_message[0]);
+		LOG(ERROR) << &error_message[0];
+		return 0;
+	}
+	
+	glValidateProgram(program_id);
+
+    glGetProgramiv(program_id, GL_VALIDATE_STATUS, &result);
+	glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &log_length);
+	if ((result == GL_FALSE) && (log_length > 0)){
+		std::vector<char> error_message(log_length+1);
+		glGetProgramInfoLog(program_id, log_length, NULL, &error_message[0]);
 		LOG(ERROR) << &error_message[0];
 		return 0;
 	}
@@ -317,11 +334,34 @@ GLuint load_shaders(const char* vertex_shader_file,
 	return program_id;
 }
 
+int print_error(int line)
+{
+    GLenum glErr;
+    int    retCode = 0;
+
+    glErr = glGetError();
+    if (glErr != GL_NO_ERROR)
+    {
+        LOG(INFO) << line << " " << gluErrorString(glErr);
+        retCode = 1;
+    }
+    return retCode;
+}
+
 int main(int argc, char * argv[]) try
 {
+
     glfwInit();
     GLFWwindow * win = glfwCreateWindow(1280, 960, "main", 0, 0);
     glfwMakeContextCurrent(win);
+	
+	#ifdef WIN32
+		// Initialize GLEW
+		glewExperimental=TRUE;
+		GLenum err = glewInit();
+		if (err != GLEW_OK)
+			LOG(ERROR) << "Could not initialize GLEW!";
+	#endif
 
     // create root-level container for the GUI
 	Panel c(".",{0,0},{1.0f, 1.0f},Alignment::left); 
@@ -358,11 +398,12 @@ int main(int argc, char * argv[]) try
 	
 	auto program_id = load_shaders("resources/shaders/font_vertex.c",
 	                               "resources/shaders/font_fragment.c");
+	print_error(__LINE__);
 
     glfwSetWindowUserPointer(win, &c);
     glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {
-        auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-        ui_element->update_mouse_position({ (int)x, (int)y });
+        /*auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+        ui_element->update_mouse_position({ (int)x, (int)y });*/
     });
     glfwSetScrollCallback(win, [](GLFWwindow * w, double x, double y) {
         auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
@@ -401,9 +442,9 @@ int main(int argc, char * argv[]) try
     });
     
     static const GLfloat g_vertex_buffer_data[] = {
-       -100.0f, -100.0f, 0.0f,
-       100.0f, -100.0f, 0.0f,
-       0.0f,  100.0f, 0.0f,
+       -1.0f, -1.0f, 0.0f,
+       1.0f, -1.0f, 0.0f,
+       0.0f,  1.0f, 0.0f,
     };
     
     GLuint vao, vbo;
@@ -433,22 +474,24 @@ int main(int argc, char * argv[]) try
         glfwPollEvents();
 
         int w,h;
-        glfwGetFramebufferSize(win, &w, &h);
-        glViewport(0, 0, w, h);
+        //glfwGetFramebufferSize(win, &w, &h);
+        //glViewport(0, 0, w, h);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glPushMatrix();
+        //glPushMatrix();
         glfwGetWindowSize(win, &w, &h);
-        glOrtho(0, w, h, 0, -1, +1);
+        //glOrtho(0, w, h, 0, -1, +1);
         
         dcPlus->update();
         dcMinus->update();
 
         Rect origin { { 0, 0 }, { w, h } };
 
-        c.render(origin);
-        
+        //c.render(origin);
+        //print_error(__LINE__);
+		
         glUseProgram(program_id);
+		print_error(__LINE__);
         
         /*glBegin(GL_QUADS);
         for (auto i = 0; i < m.get_vertex_count(); i++)
@@ -462,15 +505,17 @@ int main(int argc, char * argv[]) try
         glEnd();*/
         
         glBindVertexArray(vao);
+		print_error(__LINE__);
         
         //glDrawArrays(GL_TRIANGLES, 0, 3);
         
         glDrawArrays(GL_QUADS, 0, m.get_vertex_count());
+		print_error(__LINE__);
         //glDrawElements(GL_QUADS, m.get_vertex_count(), GL_FLOAT, 0);
 
         glUseProgram(0);
 
-        glPopMatrix();
+        //glPopMatrix();
         glfwSwapBuffers(win);
     }
 

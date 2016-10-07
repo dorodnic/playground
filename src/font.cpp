@@ -26,6 +26,7 @@ TextMesh::TextMesh(const Font& font, const std::string& text)
 {
     auto x = 200;
     auto y = 200;
+	auto scale = 0.001f;
     
     _vertex_positions.reserve(text.size() * 8);
     _texture_coords.reserve(text.size() * 8);
@@ -47,14 +48,14 @@ TextMesh::TextMesh(const Font& font, const std::string& text)
         max_y = std::max(max_y, y0);
         max_y = std::max(max_y, y1);
         
-        _vertex_positions.push_back(x0);
-        _vertex_positions.push_back(y0);
-        _vertex_positions.push_back(x1);
-        _vertex_positions.push_back(y0);
-        _vertex_positions.push_back(x1);
-        _vertex_positions.push_back(y1);
-        _vertex_positions.push_back(x0);
-        _vertex_positions.push_back(y1);
+        _vertex_positions.push_back(x0 * scale);
+        _vertex_positions.push_back(-y0 * scale);
+        _vertex_positions.push_back(x1 * scale);
+        _vertex_positions.push_back(-y0 * scale);
+        _vertex_positions.push_back(x1 * scale);
+        _vertex_positions.push_back(-y1 * scale);
+        _vertex_positions.push_back(x0 * scale);
+        _vertex_positions.push_back(-y1 * scale);
         
         _texture_coords.push_back(fc.x);
         _texture_coords.push_back(fc.y);

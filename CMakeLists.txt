@@ -19,7 +19,7 @@ add_executable(main src/main.cpp
 
 if(WIN32)
     add_subdirectory(glfw)
-	target_link_libraries(main glfw3 ${OPENGL_gl_LIBRARY})
+	target_link_libraries(main glfw3 ${OPENGL_gl_LIBRARY} glew32 glu32)
 else()
     # Find glfw header
 	find_path(GLFW_INCLUDE_DIR NAMES GLFW/glfw3.h
