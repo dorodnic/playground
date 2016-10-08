@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
-<StackPanel size="*" orientation="vertical" name="samples" font="{bind font}">
+<StackPanel size="*" orientation="vertical" name="samples">
     <Font src="v.fnt" name="font" />
-    <PageView size="*" selected="6" name="page">
+    <Font src="vb.fnt" name="font_bold" />
+    
+    <!-- PageView size="*" selected="6" name="page">
         <StackPanel size="*" orientation="vertical" name="0">
             <TextBlock text_color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
             <StackPanel orientation="horizontal">
@@ -99,22 +101,22 @@
                 <TextBlock text="{bind grid_with_dc.data_context.fps}" />
                 <Break/>
                 <TextBlock text="controls:" />
-                <Button text="changed DC to possitive" color="yellow" name="btnChangeDCtoPlus" margin="2" />
+                <Button text="change DC to possitive" color="yellow" name="btnChangeDCtoPlus" margin="2" />
                 <Break/>
                 <TextBlock />
-                <Button text="changed DC to negative" color="yellow" name="btnChangeDCtoMinus" margin="2" />
+                <Button text="change DC to negative" color="yellow" name="btnChangeDCtoMinus" margin="2" />
                 <Break/>
                 <TextBlock />
-                <Button text="changed DC to null" color="yellow" name="btnChangeDCtoNull" margin="2" />
+                <Button text="change DC to null" color="yellow" name="btnChangeDCtoNull" margin="2" />
                 <Break/>
                 <TextBlock />
-                <Button text="changed DC.counter to null" color="green" name="btnChangeCounterToNull" margin="2" />
+                <Button text="change DC.counter to null" color="green" name="btnChangeCounterToNull" margin="2" />
                 <Break/>
                 <TextBlock />
-                <Button text="changed DC.counter to ints" color="green" name="btnChangeDCtoInts" margin="2" />
+                <Button text="change DC.counter to ints" color="green" name="btnChangeDCtoInts" margin="2" />
                 <Break/>
                 <TextBlock />
-                <Button text="changed DC.counter to floats" color="green" name="btnChangeDCtoFloats" margin="2" />
+                <Button text="change DC.counter to floats" color="green" name="btnChangeDCtoFloats" margin="2" />
                 
             </Grid>
         </StackPanel>
@@ -131,10 +133,10 @@
                 <Break/>
             </Grid>
         </StackPanel>
-    </PageView>
+    </PageView -->
     <Panel size="*,40">
-        <Button color="gray" size="*" />
-        <StackPanel orientation="horizontal" size="*">
+        <Button color="gray" size="*" text="?"  />
+        <StackPanel orientation="horizontal" size="*" >
             <Button name="btnPrev"
                     text="Prev" 
                     text_align="center"
@@ -144,20 +146,22 @@
                     margin="5"
                     align="left" />
             <Panel  size="*">
-                <TextBlock name="txtStatus"
+                <!--TextBlock name="txtStatus"
+                    font="{bind font_bold}"
                     text="hello world!" 
                     align="center"
                     text_color="white"
-                    size="*" />
+                    size="*" /-->
             </Panel>
-            <Button name="btnNext"
+            <!--Button name="btnNext"
                     text="Next" 
                     text_align="center"
                     text_color="white"
                     color="Pink"
                     margin="5"
                     size="auto,*"
-                    align="right" />   
+                    
+                    align="right" /-->   
         </StackPanel>
     </Panel>
 </StackPanel>

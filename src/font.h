@@ -33,6 +33,7 @@ public:
     
     const Color3& get_color() const { return _color; }
     const Int2& get_position() const { return _position; }
+    void set_position(const Int2& pos) { _position = pos; }
     
     const FontLoader& get_font() const { return _font; }
     

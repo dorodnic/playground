@@ -10,12 +10,10 @@ public:
             Alignment alignment,
             const Size2& position,
             const Size2& size,
-            const Color3& color)
-        : ControlBase(name, position, size, alignment), 
-          _color(color), _text(text)
-    {}
+            const Color3& color);
     
-    TextBlock() {}
+    TextBlock();
+    ~TextBlock();
 
     Size2 get_intrinsic_size() const override;
 
@@ -37,6 +35,8 @@ public:
 private:
     Color3 _color = { 1.0f, 1.0f, 1.0f };
     std::string _text = "";
+    std::unique_ptr<TextMesh> _text_mesh;
+    bool _refresh = false;
 };
 
 class Button : public ControlBase

@@ -41,11 +41,13 @@ inline std::string stringify(float t)
     return ss.str();
 }
 
-inline int get_text_width(const std::string& text)
-{
-    return 50;
-    //return stb_easy_font_width((char *)text.c_str());
-}
+// inline int get_text_width(const FontLoader& loader, const std::string& text)
+// {
+    // TextMesh mesh(loader, text, 16, 0.3, 0.1, {0,0}, {1,1,1});
+    // return mesh.get_width();
+    
+    // //return stb_easy_font_width((char *)text.c_str());
+// }
 
 template<class T>
 inline T lerp(T from, T to, float t)
@@ -54,7 +56,10 @@ inline T lerp(T from, T to, float t)
 }
 
 
-inline int get_text_height() { return 8; }
+// inline int get_text_height(const FontLoader& loader, const std::string& text) { 
+    // TextMesh mesh(loader, text, 16, 0.3, 0.1, {0,0}, {1,1,1});
+    // return mesh.get_height();
+// }
 
 inline void use(const Color3& c)
 {
@@ -90,18 +95,18 @@ struct interval
     }
 };
 
-inline void draw_text(const FontRenderer* renderer, const FontLoader& loader,
-                      const Color3& color, int x, int y, const std::string& text)
-{
-    TextMesh mesh(loader, text, 16, 0.3, 0.1, {x,y}, color);
-    renderer->render(mesh);
-    /* vector<char> buffer(2000 * text.size(), 0);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(2, GL_FLOAT, 16, buffer.data());
-    glDrawArrays(GL_QUADS, 0, 4*stb_easy_font_print((float)x, (float)y, 
-                (char *)text.c_str(), nullptr, buffer.data(), buffer.size()));
-    glDisableClientState(GL_VERTEX_ARRAY); */
-}
+// inline void draw_text(const FontRenderer* renderer, const FontLoader& loader,
+                      // const Color3& color, int x, int y, const std::string& text)
+// {
+    // TextMesh mesh(loader, text, 16, 0.3, 0.1, {x,y}, color);
+    // renderer->render(mesh);
+    // /* vector<char> buffer(2000 * text.size(), 0);
+    // glEnableClientState(GL_VERTEX_ARRAY);
+    // glVertexPointer(2, GL_FLOAT, 16, buffer.data());
+    // glDrawArrays(GL_QUADS, 0, 4*stb_easy_font_print((float)x, (float)y, 
+                // (char *)text.c_str(), nullptr, buffer.data(), buffer.size()));
+    // glDisableClientState(GL_VERTEX_ARRAY); */
+// }
 
 void Button::render(const Rect& origin)
 {
@@ -145,24 +150,89 @@ Size2 Button::get_intrinsic_size() const
 
 Size2 TextBlock::get_intrinsic_size() const
 {
-    return { get_text_width(to_upper(_text)) + 16, 20 };
+    if (_text_mesh.get())
+    {
+        return { _text_mesh->get_width() + 16, 
+                 _text_mesh->get_height() + 8 };
+    }
+    
+    return {10,10};
+}
+
+TextBlock::TextBlock(std::string name,
+            std::string text,
+            Alignment alignment,
+            const Size2& position,
+            const Size2& size,
+            const Color3& color)
+        : ControlBase(name, position, size, alignment), 
+          _color(color), _text(text)
+{
+    subscribe_on_change(this, [this](const char* prop_name){
+        std::string prop(prop_name);
+        if (prop == "font")
+        {
+            _refresh = true;
+        }
+    });
+    
+}
+    
+TextBlock::TextBlock()
+{
+    subscribe_on_change(this, [this](const char* prop_name){
+        std::string prop(prop_name);
+        if (prop == "font")
+        {
+            _refresh = true;
+        }
+    });
+}
+
+TextBlock::~TextBlock()
+{
+    unsubscribe_on_change(this);
 }
 
 void TextBlock::set_text(std::string text) 
-{ 
-    auto new_width = get_text_width(to_upper(text));
-    auto width = get_size().x;
-    if ((get_text_width(to_upper(_text)) == new_width) ||
-        (width.is_const() && width.get_pixels() > new_width))
+{
+    if (text != _text)
     {
-        _text = text; 
+        _text = text;
+        //_refresh = true;
+        fire_property_change("text");
+    }
+    
+    /*bool was_changed = (text == _text);
+    auto font = dynamic_cast<Font*>(get_font().get());
+    if (font)
+    {
+        auto& loader = font->get_loader();
+        std::unique_ptr<TextMesh> new_mesh(new TextMesh(
+            loader, text, 16, 0.3, 0.1, {0,0}, _color
+        ));
+        
+        auto new_width = new_mesh->get_width();
+        auto width = get_size().x;
+        if ((_text_mesh.get() && _text_mesh->get_width() == new_width) ||
+            (width.is_const() && width.get_pixels() > new_width))
+        {
+            _text = text; 
+            _text_mesh = std::move(new_mesh);
+        }
+        else
+        {
+            _text = text;
+            _text_mesh = std::move(new_mesh);
+            
+            ControlBase::invalidate_layout();
+        }
     }
     else
     {
         _text = text;
-        ControlBase::invalidate_layout();
     }
-    fire_property_change("text");
+    if (was_changed) fire_property_change("text");*/
 }
 
 void TextBlock::render(const Rect& origin)
@@ -177,28 +247,49 @@ void TextBlock::render(const Rect& origin)
     glColor3f(c.r, c.g, c.b);
     
     auto rect = arrange(origin);
-    auto text = to_upper(_text);
+    auto text = _text;
     
-    auto text_width = get_text_width(text);
-    auto text_height = get_text_height();
-    auto y_margin = rect.size.y / 2 - text_height / 2;
-    auto text_y = rect.position.y + y_margin;
-    
-    auto renderer = get_render_context().font_renderer;
-    
-    auto font = dynamic_cast<Font*>(get_font().get());
-    if (font)
+    if (_refresh)
     {
-        auto& loader = font->get_loader();
-        if (get_align() == Alignment::left){
-            draw_text(renderer, loader, c, rect.position.x + y_margin, text_y, text);
-        } else if (get_align() == Alignment::center){
-            draw_text(renderer, loader, c, rect.position.x + rect.size.x / 2 - text_width / 2, 
-                      text_y, text);
-        } else {
-            draw_text(renderer, loader, c, rect.position.x + rect.size.x - text_width - y_margin, 
-                      text_y, text);
+        auto font = dynamic_cast<Font*>(get_font().get());
+        if (font)
+        {
+            auto& loader = font->get_loader();
+            LOG(INFO) << "resetting " << _text;
+            _text_mesh.reset(new TextMesh(
+                loader, _text, 16, 0.3, 0.1, {0,0}, _color
+            ));
         }
+        else
+        {
+            _text_mesh.reset(nullptr);
+        }
+        ControlBase::invalidate_layout();
+        _refresh = false;
+    }
+    
+    LOG(INFO) << "rendering " << _text;
+    if (_text_mesh.get())
+    {
+        auto text_width = _text_mesh->get_width();
+        auto text_height = _text_mesh->get_height();
+        auto y_margin = rect.size.y / 2 - text_height / 2;
+        auto text_y = rect.position.y + y_margin;
+        
+        auto renderer = get_render_context().font_renderer;
+        
+        Int2 position;
+        
+        if (get_align() == Alignment::left){
+            position = {rect.position.x + y_margin, text_y};
+        } else if (get_align() == Alignment::center){
+            position = {rect.position.x + rect.size.x / 2 - text_width / 2, text_y};
+        } else {
+            position = {rect.position.x + rect.size.x - text_width - y_margin, text_y};
+        }
+        
+        _text_mesh->set_position(position);
+        renderer->render(*_text_mesh);
     }
 }
 
@@ -321,7 +412,7 @@ void Slider::render(const Rect& origin)
 
 void Slider::update_mouse_position(Int2 cursor)
 {
-    const auto pad = 1;
+    /*const auto pad = 1;
     auto rect = _rect;
 
     auto x0 = rect.position.x;
@@ -367,7 +458,7 @@ void Slider::update_mouse_position(Int2 cursor)
             auto t = (x - x0) / (x1 - x0 + 0.01f);
             set_value(lerp(_min, _max, t));
         }
-    }
+    }*/
 }
     
 void Slider::update_mouse_state(MouseButton button, MouseState state)

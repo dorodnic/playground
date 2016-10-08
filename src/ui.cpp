@@ -9,6 +9,46 @@ using namespace std;
 
 #include "../stb/stb_easy_font.h"
 
+void ControlBase::update_parent(IVisualElement* new_parent) 
+{
+    if (_parent != new_parent)
+    {
+        if (_parent)
+        {
+            _parent->unsubscribe_on_change(this);
+        }
+        _parent = new_parent; 
+        if (new_parent)
+        {
+            new_parent->subscribe_on_change(this,
+            [this](const char* prop_name)
+            {
+                std::string prop(prop_name);
+                if (prop == "font")
+                {
+                    LOG(INFO) << "parent of " << to_string() << " had his font changed!";
+                    if (!_font.get())
+                    {
+                        LOG(INFO) << to_string() << " font is the same, so it also changed...";
+                        fire_property_change("font");
+                    }
+                }
+            });
+        }
+        
+        fire_property_change("parent");
+    }
+   
+}
+
+ControlBase::~ControlBase()
+{
+    if (_parent)
+    {
+        _parent->unsubscribe_on_change(this);
+    }
+}
+
 void ControlBase::update_mouse_state(MouseButton button, MouseState state)
 {
     auto now = chrono::high_resolution_clock::now();

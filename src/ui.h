@@ -162,11 +162,7 @@ public:
     
     IVisualElement* get_parent() { return _parent; }
     const IVisualElement* get_parent() const { return _parent; }
-    void update_parent(IVisualElement* new_parent) 
-    {
-        _parent = new_parent; 
-        fire_property_change("parent");
-    }
+    void update_parent(IVisualElement* new_parent);
     
     std::string to_string() const override { return get_name() + "(" + get_type() + ")"; }
     
@@ -222,6 +218,8 @@ public:
         return _font;
     }
 
+    ~ControlBase();
+    
 protected:
     ControlBase();
 
@@ -253,7 +251,7 @@ private:
     const int CLICK_TIME_MS = 200;
     RenderContext _render_context = { nullptr, nullptr };
     
-    std::shared_ptr<INotifyPropertyChanged> _font;
+    std::shared_ptr<INotifyPropertyChanged> _font = nullptr;
 };
 
 
