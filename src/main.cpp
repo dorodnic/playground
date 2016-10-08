@@ -18,9 +18,6 @@
 #define GL_GLEXT_PROTOTYPES
 #include <GLFW/glfw3.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "../stb/stb_image.h"
-
 INITIALIZE_EASYLOGGINGPP
 
 using namespace std;
@@ -253,7 +250,7 @@ void setup_ui(IVisualElement* c, shared_ptr<INotifyPropertyChanged> dcPlus,
     });
 }
 
-GLuint load_shaders(const char* vertex_shader_file, 
+/*GLuint load_shaders(const char* vertex_shader_file, 
                     const char* fragment_shader_file)
 {
     // Create the shaders
@@ -332,10 +329,10 @@ GLuint load_shaders(const char* vertex_shader_file,
     glDeleteShader(vertex_shader_id);
     glDeleteShader(fragment_shader_id);
     
-    LOG(INFO) << "Success!";
+    
 
     return program_id;
-}
+}*/
 
 int print_error(int line)
 {
@@ -394,187 +391,82 @@ int main(int argc, char * argv[]) try
             )));
     }
     
-    Font f("resources/fonts/v.fnt");
-    TextMesh m(f, "Hello World!");
-    
-    LOG(INFO) << m.get_width() << " x " << m.get_height();
-    
-    auto program_id = load_shaders("resources/shaders/font_vertex.c",
-                                   "resources/shaders/font_fragment.c");
-    print_error(__LINE__);
-
-    glfwSetWindowUserPointer(win, &c);
-    glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {
-        /*auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-        ui_element->update_mouse_position({ (int)x, (int)y });*/
-    });
-    glfwSetScrollCallback(win, [](GLFWwindow * w, double x, double y) {
-        auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-        ui_element->update_mouse_scroll({ (int)x, (int)y });
-    });
-    glfwSetMouseButtonCallback(win, [](GLFWwindow * w, int button, int action, int mods)
     {
-        auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-        MouseButton button_type;
-        switch(button)
-        {
-        case GLFW_MOUSE_BUTTON_RIGHT:
-            button_type = MouseButton::right; break;
-        case GLFW_MOUSE_BUTTON_LEFT:
-            button_type = MouseButton::left; break;
-        case GLFW_MOUSE_BUTTON_MIDDLE:
-            button_type = MouseButton::middle; break;
-        default:
-            button_type = MouseButton::left;
-        };
-
-        MouseState mouse_state;
-        switch(action)
-        {
-        case GLFW_PRESS:
-            mouse_state = MouseState::down;
-            break;
-        case GLFW_RELEASE:
-            mouse_state = MouseState::up;
-            break;
-        default:
-            mouse_state = MouseState::up;
-        };
-
-        ui_element->update_mouse_state(button_type, mouse_state);
-    });
-    
-    static const GLfloat g_vertex_buffer_data[] = {
-       -1.0f, -1.0f, 0.0f,
-       1.0f, -1.0f, 0.0f,
-       0.0f,  1.0f, 0.0f,
-    };
-    
-    GLuint vao, vbo, vbo2;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    glGenBuffers(1, &vbo);
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, m.get_size(), m.get_vertex_positions(), GL_STATIC_DRAW);
-	
-    //glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-    //glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    
-    /*glVertexAttribPointer(
-       0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-       3,                  // size
-       GL_FLOAT,           // type
-       GL_FALSE,           // normalized?
-       0,                  // stride
-       (void*)0            // array buffer offset
-    );*/
-    
-	
-	
-	glGenBuffers(1, &vbo2);
-    glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo2);
-	
-	glBufferData(GL_ARRAY_BUFFER, m.get_size(), m.get_texture_coords(), GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-	
-	
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-    string name = "resources/fonts/v.png";
-    const char * cstr = name.c_str();
-
-    //stb_image
-    int x, y, comp;
-    FILE *fh = fopen(cstr, "rb");
-    unsigned char *res;
-    res = stbi_load_from_file(fh,&x,&y,&comp,0);
-    fclose(fh);
-    
-    // Create one OpenGL texture
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-
-    // "Bind" the newly created texture : all future texture functions will modify this texture
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    // Give the image to OpenGL
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, res);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	
-	glBindTexture(GL_TEXTURE_2D, 0);
-	
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	
-	glUseProgram(program_id);
-	//float myFloats[3] = {0.7f, 0.5f, 0.8f};
-	GLint myLoc = glGetUniformLocation(program_id, "font_color");
-	// myLoc = glGetProgramResourceLocation(program_id, GL_UNIFORM, "font_color");
-	LOG(INFO) << myLoc;
-	print_error(__LINE__);
-	glUniform3f(myLoc, 0.7f, 0.5f, 0.8f);
-	print_error(__LINE__);
-	LOG(INFO) << "ready";
-    
-    while (!glfwWindowShouldClose(win))
-    {
-        glfwPollEvents();
-
-        int w,h;
-        glfwGetFramebufferSize(win, &w, &h);
-        glViewport(0, 0, w, h);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        //glPushMatrix();
-        glfwGetWindowSize(win, &w, &h);
-        //glOrtho(0, w, h, 0, -1, +1);
+        FontLoader font("v.fnt");
+        FontLoader font_bold("vb.fnt");
+        FontRenderer renderer;
         
-        dcPlus->update();
-        dcMinus->update();
+        TextMesh mesh(font, "Hello World!", 60, 0.3, 0.2, { 50, 50 },  { 0.7f, 0.3f, 0.4f });
+        TextMesh mesh2(font_bold, "Testing testing !~34455 $%^*( testing", 
+                       20, 0.5, 0.1,
+                       { 0, 200 }, { 0.2f, 0.9f, 0.8f });
 
-        Rect origin { { 0, 0 }, { w, h } };
-
-        //c.render(origin);
-        //print_error(__LINE__);
-        
-		glBindTexture(GL_TEXTURE_2D, textureID);
-        glUseProgram(program_id);
-        print_error(__LINE__);
-        
-        /*glBegin(GL_QUADS);
-        for (auto i = 0; i < m.get_vertex_count(); i++)
+        glfwSetWindowUserPointer(win, &c);
+        glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {
+            /*auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+            ui_element->update_mouse_position({ (int)x, (int)y });*/
+        });
+        glfwSetScrollCallback(win, [](GLFWwindow * w, double x, double y) {
+            auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+            ui_element->update_mouse_scroll({ (int)x, (int)y });
+        });
+        glfwSetMouseButtonCallback(win, [](GLFWwindow * w, 
+                                           int button, int action, int mods)
         {
-            float x;
-            float y;
-            m.get_vertex(i, x, y);
-            LOG(INFO) << "Vertex " << x << ", " << y;
-            glVertex3f(x, y, 0);
+            auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+            MouseButton button_type;
+            switch(button)
+            {
+            case GLFW_MOUSE_BUTTON_RIGHT:
+                button_type = MouseButton::right; break;
+            case GLFW_MOUSE_BUTTON_LEFT:
+                button_type = MouseButton::left; break;
+            case GLFW_MOUSE_BUTTON_MIDDLE:
+                button_type = MouseButton::middle; break;
+            default:
+                button_type = MouseButton::left;
+            };
+
+            MouseState mouse_state;
+            switch(action)
+            {
+            case GLFW_PRESS:
+                mouse_state = MouseState::down;
+                break;
+            case GLFW_RELEASE:
+                mouse_state = MouseState::up;
+                break;
+            default:
+                mouse_state = MouseState::up;
+            };
+
+            ui_element->update_mouse_state(button_type, mouse_state);
+        });
+        
+        while (!glfwWindowShouldClose(win))
+        {
+            glfwPollEvents();
+
+            int w,h;
+            glfwGetFramebufferSize(win, &w, &h);
+            glViewport(0, 0, w, h);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            glfwGetWindowSize(win, &w, &h);
+            renderer.set_window_size({w, h});
+            
+
+            dcPlus->update();
+            dcMinus->update();
+
+            Rect origin { { 0, 0 }, { w, h } };
+
+            renderer.render(mesh);
+            renderer.render(mesh2);
+
+            glfwSwapBuffers(win);
         }
-        glEnd();*/
-        
-        glBindVertexArray(vao);
-        print_error(__LINE__);
-        
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
-        
-        glDrawArrays(GL_QUADS, 0, m.get_vertex_count());
-        print_error(__LINE__);
-        //glDrawElements(GL_QUADS, m.get_vertex_count(), GL_FLOAT, 0);
-
-        glUseProgram(0);
-
-        //glPopMatrix();
-        glfwSwapBuffers(win);
     }
-
-    glDeleteBuffers(1, &vbo);
-	glDeleteBuffers(1, &vbo2);
-    glDeleteBuffers(1, &vao);
 
     glfwDestroyWindow(win);
     glfwTerminate();

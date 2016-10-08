@@ -1,10 +1,13 @@
 #pragma once
 
+#include "shader.h"
+#include "types.h"
+
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-class Font;
+class FontLoader;
 
 class TextMesh
 {
@@ -19,18 +22,42 @@ public:
     float* get_vertex_positions() { return _vertex_positions.data(); }
     float* get_texture_coords() { return _texture_coords.data(); }
     
-    void get_vertex(int i, float& x, float& y) { 
-        x = _vertex_positions[i * 2];
-        y = _vertex_positions[i * 2 + 1];
-    }
+    TextMesh(const FontLoader& font, 
+             const std::string& text,
+             int size, float sdf_width, float sdf_edge,
+             const Int2& position,
+             const Color3& c);
     
-    TextMesh(const Font& font, const std::string& text);
+    unsigned int get_vao() const { return _vao; }
+    
+    const Color3& get_color() const { return _color; }
+    const Int2& get_position() const { return _position; }
+    
+    const FontLoader& get_font() const { return _font; }
+    
+    float get_size_ratio() const { return _size_ratio; }
+    float get_sdf_width() const { return _sdf_width; }
+    float get_sdf_edge() const { return _sdf_edge; }
+
+    ~TextMesh();
 
 private:
     std::vector<float> _vertex_positions;
     std::vector<float> _texture_coords;
     int _width;
     int _height;
+    unsigned int _vao;
+    unsigned int _vertex_vbo;
+    unsigned int _uv_vbo;
+    
+    float _size_ratio;
+    
+    float _sdf_width;
+    float _sdf_edge;
+    
+    Color3 _color;
+    const FontLoader& _font;
+    Int2 _position;
 };
 
 struct FontCharacter
@@ -45,10 +72,23 @@ struct FontCharacter
     int xadvance;
 };
 
-class Font
+class FontRenderer
 {
 public:
-    explicit Font(const std::string& filename);
+    FontRenderer();
+    
+    void render(const TextMesh& mesh) const;
+    
+    void set_window_size(const Int2& size) const;
+    
+private:
+    std::unique_ptr<ShaderProgram> _shader;
+};
+
+class FontLoader
+{
+public:
+    explicit FontLoader(const std::string& filename);
     
     const FontCharacter* lookup(char c) const {
         auto it = _chars.find(c);
@@ -58,14 +98,23 @@ public:
 	
 	int get_kerning(char a, char b) const;
 	
-	int get_size() const { return _size; }
+	int get_texture_size() const { return _texture_size; }
+    
+    int get_native_size() const { return _size; }
 	
 	int get_advance_adjustment() const { return _advance_adjustment; }
-    
+	
+    void begin() const;
+    void end() const;
+
+	~FontLoader();
+	
 private:
     std::unordered_map<char, FontCharacter> _chars;
     std::unordered_map<std::string, int> _kerning;
-    int _texture_id;
-	int _size;
+    
+	int _texture_size;
+    int _size;
 	int _advance_adjustment;
+    unsigned int _texture_id;
 };

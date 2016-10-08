@@ -2,19 +2,19 @@
 
 out vec4 color;
 
-in vec2 UV;
+in vec2 uv;
 
-uniform sampler2D myTextureSampler;
+uniform sampler2D smapler;
 
-const float width = 0.5;
-const float edge = 0.1;
+uniform float sdf_width;
+uniform float sdf_edge;
 
 uniform vec3 font_color;
 
 void main()
 {
-	float dist = 1 - texture( myTextureSampler, UV ).a;
-	float alpha = 1 - smoothstep(width, width + edge, dist);
+	float dist = 1 - texture(smapler, uv).a;
+	float alpha = 1 - smoothstep(sdf_width, sdf_width + sdf_edge, dist);
 
 	color.xyz = font_color;
 	color.a = alpha;
