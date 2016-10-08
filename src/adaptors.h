@@ -85,6 +85,15 @@ public:
         _element->set_render_context(context);
     }
     
+    void set_font(std::shared_ptr<INotifyPropertyChanged> font) override
+    {
+        _element->set_font(font);
+    }
+    const std::shared_ptr<INotifyPropertyChanged>& get_font() const 
+    {
+        return _element->get_font();
+    }
+    
 protected:
     std::shared_ptr<INotifyPropertyChanged> _obj;
     IVisualElement* _element;
@@ -171,8 +180,15 @@ public:
     
     void set_render_context(const RenderContext& context) override {}
     
+    void set_font(std::shared_ptr<INotifyPropertyChanged> font) override {}
+    const std::shared_ptr<INotifyPropertyChanged>& get_font() const 
+    {
+        return _font;
+    }
+    
 private:
     std::shared_ptr<INotifyPropertyChanged> _obj;
+    std::shared_ptr<INotifyPropertyChanged> _font = nullptr;
     std::string _name;
     std::string _type;
 };

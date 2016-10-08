@@ -185,15 +185,20 @@ void TextBlock::render(const Rect& origin)
     auto text_y = rect.position.y + y_margin;
     
     auto renderer = get_render_context().font_renderer;
-
-    if (get_align() == Alignment::left){
-        draw_text(renderer, _loader, c, rect.position.x + y_margin, text_y, text);
-    } else if (get_align() == Alignment::center){
-        draw_text(renderer, _loader, c, rect.position.x + rect.size.x / 2 - text_width / 2, 
-                  text_y, text);
-    } else {
-        draw_text(renderer, _loader, c, rect.position.x + rect.size.x - text_width - y_margin, 
-                  text_y, text);
+    
+    auto font = dynamic_cast<Font*>(get_font().get());
+    if (font)
+    {
+        auto& loader = font->get_loader();
+        if (get_align() == Alignment::left){
+            draw_text(renderer, loader, c, rect.position.x + y_margin, text_y, text);
+        } else if (get_align() == Alignment::center){
+            draw_text(renderer, loader, c, rect.position.x + rect.size.x / 2 - text_width / 2, 
+                      text_y, text);
+        } else {
+            draw_text(renderer, loader, c, rect.position.x + rect.size.x - text_width - y_margin, 
+                      text_y, text);
+        }
     }
 }
 

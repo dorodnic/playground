@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<StackPanel size="*" orientation="vertical" name="samples">
+<StackPanel size="*" orientation="vertical" name="samples" font="{bind font}">
+    <Font src="v.fnt" name="font" />
     <PageView size="*" selected="6" name="page">
         <StackPanel size="*" orientation="vertical" name="0">
             <TextBlock text_color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />

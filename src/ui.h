@@ -13,6 +13,8 @@
 #include "bind.h"
 #include "render.h"
 
+class Font;
+
 class IVisualElement : public INotifyPropertyChanged
 {
 public:
@@ -50,6 +52,9 @@ public:
     virtual std::shared_ptr<INotifyPropertyChanged> get_data_context() const = 0;
     
     virtual void set_render_context(const RenderContext& context) = 0;
+    
+    virtual void set_font(std::shared_ptr<INotifyPropertyChanged> font) = 0;
+    virtual const std::shared_ptr<INotifyPropertyChanged>& get_font() const = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -198,6 +203,24 @@ public:
     {
         _render_context = context;
     }
+    
+    void set_font(std::shared_ptr<INotifyPropertyChanged> font) override
+    {
+        _font = font;
+        fire_property_change("font");
+    }
+    const std::shared_ptr<INotifyPropertyChanged>& get_font() const 
+    {
+        if (_font.get())
+        {
+            return _font;
+        }
+        if (_parent)
+        {
+            return _parent->get_font();
+        }
+        return _font;
+    }
 
 protected:
     ControlBase();
@@ -229,6 +252,8 @@ private:
 
     const int CLICK_TIME_MS = 200;
     RenderContext _render_context = { nullptr, nullptr };
+    
+    std::shared_ptr<INotifyPropertyChanged> _font;
 };
 
 
@@ -247,7 +272,8 @@ struct TypeDefinition<ControlBase>
                          ->AddProperty(get_align, set_align)
                          ->AddProperty(is_visible, set_visible)
                          ->AddProperty(is_enabled, set_enabled)
-                         ->AddProperty(get_data_context, set_data_context);
+                         ->AddProperty(get_data_context, set_data_context)
+                         ->AddProperty(get_font, set_font);
     }
 };
 

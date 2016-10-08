@@ -3,6 +3,7 @@
 #include "containers.h"
 #include "adaptors.h"
 #include "nonvisual.h"
+#include "font.h"
 
 #include <fstream>
 #include <streambuf>
@@ -24,6 +25,20 @@ struct TypeDefinition<BindingBridge>
     static std::shared_ptr<ITypeDefinition> make() 
     {
         DefineClass(BindingBridge)->AddField(object_exists);
+    }
+};
+
+struct BindingOwner : public BindableObjectBase
+{
+    std::shared_ptr<INotifyPropertyChanged> object;
+};
+
+template<>
+struct TypeDefinition<BindingOwner>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        DefineClass(BindingOwner)->AddField(object);
     }
 };
 
@@ -77,6 +92,22 @@ public:
     
 private:
     std::shared_ptr<BindingBridge> _bridge;
+};
+
+class OwningBinding : public Binding
+{
+public:
+    OwningBinding(std::shared_ptr<TypeFactory> factory,
+        std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
+        std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
+        std::shared_ptr<BindingOwner> owner)
+        : Binding(factory, a, a_prop, b, b_prop),
+          _owner(owner)
+    {
+    }
+    
+private:
+    std::shared_ptr<BindingOwner> _owner;
 };
 
 std::unique_ptr<Binding> create_multilevel_binding(
@@ -143,7 +174,8 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
 	        StackPanel,
 	        Grid,
 	        PageView,
-	        Timer
+	        Timer,
+            Font
 	        >());
     }
 
@@ -151,6 +183,11 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
     {
         _factory->register_type<BindingBridge>();
     }
+    if (!_factory->find_type("BindingOwner"))
+    {
+        _factory->register_type<BindingOwner>();
+    }
+
 
     AttrBag bag;
     BindingBag bindings;
@@ -167,11 +204,24 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
         
         LOG(INFO) << "Creating binding to " << a->to_string() << "." 
             << def.a_prop << " from " << def.b_name << "." << def.b_prop;
-
-        auto binding = create_multilevel_binding(
+            
+        if (def.b_prop == "")
+        {
+            auto owner = std::make_shared<BindingOwner>();
+            owner->object = b_ptr;
+            
+            std::unique_ptr<Binding> binding(new OwningBinding(_factory, 
+                                             a_ptr, def.a_prop, 
+                                             owner, "object", owner));
+                        
+            if (a) a->add_binding(std::move(binding));
+        }
+        else
+        {
+            auto binding = create_multilevel_binding(
                         _factory, a_ptr, b_ptr, def.a_prop, def.b_prop);
-
-        if (a) a->add_binding(std::move(binding));
+            if (a) a->add_binding(std::move(binding));
+        }
     }
     return res;
 }
@@ -243,13 +293,20 @@ void parse_binding(const std::string& prop_text,
     MinimalParser p(prop_text);
     p.try_get_string("{bind ");
     auto element_id = p.get_id();
-    p.req('.');
-    auto prop_name = p.get_id();
-    while (p.peek() == '.')
+    
+    std::string prop_name = "";
+    
+    if (p.peek() == '.')
     {
-        p.get();
-        prop_name += "." + p.get_id();
+        p.req('.');
+        prop_name = p.get_id();
+        while (p.peek() == '.')
+        {
+            p.get();
+            prop_name += "." + p.get_id();
+        }
     }
+    
     p.req('}');
     p.req_eof();
     LOG(INFO) << "Parsing binding to " << element_id << "." << prop_name;

@@ -2,6 +2,7 @@
 
 #include "shader.h"
 #include "types.h"
+#include "bind.h"
 
 #include <string>
 #include <unordered_map>
@@ -117,4 +118,44 @@ private:
     int _size;
 	int _advance_adjustment;
     unsigned int _texture_id;
+};
+
+class Font : public BindableObjectBase
+{
+public:
+    Font() : _src(""), _loader(nullptr) {}
+    
+    const std::string& get_src() const
+    {
+        return _src;
+    }
+    
+    void set_src(const std::string& src)
+    {
+        if (src != _src)
+        {
+            _loader.reset(new FontLoader(src));
+            _src = src;
+            fire_property_change("src");
+        }
+    }
+    
+    const FontLoader& get_loader() const
+    {
+        return *_loader;
+    }
+    
+private:
+    std::unique_ptr<FontLoader> _loader;
+    std::string _src;
+};
+
+template<>
+struct TypeDefinition<Font>
+{
+    static std::shared_ptr<ITypeDefinition> make() 
+    {
+        DefineClass(Font)
+             ->AddProperty(get_src, set_src);
+    }
 };

@@ -12,11 +12,10 @@ public:
             const Size2& size,
             const Color3& color)
         : ControlBase(name, position, size, alignment), 
-          _color(color), _text(text),
-          _loader("v.fnt")
+          _color(color), _text(text)
     {}
     
-    TextBlock() : _loader("v.fnt") {}
+    TextBlock() {}
 
     Size2 get_intrinsic_size() const override;
 
@@ -37,7 +36,6 @@ public:
 
 private:
     Color3 _color = { 1.0f, 1.0f, 1.0f };
-    FontLoader _loader;
     std::string _text = "";
 };
 
@@ -63,7 +61,9 @@ public:
     Button() :
         _text_block("", "", Alignment::center, {0, 0}, 
                     { 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f })
-    {}
+    {
+        _text_block.update_parent(this);
+    }
     
     const char* get_type() const override { return "Button"; }
     
