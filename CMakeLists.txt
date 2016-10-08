@@ -16,6 +16,8 @@ add_executable(main src/main.cpp
                src/serializer.h src/serializer.cpp
                src/font.h src/font.cpp
                src/shader.h src/shader.cpp
+               src/flat2d.h src/flat2d.cpp
+               src/render.h
                )
 
 if(WIN32)

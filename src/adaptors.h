@@ -80,6 +80,11 @@ public:
         return _element->get_data_context(); 
     }
     
+    void set_render_context(const RenderContext& context) override
+    {
+        _element->set_render_context(context);
+    }
+    
 protected:
     std::shared_ptr<INotifyPropertyChanged> _obj;
     IVisualElement* _element;
@@ -163,6 +168,8 @@ public:
     {
         return nullptr;
     }
+    
+    void set_render_context(const RenderContext& context) override {}
     
 private:
     std::shared_ptr<INotifyPropertyChanged> _obj;

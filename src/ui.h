@@ -11,6 +11,7 @@
 
 #include "types.h"
 #include "bind.h"
+#include "render.h"
 
 class IVisualElement : public INotifyPropertyChanged
 {
@@ -47,6 +48,8 @@ public:
     
     virtual void set_data_context(std::shared_ptr<INotifyPropertyChanged> dc) = 0;
     virtual std::shared_ptr<INotifyPropertyChanged> get_data_context() const = 0;
+    
+    virtual void set_render_context(const RenderContext& context) = 0;
 
     virtual ~IVisualElement() {}
 };
@@ -190,9 +193,19 @@ public:
     {
         _base.unsubscribe_on_change(owner);
     }
+    
+    void set_render_context(const RenderContext& context) override
+    {
+        _render_context = context;
+    }
 
 protected:
     ControlBase();
+
+    const RenderContext& get_render_context() const
+    {
+        return _render_context;
+    }
 
 private:
     Size2 _position = {0,0};
@@ -215,6 +228,7 @@ private:
     std::function<void()> _on_double_click;
 
     const int CLICK_TIME_MS = 200;
+    RenderContext _render_context = { nullptr, nullptr };
 };
 
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "ui.h"
+#include "font.h"
 
 class TextBlock : public ControlBase
 {
@@ -11,10 +12,11 @@ public:
             const Size2& size,
             const Color3& color)
         : ControlBase(name, position, size, alignment), 
-          _color(color), _text(text)
+          _color(color), _text(text),
+          _loader("v.fnt")
     {}
     
-    TextBlock() {}
+    TextBlock() : _loader("v.fnt") {}
 
     Size2 get_intrinsic_size() const override;
 
@@ -35,6 +37,7 @@ public:
 
 private:
     Color3 _color = { 1.0f, 1.0f, 1.0f };
+    FontLoader _loader;
     std::string _text = "";
 };
 
@@ -93,6 +96,12 @@ public:
         fire_property_change("text_align");
     }
     Alignment get_text_align() const { return _text_block.get_align(); }
+    
+    void set_render_context(const RenderContext& ctx) override
+    {
+        ControlBase::set_render_context(ctx);
+        _text_block.set_render_context(ctx);
+    }
 
 private:
     Color3 _color = { 0.4f, 0.4f, 0.4f };

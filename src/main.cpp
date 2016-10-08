@@ -7,6 +7,7 @@
 #include "containers.h"
 #include "serializer.h"
 #include "font.h"
+#include "flat2d.h"
 
 #ifdef WIN32
     #define USEGLEW
@@ -250,91 +251,7 @@ void setup_ui(IVisualElement* c, shared_ptr<INotifyPropertyChanged> dcPlus,
     });
 }
 
-/*GLuint load_shaders(const char* vertex_shader_file, 
-                    const char* fragment_shader_file)
-{
-    // Create the shaders
-    GLuint vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
-
-
-    auto vertex_shader_code = read_all_text(vertex_shader_file);
-    auto fragment_shader_code = read_all_text(fragment_shader_file);
-
-    LOG(INFO) << "Compiling shader " << vertex_shader_file << "...";
-    
-    char const * vertex_source_ptr = vertex_shader_code.c_str();
-    int length = vertex_shader_code.size();
-    glShaderSource(vertex_shader_id, 1, &vertex_source_ptr, &length);
-    glCompileShader(vertex_shader_id);
-
-    // Check Vertex Shader
-    GLint result;
-    int log_length;
-    
-    glGetShaderiv(vertex_shader_id, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(vertex_shader_id, GL_INFO_LOG_LENGTH, &log_length);
-    if ((result == GL_FALSE) && (log_length > 0)){
-        std::vector<char> error_message(log_length+1);
-        glGetShaderInfoLog(vertex_shader_id, log_length, NULL, &error_message[0]);
-        LOG(ERROR) << &error_message[0];
-        return 0;
-    }
-
-    LOG(INFO) << "Compiling shader " << fragment_shader_file << "...";
-    
-    char const * fragment_source_ptr = fragment_shader_code.c_str();
-    glShaderSource(fragment_shader_id, 1, &fragment_source_ptr, NULL);
-    glCompileShader(fragment_shader_id);
-
-    glGetShaderiv(fragment_shader_id, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(fragment_shader_id, GL_INFO_LOG_LENGTH, &log_length);
-    if ((result == GL_FALSE) && (log_length > 0)){
-        std::vector<char> error_message(log_length+1);
-        glGetShaderInfoLog(fragment_shader_id, log_length, NULL, &error_message[0]);
-        LOG(ERROR) << &error_message[0];
-        return 0;
-    }
-
-    LOG(INFO) << "Linking program...";
-    
-    GLuint program_id = glCreateProgram();
-    glAttachShader(program_id, vertex_shader_id);
-    glAttachShader(program_id, fragment_shader_id);
-    glLinkProgram(program_id);
-
-    glGetProgramiv(program_id, GL_LINK_STATUS, &result);
-    glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &log_length);
-    if ((result == GL_FALSE) && (log_length > 0)){
-        std::vector<char> error_message(log_length+1);
-        glGetProgramInfoLog(program_id, log_length, NULL, &error_message[0]);
-        LOG(ERROR) << &error_message[0];
-        return 0;
-    }
-    
-    glValidateProgram(program_id);
-
-    glGetProgramiv(program_id, GL_VALIDATE_STATUS, &result);
-    glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &log_length);
-    if ((result == GL_FALSE) && (log_length > 0)){
-        std::vector<char> error_message(log_length+1);
-        glGetProgramInfoLog(program_id, log_length, NULL, &error_message[0]);
-        LOG(ERROR) << &error_message[0];
-        return 0;
-    }
-    
-    glDetachShader(program_id, vertex_shader_id);
-    glDetachShader(program_id, fragment_shader_id);
-    
-    glDeleteShader(vertex_shader_id);
-    glDeleteShader(fragment_shader_id);
-    
-    
-
-    return program_id;
-}*/
-
-int print_error(int line)
+/*int print_error(int line)
 {
     GLenum glErr;
     int    retCode = 0;
@@ -346,7 +263,7 @@ int print_error(int line)
         retCode = 1;
     }
     return retCode;
-}
+}*/
 
 int main(int argc, char * argv[]) try
 {
@@ -396,6 +313,14 @@ int main(int argc, char * argv[]) try
         FontLoader font_bold("vb.fnt");
         FontRenderer renderer;
         
+        Flat2dRenderer flat_render;
+        Flat2dRect r({ {80,30}, {100, 50} }, { 0.9f, 0.3f, 0.7f });
+        
+        RenderContext ctx;
+        ctx.font_renderer = &renderer;
+        ctx.flat2d_renderer = &flat_render;
+        c.set_render_context(ctx);
+        
         TextMesh mesh(font, "Hello World!", 60, 0.3, 0.2, { 50, 50 },  { 0.7f, 0.3f, 0.4f });
         TextMesh mesh2(font_bold, "Testing testing !~34455 $%^*( testing", 
                        20, 0.5, 0.1,
@@ -403,8 +328,8 @@ int main(int argc, char * argv[]) try
 
         glfwSetWindowUserPointer(win, &c);
         glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {
-            /*auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-            ui_element->update_mouse_position({ (int)x, (int)y });*/
+            auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+            ui_element->update_mouse_position({ (int)x, (int)y });
         });
         glfwSetScrollCallback(win, [](GLFWwindow * w, double x, double y) {
             auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
@@ -454,15 +379,18 @@ int main(int argc, char * argv[]) try
 
             glfwGetWindowSize(win, &w, &h);
             renderer.set_window_size({w, h});
-            
+            flat_render.set_window_size({w, h});
 
             dcPlus->update();
             dcMinus->update();
 
             Rect origin { { 0, 0 }, { w, h } };
+            
+            c.render(origin);
 
-            renderer.render(mesh);
-            renderer.render(mesh2);
+            //renderer.render(mesh);
+            //renderer.render(mesh2);
+            // flat_render.render(r);
 
             glfwSwapBuffers(win);
         }

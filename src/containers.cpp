@@ -88,7 +88,7 @@ Rect calc_new_layout(IVisualElement* p,
 
 void outline(const Rect& r, const Color3& c)
 {
-    glPushAttrib(GL_ENABLE_BIT);
+    /* glPushAttrib(GL_ENABLE_BIT);
 
     glLineStipple(1, 0xAAAA);
     glEnable(GL_LINE_STIPPLE);
@@ -102,7 +102,7 @@ void outline(const Rect& r, const Color3& c)
     glVertex2i(r.position.x, r.position.y);
     glEnd();
 
-    glPopAttrib();
+    glPopAttrib(); */
 }
 
 void StackPanel::update_mouse_position(Int2 cursor)

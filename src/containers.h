@@ -100,6 +100,16 @@ public:
         return nullptr;
     }
     
+    void set_render_context(const RenderContext& context) override
+    {
+        ControlBase::set_render_context(context);
+        
+        for (auto& e : get_elements())
+        {
+            e->set_render_context(context);
+        }
+    }
+    
     void set_focused(bool on) override
     {
         for (auto& e : get_elements())
