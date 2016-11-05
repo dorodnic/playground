@@ -161,6 +161,8 @@ TextMesh::TextMesh(const FontLoader& font, const std::string& text,
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    //LOG(INFO) << "created vao " << vao << " with " << get_size() << " vertexes";
     
     _vao = vao;
     _vertex_vbo = vbo;
@@ -169,6 +171,7 @@ TextMesh::TextMesh(const FontLoader& font, const std::string& text,
 
 TextMesh::~TextMesh()
 {
+    //LOG(INFO) << "deleted vao " << _vao;
     glDeleteBuffers(1, &_vertex_vbo);
 	glDeleteBuffers(1, &_uv_vbo);
     glDeleteBuffers(1, &_vao);
@@ -341,27 +344,38 @@ void FontRenderer::render(const TextMesh& mesh) const
     mesh.get_font().begin();
 
     auto c = mesh.get_color();
-	GLint myLoc = glGetUniformLocation(_shader->get_id(), "font_color");
-	glUniform3f(myLoc, c.r, c.g, c.b);
+    GLint myLoc = glGetUniformLocation(_shader->get_id(), "font_color");
+    glUniform3f(myLoc, c.r, c.g, c.b);
     
     auto position = mesh.get_position();
     myLoc = glGetUniformLocation(_shader->get_id(), "text_position");
-	glUniform2f(myLoc, position.x, position.y);
+    glUniform2f(myLoc, position.x, position.y);
     
     auto size_ratio = mesh.get_size_ratio();
     myLoc = glGetUniformLocation(_shader->get_id(), "size_ratio");
-	glUniform1f(myLoc, size_ratio);
+    glUniform1f(myLoc, size_ratio);
     
     auto sdf_width = mesh.get_sdf_width();
     myLoc = glGetUniformLocation(_shader->get_id(), "sdf_width");
-	glUniform1f(myLoc, sdf_width);
+    glUniform1f(myLoc, sdf_width);
     
     auto sdf_edge = mesh.get_sdf_edge();
     myLoc = glGetUniformLocation(_shader->get_id(), "sdf_edge");
-	glUniform1f(myLoc, sdf_edge);
+    glUniform1f(myLoc, sdf_edge);
     
+    //LOG(INFO) << "binding vao " << mesh.get_vao();
     glBindVertexArray(mesh.get_vao());
+    //LOG(INFO) << "going to draw " <<  mesh.get_vertex_count() << " rects";
+
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.get_vbo());
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.get_uv_vbo());
+    glEnableVertexAttribArray(1);
+
     glDrawArrays(GL_QUADS, 0, mesh.get_vertex_count());
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
     
     mesh.get_font().end();
     _shader->end();

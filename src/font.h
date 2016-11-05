@@ -22,6 +22,8 @@ public:
     
     float* get_vertex_positions() { return _vertex_positions.data(); }
     float* get_texture_coords() { return _texture_coords.data(); }
+
+    TextMesh(const TextMesh&) = delete;
     
     TextMesh(const FontLoader& font, 
              const std::string& text,
@@ -30,6 +32,8 @@ public:
              const Color3& c);
     
     unsigned int get_vao() const { return _vao; }
+    unsigned int get_vbo() const { return _vertex_vbo; }
+    unsigned int get_uv_vbo() const { return _uv_vbo; }
     
     const Color3& get_color() const { return _color; }
     const Int2& get_position() const { return _position; }

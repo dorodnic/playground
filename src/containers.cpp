@@ -53,7 +53,9 @@ Rect calc_new_layout(IVisualElement* p,
     (new_origin.position.*ifield) = curr_sum;
     (new_origin.size.*ifield) = size_pair.first;
     
-    auto p_size = size_cache.find(p)->second;
+    auto it = size_cache.find(p);
+    if (it == size_cache.end()) return arrangement;
+    auto p_size = it->second;
     
     if (expand_relatives)
     {

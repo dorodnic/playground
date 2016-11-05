@@ -291,11 +291,13 @@ int main(int argc, char * argv[]) try
         LOG(INFO) << "Loading UI...";
         Serializer s("resources/ui.xml");
         c.add_item(s.deserialize());
-        //setup_ui(&c, dcPlus, dcMinus);
+        setup_ui(&c, dcPlus, dcMinus);
         Rect origin { { 0, 0 }, { 1280, 960 } };
         c.arrange(origin);
         LOG(INFO) << "UI has been succesfully loaded and arranged";
-    } catch(const std::exception& ex) {
+    }
+    catch(const std::exception& ex)
+    {
         LOG(ERROR) << "UI Loading Error: " << ex.what();
         stringstream ss; ss << "UI Loading Error: \"" << ex.what() << "\"";
         c.add_item(std::shared_ptr<TextBlock>(new TextBlock(
@@ -309,41 +311,28 @@ int main(int argc, char * argv[]) try
     }
     
     {
-        FontLoader font("v.fnt");
-        FontLoader font_bold("vb.fnt");
         FontRenderer renderer;
         
         Flat2dRenderer flat_render;
-        Flat2dRect r({ {80,30}, {100, 50} }, { 0.9f, 0.3f, 0.7f });
-        
+
         RenderContext ctx;
         ctx.font_renderer = &renderer;
         ctx.flat2d_renderer = &flat_render;
         c.set_render_context(ctx);
-        
-        std::shared_ptr<Font> f(new Font());
-        f->set_src("v.fnt");
-        auto ctrl = dynamic_cast<IVisualElement*>(c.find_element("btnPrev"));
-        ctrl->set_font(f);
-        
-        TextMesh mesh(font, "", 60, 0.3, 0.2, { 50, 50 },  { 0.7f, 0.3f, 0.4f });
-        TextMesh mesh2(font_bold, "Testing testing !~34455 $%^*( testing", 
-                       20, 0.5, 0.1,
-                       { 0, 200 }, { 0.2f, 0.9f, 0.8f });
 
         glfwSetWindowUserPointer(win, &c);
         glfwSetCursorPosCallback(win, [](GLFWwindow * w, double x, double y) {
-            //auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-            //ui_element->update_mouse_position({ (int)x, (int)y });
+            auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+            ui_element->update_mouse_position({ (int)x, (int)y });
         });
         glfwSetScrollCallback(win, [](GLFWwindow * w, double x, double y) {
-            //auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
-            //ui_element->update_mouse_scroll({ (int)x, (int)y });
+            auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+            ui_element->update_mouse_scroll({ (int)x, (int)y });
         });
         glfwSetMouseButtonCallback(win, [](GLFWwindow * w, 
                                            int button, int action, int mods)
         {
-            /*auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
+            auto ui_element = (IVisualElement*)glfwGetWindowUserPointer(w);
             MouseButton button_type;
             switch(button)
             {
@@ -370,7 +359,7 @@ int main(int argc, char * argv[]) try
                 mouse_state = MouseState::up;
             };
 
-            ui_element->update_mouse_state(button_type, mouse_state);*/
+            ui_element->update_mouse_state(button_type, mouse_state);
         });
         
         while (!glfwWindowShouldClose(win))
@@ -390,13 +379,8 @@ int main(int argc, char * argv[]) try
             dcMinus->update();
 
             Rect origin { { 0, 0 }, { w, h } };
-            
-            c.render(origin);
 
-            //renderer.render(mesh);
-            //renderer.render(mesh2);
-           
-            // flat_render.render(r);
+            c.render(origin);
 
             glfwSwapBuffers(win);
         }

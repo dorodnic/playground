@@ -199,40 +199,40 @@ void TextBlock::set_text(std::string text)
     if (text != _text)
     {
         _text = text;
-        //_refresh = true;
+        _refresh = true;
         fire_property_change("text");
     }
     
-    /*bool was_changed = (text == _text);
-    auto font = dynamic_cast<Font*>(get_font().get());
-    if (font)
-    {
-        auto& loader = font->get_loader();
-        std::unique_ptr<TextMesh> new_mesh(new TextMesh(
-            loader, text, 16, 0.3, 0.1, {0,0}, _color
-        ));
+//    bool was_changed = (text != _text);
+//    auto font = dynamic_cast<Font*>(get_font().get());
+//    if (font)
+//    {
+//        auto& loader = font->get_loader();
+//        std::unique_ptr<TextMesh> new_mesh(new TextMesh(
+//            loader, text, 16, 0.3, 0.1, {0,0}, _color
+//        ));
         
-        auto new_width = new_mesh->get_width();
-        auto width = get_size().x;
-        if ((_text_mesh.get() && _text_mesh->get_width() == new_width) ||
-            (width.is_const() && width.get_pixels() > new_width))
-        {
-            _text = text; 
-            _text_mesh = std::move(new_mesh);
-        }
-        else
-        {
-            _text = text;
-            _text_mesh = std::move(new_mesh);
+//        auto new_width = new_mesh->get_width();
+//        auto width = get_size().x;
+//        if ((_text_mesh.get() && _text_mesh->get_width() == new_width) ||
+//            (width.is_const() && width.get_pixels() > new_width))
+//        {
+//            _text = text;
+//            _text_mesh = std::move(new_mesh);
+//        }
+//        else
+//        {
+//            _text = text;
+//            _text_mesh = std::move(new_mesh);
             
-            ControlBase::invalidate_layout();
-        }
-    }
-    else
-    {
-        _text = text;
-    }
-    if (was_changed) fire_property_change("text");*/
+//            ControlBase::invalidate_layout();
+//        }
+//    }
+//    else
+//    {
+//        _text = text;
+//    }
+//    if (was_changed) fire_property_change("text");
 }
 
 void TextBlock::render(const Rect& origin)
@@ -242,6 +242,11 @@ void TextBlock::render(const Rect& origin)
     if (!is_enabled())
     {
         c = c.mix_with(c.to_grayscale(), 0.7);
+    }
+
+    if (get_name() == "binded_text")
+    {
+        LOG(INFO) << _text;
     }
     
     glColor3f(c.r, c.g, c.b);
@@ -255,7 +260,7 @@ void TextBlock::render(const Rect& origin)
         if (font)
         {
             auto& loader = font->get_loader();
-            LOG(INFO) << "resetting " << _text;
+            //LOG(INFO) << "resetting " << _text;
             _text_mesh.reset(new TextMesh(
                 loader, _text, 16, 0.3, 0.1, {0,0}, _color
             ));
@@ -268,7 +273,7 @@ void TextBlock::render(const Rect& origin)
         _refresh = false;
     }
     
-    LOG(INFO) << "rendering " << _text;
+    //LOG(INFO) << "rendering " << _text;
     if (_text_mesh.get())
     {
         auto text_width = _text_mesh->get_width();
