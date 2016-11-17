@@ -269,7 +269,7 @@ int main(int argc, char * argv[]) try
 {
 
     glfwInit();
-    GLFWwindow * win = glfwCreateWindow(1280, 960, "main", 0, 0);
+    GLFWwindow * win = glfwCreateWindow(800, 600, "main", 0, 0);
     glfwMakeContextCurrent(win);
     
     #ifdef WIN32
@@ -292,7 +292,7 @@ int main(int argc, char * argv[]) try
         Serializer s("resources/ui.xml");
         c.add_item(s.deserialize());
         setup_ui(&c, dcPlus, dcMinus);
-        Rect origin { { 0, 0 }, { 1280, 960 } };
+        Rect origin { { 0, 0 }, { 800, 600 } };
         c.arrange(origin);
         LOG(INFO) << "UI has been succesfully loaded and arranged";
     }

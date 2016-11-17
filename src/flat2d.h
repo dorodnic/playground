@@ -29,10 +29,11 @@ class Flat2dRenderer
 public:
     Flat2dRenderer();
     
-    void set_window_size(const Int2& size) const;
+    void set_window_size(const Int2& size);
     
     void render(const Flat2dRect& rect) const;
     
 private:
     std::unique_ptr<ShaderProgram> _shader;
+    Int2 _size;
 };

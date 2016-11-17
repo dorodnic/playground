@@ -304,17 +304,17 @@ Size2 Slider::get_intrinsic_size() const
     return { 120, 20 };
 }
 
-void draw_diamond(float x, float y, float size)
-{
-    glVertex2i(x, y - size);
-    glVertex2i(x + size, y);
-    glVertex2i(x, y + size);
-    glVertex2i(x - size, y);
-}
+//void draw_diamond(float x, float y, float size)
+//{
+//    glVertex2i(x, y - size);
+//    glVertex2i(x + size, y);
+//    glVertex2i(x, y + size);
+//    glVertex2i(x - size, y);
+//}
 
 void Slider::render(const Rect& origin) 
 {
-    /* auto bg_color = _color;
+    auto bg_color = _color;
     auto txt_color = _text_color;
     if (!is_enabled())
     {
@@ -329,45 +329,50 @@ void Slider::render(const Rect& origin)
     auto x0 = rect.position.x;
     auto x1 = rect.position.x + rect.size.x;
     
-    auto text_y = rect.position.y + rect.size.y - get_text_height();
+    auto text_y = rect.position.y + rect.size.y - 20;// get_text_height();
     
     auto min_txt = stringify(_min);
     auto max_txt = stringify(_max);
     
-    auto max_x = x1 - get_text_width(max_txt.c_str());
-    auto min_x = x0 + get_text_width(min_txt.c_str());
+    //auto max_x = x1 - get_text_width(max_txt.c_str());
+    //auto min_x = x0 + get_text_width(min_txt.c_str());
     
     auto value_txt = stringify(_value);
-    auto value_width = get_text_width(value_txt.c_str());
+    //auto value_width = get_text_width(value_txt.c_str());
     auto v = (clamp(_value, _min, _max) - _min) / (_max - _min + 0.01f);
     auto value_x = (int)lerp(x0, x1, v);
-    auto value_x0 = (int)(value_x - value_width / 2.0f);
-    if (float_eq(_value, _min)) value_x0 = value_x;
-    if (float_eq(_value, _max)) value_x0 = value_x - value_width;
-    auto value_x1 = value_x0 + value_width;
-    interval<int> value { value_x0, value_x1 };
+    //auto value_x0 = (int)(value_x - value_width / 2.0f);
+    //if (float_eq(_value, _min)) value_x0 = value_x;
+    //if (float_eq(_value, _max)) value_x0 = value_x - value_width;
+    //auto value_x1 = value_x0 + value_width;
+    //interval<int> value { value_x0, value_x1 };
 
     use(bg_color);
-    
-    
-    glBegin(GL_QUADS);
-    
-    glVertex2i(x0, rect.position.y + pad);
-    glVertex2i(x0, text_y - pad - 1);
-    glVertex2i(x1,
-               text_y - pad - 1);
-    glVertex2i(x1,
-               rect.position.y + pad);
 
-    glEnd();
+    Rect bg_rect { { x0, rect.position.y + pad }, { x1 - x0, text_y - 2*pad - 1 - rect.position.y } };
+    
+    Flat2dRect r(bg_rect, bg_color);
+    auto renderer = get_render_context().flat2d_renderer;
+    renderer->render(r);
+
+    //glBegin(GL_QUADS);
+    
+    //glVertex2i(x0, rect.position.y + pad);
+    //glVertex2i(x0, text_y - pad - 1);
+    //glVertex2i(x1,
+    //           text_y - pad - 1);
+    //glVertex2i(x1,
+    //           rect.position.y + pad);
+
+    //glEnd();
     
     use(txt_color);
     
-    if (min_x <= value_x0) draw_text(x0, text_y, min_txt);
-    if (max_x >= value_x1) draw_text(max_x, text_y, max_txt);
-    draw_text(value_x0, text_y, value_txt);
+    //if (min_x <= value_x0) draw_text(x0, text_y, min_txt);
+    //if (max_x >= value_x1) draw_text(max_x, text_y, max_txt);
+    //draw_text(value_x0, text_y, value_txt);
     
-    if (!float_eq(_step, 0.0f))
+    /*if (!float_eq(_step, 0.0f))
     {
         auto last_x = min_x;
         auto last_line_x = x0;
@@ -396,23 +401,23 @@ void Slider::render(const Rect& origin)
                 last_line_x = marker_center;
             }
         }
-    }
+    }*/
     
     auto size = (text_y - rect.position.y) / 2 - pad;
     auto btn_y = rect.position.y + pad + size;
     auto btn_x = value_x;
     
     
-    glBegin(GL_QUADS);
+    //glBegin(GL_QUADS);
     
-    draw_diamond(btn_x, btn_y, size);
+    //draw_diamond(btn_x, btn_y, size);
     
     if (_dragger_ready || _dragging) bg_color = -bg_color;
     
     use(bg_color);
-    draw_diamond(btn_x, btn_y, size - 3);
+    //draw_diamond(btn_x, btn_y, size - 3);
 
-    glEnd(); */
+    //glEnd();
 }
 
 void Slider::update_mouse_position(Int2 cursor)

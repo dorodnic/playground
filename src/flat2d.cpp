@@ -18,14 +18,9 @@ Flat2dRenderer::Flat2dRenderer()
                                   "resources/shaders/flat2d_fragment.c");
 }
 
-void Flat2dRenderer::set_window_size(const Int2& size) const
+void Flat2dRenderer::set_window_size(const Int2& size)
 {
-    _shader->begin();
-    
-	GLint myLoc = glGetUniformLocation(_shader->get_id(), "screen_size");
-	glUniform2f(myLoc, size.x, size.y);
-    
-    _shader->end();
+    _size = size;
 }
 
 void Flat2dRenderer::render(const Flat2dRect& rect) const
@@ -37,7 +32,7 @@ void Flat2dRenderer::render(const Flat2dRect& rect) const
 	glUniform3f(myLoc, c.r, c.g, c.b);
     
     myLoc = glGetUniformLocation(_shader->get_id(), "screen_size");
-	glUniform2f(myLoc, 640, 480);
+    glUniform2f(myLoc, _size.x, _size.y);
     
     glBindVertexArray(rect.get_vao());
     glDrawArrays(GL_QUADS, 0, 4);
