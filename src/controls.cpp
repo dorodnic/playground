@@ -61,11 +61,6 @@ inline T lerp(T from, T to, float t)
     // return mesh.get_height();
 // }
 
-inline void use(const Color3& c)
-{
-    glColor3f(c.r, c.g, c.b);
-}
-
 template<class T>
 struct interval
 {
@@ -243,11 +238,6 @@ void TextBlock::render(const Rect& origin)
     {
         c = c.mix_with(c.to_grayscale(), 0.7);
     }
-
-    if (get_name() == "binded_text")
-    {
-        LOG(INFO) << _text;
-    }
     
     glColor3f(c.r, c.g, c.b);
     
@@ -262,7 +252,7 @@ void TextBlock::render(const Rect& origin)
             auto& loader = font->get_loader();
             //LOG(INFO) << "resetting " << _text;
             _text_mesh.reset(new TextMesh(
-                loader, _text, 16, 0.3, 0.1, {0,0}, _color
+                loader, _text, _text_size, 0.3, 0.1, {0,0}, _color
             ));
         }
         else
@@ -293,6 +283,7 @@ void TextBlock::render(const Rect& origin)
             position = {rect.position.x + rect.size.x - text_width - y_margin, text_y};
         }
         
+        _text_mesh->set_text_size(_text_size);
         _text_mesh->set_position(position);
         renderer->render(*_text_mesh);
     }
@@ -304,13 +295,14 @@ Size2 Slider::get_intrinsic_size() const
     return { 120, 20 };
 }
 
-//void draw_diamond(float x, float y, float size)
-//{
-//    glVertex2i(x, y - size);
-//    glVertex2i(x + size, y);
-//    glVertex2i(x, y + size);
-//    glVertex2i(x - size, y);
-//}
+void draw_diamond(Flat2dRenderer* renderer,
+                  float x, float y,
+                  float size, const Color3& c)
+{
+    Flat2dRect r({{x - size - 1, y - size - 1},
+                  {2 * size + 1, 2 * size + 1}}, c);
+    renderer->render(r);
+}
 
 void Slider::render(const Rect& origin) 
 {
@@ -329,7 +321,7 @@ void Slider::render(const Rect& origin)
     auto x0 = rect.position.x;
     auto x1 = rect.position.x + rect.size.x;
     
-    auto text_y = rect.position.y + rect.size.y - 20;// get_text_height();
+    auto text_y = rect.position.y + rect.size.y;// get_text_height();
     
     auto min_txt = stringify(_min);
     auto max_txt = stringify(_max);
@@ -347,8 +339,6 @@ void Slider::render(const Rect& origin)
     //auto value_x1 = value_x0 + value_width;
     //interval<int> value { value_x0, value_x1 };
 
-    use(bg_color);
-
     Rect bg_rect { { x0, rect.position.y + pad }, { x1 - x0, text_y - 2*pad - 1 - rect.position.y } };
     
     Flat2dRect r(bg_rect, bg_color);
@@ -365,8 +355,7 @@ void Slider::render(const Rect& origin)
     //           rect.position.y + pad);
 
     //glEnd();
-    
-    use(txt_color);
+
     
     //if (min_x <= value_x0) draw_text(x0, text_y, min_txt);
     //if (max_x >= value_x1) draw_text(max_x, text_y, max_txt);
@@ -410,11 +399,11 @@ void Slider::render(const Rect& origin)
     
     //glBegin(GL_QUADS);
     
-    //draw_diamond(btn_x, btn_y, size);
+    draw_diamond(renderer, btn_x, btn_y, size, txt_color);
     
     if (_dragger_ready || _dragging) bg_color = -bg_color;
-    
-    use(bg_color);
+
+    draw_diamond(renderer, btn_x, btn_y, size - 3, bg_color);
     //draw_diamond(btn_x, btn_y, size - 3);
 
     //glEnd();
@@ -422,13 +411,13 @@ void Slider::render(const Rect& origin)
 
 void Slider::update_mouse_position(Int2 cursor)
 {
-    /*const auto pad = 1;
+    const auto pad = 1;
     auto rect = _rect;
 
     auto x0 = rect.position.x;
     auto x1 = rect.position.x + rect.size.x;
     
-    auto text_y = rect.position.y + rect.size.y - get_text_height();
+    auto text_y = rect.position.y + rect.size.y /*- get_text_height()*/;
     
     auto size = (text_y - rect.position.y) / 2 - pad;
     auto btn_y = rect.position.y + pad + size;
@@ -468,7 +457,7 @@ void Slider::update_mouse_position(Int2 cursor)
             auto t = (x - x0) / (x1 - x0 + 0.01f);
             set_value(lerp(_min, _max, t));
         }
-    }*/
+    }
 }
     
 void Slider::update_mouse_state(MouseButton button, MouseState state)

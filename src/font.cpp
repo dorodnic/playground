@@ -141,8 +141,8 @@ TextMesh::TextMesh(const FontLoader& font, const std::string& text,
         }
     }
     
-    _width = x * _size_ratio;
-    _height = (max_y - min_y) * _size_ratio;
+    _width = x;
+    _height = (max_y - min_y);
     
     GLuint vao, vbo, vbo2;
     glGenVertexArrays(1, &vao);
@@ -379,4 +379,8 @@ void FontRenderer::render(const TextMesh& mesh) const
     
     mesh.get_font().end();
     _shader->end();
+}
+
+void TextMesh::set_text_size(float size) {
+    _size_ratio = size / (float)_font.get_native_size();
 }

@@ -15,8 +15,8 @@ class TextMesh
 public:
     int get_vertex_count() const { return _vertex_positions.size() / 2; }
     
-    int get_width() const { return _width; }
-    int get_height() const { return _height; }
+    int get_width() const { return _width * _size_ratio; }
+    int get_height() const { return _height * _size_ratio; }
     
     int get_size() const { return _vertex_positions.size() * sizeof(float); }
     
@@ -44,6 +44,8 @@ public:
     float get_size_ratio() const { return _size_ratio; }
     float get_sdf_width() const { return _sdf_width; }
     float get_sdf_edge() const { return _sdf_edge; }
+
+    void set_text_size(float size);
 
     ~TextMesh();
 

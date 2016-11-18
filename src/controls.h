@@ -30,13 +30,20 @@ public:
         fire_property_change("color");
     }
     const Color3& get_color() const { return _color; }
-    
+
+    void set_text_size(float size) {
+        _text_size = size;
+        fire_property_change("text_size");
+        ControlBase::invalidate_layout();
+    }
+    float get_text_size() const { return _text_size; }
 
 private:
     Color3 _color = { 1.0f, 1.0f, 1.0f };
     std::string _text = "";
     std::unique_ptr<TextMesh> _text_mesh;
     bool _refresh = false;
+    float _text_size = 16;
 };
 
 class Button : public ControlBase
@@ -247,6 +254,7 @@ struct TypeDefinition<TextBlock>
         ExtendClass(TextBlock, ControlBase)
              ->AddProperty(get_text, set_text)
              ->AddProperty(get_color, set_color)
+             ->AddProperty(get_text_size, set_text_size)
              ;
     }
 };
