@@ -122,6 +122,7 @@ void Button::render(const Rect& origin)
     
     Flat2dRect r(rect, c);
     auto renderer = get_render_context().flat2d_renderer;
+    r.set_rounding(_corner_radius);
     renderer->render(r);
     
     /* glColor3f(c.r, c.g, c.b);
@@ -252,7 +253,8 @@ void TextBlock::render(const Rect& origin)
             auto& loader = font->get_loader();
             //LOG(INFO) << "resetting " << _text;
             _text_mesh.reset(new TextMesh(
-                loader, _text, _text_size, 0.3, 0.1, {0,0}, _color
+                loader, _text, _text_size,
+                _sdf_width, _sdf_edge, {0,0}, _color
             ));
         }
         else
@@ -283,6 +285,8 @@ void TextBlock::render(const Rect& origin)
             position = {rect.position.x + rect.size.x - text_width - y_margin, text_y};
         }
         
+        _text_mesh->set_sdf_width(_sdf_width);
+        _text_mesh->set_sdf_edge(_sdf_edge);
         _text_mesh->set_text_size(_text_size);
         _text_mesh->set_position(position);
         renderer->render(*_text_mesh);

@@ -41,11 +41,14 @@ public:
     
     const FontLoader& get_font() const { return _font; }
     
+    float get_text_size() const;
     float get_size_ratio() const { return _size_ratio; }
     float get_sdf_width() const { return _sdf_width; }
     float get_sdf_edge() const { return _sdf_edge; }
 
     void set_text_size(float size);
+    void set_sdf_width(float width) { _sdf_width = width; }
+    void set_sdf_edge(float edge) { _sdf_edge = edge; }
 
     ~TextMesh();
 

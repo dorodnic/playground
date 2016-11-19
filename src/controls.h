@@ -38,12 +38,28 @@ public:
     }
     float get_text_size() const { return _text_size; }
 
+
+    void set_sdf_width(float width) {
+        _sdf_width = width;
+        fire_property_change("sdf_width");
+    }
+    float get_sdf_width() const { return _sdf_width; }
+
+    void set_sdf_edge(float edge) {
+        _sdf_edge = edge;
+        fire_property_change("sdf_edge");
+    }
+    float get_sdf_edge() const { return _sdf_edge; }
+
+
 private:
     Color3 _color = { 1.0f, 1.0f, 1.0f };
     std::string _text = "";
     std::unique_ptr<TextMesh> _text_mesh;
     bool _refresh = false;
     float _text_size = 16;
+    float _sdf_width = 0.3f;
+    float _sdf_edge = 0.1f;
 };
 
 class Button : public ControlBase
@@ -110,9 +126,16 @@ public:
         _text_block.set_render_context(ctx);
     }
 
+    void set_corner_radius(float val) {
+        _corner_radius = val;
+        fire_property_change("corner_radius");
+    }
+    float get_corner_radius() const { return _corner_radius; }
+
 private:
     Color3 _color = { 0.4f, 0.4f, 0.4f };
     TextBlock _text_block;
+    float _corner_radius = 0;
 };
 
 class Slider : public ControlBase
@@ -242,7 +265,8 @@ struct TypeDefinition<Button>
              ->AddProperty(get_text, set_text)
              ->AddProperty(get_color, set_color)
              ->AddProperty(get_text_color, set_text_color)
-             ->AddProperty(get_text_align, set_text_align);
+             ->AddProperty(get_text_align, set_text_align)
+             ->AddProperty(get_corner_radius, set_corner_radius);
     }
 };
 
@@ -255,6 +279,8 @@ struct TypeDefinition<TextBlock>
              ->AddProperty(get_text, set_text)
              ->AddProperty(get_color, set_color)
              ->AddProperty(get_text_size, set_text_size)
+             ->AddProperty(get_sdf_width, set_sdf_width)
+             ->AddProperty(get_sdf_edge, set_sdf_edge)
              ;
     }
 };

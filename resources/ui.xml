@@ -141,12 +141,15 @@
                 <Break/>
                 <TextBlock text="Text Size:" />
                 <Slider min="1" max="100" step="1" value="{bind text_8.text_size}" />
-                <Break/>
-                <TextBlock text="sdf_edge:" />
-                <Slider min="0" max="2" step="0" />
+                <TextBlock text="{bind text_8.text_size}" />
                 <Break/>
                 <TextBlock text="sdf_width:" />
-                <Slider min="0" max="2" step="0" />
+                <Slider min="0" max="2" step="0" value="{bind text_8.sdf_width}" />
+                <TextBlock text="{bind text_8.sdf_width}" />
+                <Break/>
+                <TextBlock text="sdf_edge:" />
+                <Slider min="0" max="2" step="0" value="{bind text_8.sdf_edge}" />
+                <TextBlock text="{bind text_8.sdf_edge}" />
                 <Break/>
             </Grid>
         </StackPanel>
@@ -161,7 +164,9 @@
                     color="Pink"
                     size="auto,*"
                     margin="5"
-                    align="left" />
+                    align="left"
+                    corner_radius="8"
+                    />
             <Panel  size="*">
                 <TextBlock name="txtStatus"
                     text="hello world!" 
@@ -176,7 +181,8 @@
                     color="Pink"
                     margin="5"
                     size="auto,*"
-                    align="right" />   
+                    align="right"
+                    corner_radius="8" />   
         </StackPanel>
     </Panel>
 </StackPanel>

@@ -384,3 +384,7 @@ void FontRenderer::render(const TextMesh& mesh) const
 void TextMesh::set_text_size(float size) {
     _size_ratio = size / (float)_font.get_native_size();
 }
+
+float TextMesh::get_text_size() const {
+    return _size_ratio * (float)_font.get_native_size();
+}
