@@ -383,8 +383,8 @@ public:
     {
     }
 
-    virtual S convert(T) const = 0;
-    virtual T convert(S) const = 0;
+    virtual S convert_to(T) const = 0;
+    virtual T convert_from(S) const = 0;
     
     const std::string& get_from() const override { return _from; }
     const std::string& get_to() const override { return _to; }
@@ -397,13 +397,13 @@ public:
             if (dual)
             {
                 auto t = dual->get_from().get();
-                auto s = convert(t);
+                auto s = convert_to(t);
                 dual->get_to().set(s);
             }
             else
             {
                 auto t = type_string_traits::parse(var.get_value(0), (T*)(nullptr));
-                auto s = convert(t);
+                auto s = convert_to(t);
                 var.set_value(1, type_string_traits::to_string(s));
             }
         }
@@ -413,13 +413,13 @@ public:
             if (dual)
             {
                 auto s = dual->get_to().get();
-                auto t = convert(s);
+                auto t = convert_from(s);
                 dual->get_from().set(t);
             }
             else
             {
                 auto s = type_string_traits::parse(var.get_value(1), (S*)(nullptr));
-                auto t = convert(s);
+                auto t = convert_from(s);
                 var.set_value(0, type_string_traits::to_string(t));
             }
         }
@@ -850,7 +850,7 @@ public:
     Binding(std::shared_ptr<TypeFactory> factory,
             std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
             std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
-            std::unique_ptr<ITypeConverter> converter = nullptr);
+            std::shared_ptr<ITypeConverter> converter = nullptr);
             
     virtual ~Binding();
     
@@ -871,7 +871,7 @@ private:
     bool _skip_a = false;
     bool _skip_b = false;
     
-    std::unique_ptr<ITypeConverter> _converter;
+    std::shared_ptr<ITypeConverter> _converter;
     std::unique_ptr<IMultitype> _converter_state;
     bool _converter_direction;
     std::shared_ptr<TypeFactory> _factory;

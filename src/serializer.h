@@ -16,6 +16,7 @@ struct BindingDef
     std::string a_prop;
     std::string b_name;
     std::string b_prop;
+    std::string converter_name;
 };
 typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
 typedef std::vector<BindingDef> BindingBag;

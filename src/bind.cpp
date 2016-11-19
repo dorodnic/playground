@@ -85,7 +85,7 @@ void Binding::b_to_a()
 Binding::Binding(std::shared_ptr<TypeFactory> factory,
                  std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
                  std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
-                 std::unique_ptr<ITypeConverter> converter)
+                 std::shared_ptr<ITypeConverter> converter)
     : _factory(factory)
 {
     auto strong_a = a.lock();
@@ -104,7 +104,7 @@ Binding::Binding(std::shared_ptr<TypeFactory> factory,
               << ", property " << b_prop;
     LOG(INFO) << "Created " << _id;
     
-    _converter = std::move(converter);
+    _converter = converter;
     if (_converter)
     {
         _converter_state = _converter->make_state();
@@ -140,11 +140,12 @@ Binding::Binding(std::shared_ptr<TypeFactory> factory,
                                      << _b_prop_def->get_type() << " or "
                                      << _a_prop_def->get_type());
         }
-        if (_is_direct)
+        /*if (_is_direct)
         {
             throw std::runtime_error(
                     str() << "Can't use a converter with binding of same type!");
-        }
+        }*/
+        _is_direct = false;
         
         _converter_direction = _a_prop_def->get_type() != _converter->get_to();
     }

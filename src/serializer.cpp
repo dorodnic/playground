@@ -7,10 +7,79 @@
 
 #include <fstream>
 #include <streambuf>
+#include <iterator>
 
 using namespace std;
 using namespace rapidxml;
 
+template<class T, class S>
+class Dictionary : public TypeConverterBase<T, S>,
+                   public BindableObjectBase
+{
+public:
+    Dictionary() {}
+
+    void add_key_value(const T& key, const S& value)
+    {
+        _map[key] = value;
+        _reverse[value] = key;
+    }
+
+    S convert_to(T key) const override
+    {
+        return _map.find(key)->second;
+    }
+
+    T convert_from(S val) const override
+    {
+        return _reverse.find(val)->second;
+    }
+
+    T next(T key) const
+    {
+        auto it = _map.lower_bound(key);
+        if (it == _map.end()) return _map.begin()->first;
+        return it->first;
+    }
+
+    T prev(T key) const
+    {
+        auto it = _map.lower_bound(key);
+        if (it == _map.begin()) return _map.begin()->first;
+        return std::prev(it)->first;
+    }
+
+private:
+    std::map<T, S> _map;
+    std::map<S, T> _reverse;
+};
+
+class FloatDictionary : public Dictionary<float, float>
+{
+public:
+    float convert_to(float key) const override
+    {
+        auto p = prev(key);
+        auto n = next(key);
+        auto t = (n != p) ? (key - p) / (n - p) : key;
+        auto pv = Dictionary<float, float>::convert_to(p);
+        auto nv = Dictionary<float, float>::convert_to(n);
+        auto v = pv + (nv - pv) * t;
+        return v;
+    }
+
+    bool interpolate = true;
+};
+
+template<>
+struct TypeDefinition<FloatDictionary>
+{
+    static std::shared_ptr<ITypeDefinition> make()
+    {
+        DefineClass(FloatDictionary)
+                ->AddField(interpolate);
+    }
+};
 
 struct BindingBridge : public BindableObjectBase
 {
@@ -52,7 +121,7 @@ public:
     {
     }
 
-    bool convert(std::shared_ptr<INotifyPropertyChanged> x) const override
+    bool convert_to(std::shared_ptr<INotifyPropertyChanged> x) const override
     {
         bool is_null = !x.get();
         
@@ -65,7 +134,7 @@ public:
     
         return x.get();
     }
-    std::shared_ptr<INotifyPropertyChanged> convert(bool x) const override
+    std::shared_ptr<INotifyPropertyChanged> convert_from(bool x) const override
     {
         return nullptr;
     }
@@ -83,7 +152,7 @@ public:
     ExtendedBinding(std::shared_ptr<TypeFactory> factory,
         std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
         std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
-        std::unique_ptr<ITypeConverter> converter,
+        std::shared_ptr<ITypeConverter> converter,
         std::shared_ptr<BindingBridge> bridge)
         : Binding(factory, a, a_prop, b, b_prop, std::move(converter)),
           _bridge(bridge)
@@ -100,8 +169,9 @@ public:
     OwningBinding(std::shared_ptr<TypeFactory> factory,
         std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
         std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
-        std::shared_ptr<BindingOwner> owner)
-        : Binding(factory, a, a_prop, b, b_prop),
+        std::shared_ptr<BindingOwner> owner,
+        std::shared_ptr<ITypeConverter> converter)
+        : Binding(factory, a, a_prop, b, b_prop, converter),
           _owner(owner)
     {
     }
@@ -115,7 +185,8 @@ std::unique_ptr<Binding> create_multilevel_binding(
     std::shared_ptr<INotifyPropertyChanged> a_ptr,
     std::shared_ptr<INotifyPropertyChanged> b_ptr,
     const std::string& a_prop,
-    const std::string& b_prop
+    const std::string& b_prop,
+    std::shared_ptr<ITypeConverter> converter
     )
 {
     std::unique_ptr<Binding> binding;
@@ -130,13 +201,14 @@ std::unique_ptr<Binding> create_multilevel_binding(
         std::shared_ptr<BindingBridge> bridge(new BindingBridge());
         std::weak_ptr<BindingBridge> weak(bridge);
        
-        auto on_create = [factory, weak, a_ptr, a_prop, prop_rest](auto x)
+        auto on_create = [factory, weak, a_ptr,
+                          a_prop, prop_rest, converter](auto x)
         {
             auto b = weak.lock();
             if (b)
             {
                 b->binding = create_multilevel_binding(
-                    factory, a_ptr, x, a_prop, prop_rest);
+                    factory, a_ptr, x, a_prop, prop_rest, converter);
             }
         };
         auto on_delete = [weak](){
@@ -156,7 +228,11 @@ std::unique_ptr<Binding> create_multilevel_binding(
     }
     else
     {
-        binding.reset(new Binding(factory, a_ptr, a_prop, b_ptr, b_prop));
+        if (converter)
+        {
+            LOG(INFO) << "stuff";
+        }
+        binding.reset(new Binding(factory, a_ptr, a_prop, b_ptr, b_prop, converter));
     }
     return binding;
 }
@@ -175,7 +251,8 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
 	        Grid,
 	        PageView,
 	        Timer,
-            Font
+            Font,
+            FloatDictionary
 	        >());
     }
 
@@ -196,14 +273,39 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
     auto elem = dynamic_cast<IVisualElement*>(res.get());
     for (auto& def : bindings)
     {
+        auto converter_obj = elem->find_element(def.converter_name);
         auto a_ptr = elements[def.a];
         auto a = dynamic_cast<ControlBase*>(def.a);
-        auto b_ptr = elements[elem->find_element(def.b_name)];
-        auto adaptor = dynamic_cast<VisualAdaptor*>(b_ptr.get());
-        if (adaptor) b_ptr = adaptor->get();
+        auto b_obj = elem->find_element(def.b_name);
+        std::shared_ptr<INotifyPropertyChanged> b_ptr, converter_ptr;
+        if (b_obj)
+        {
+            b_ptr = elements[b_obj];
+            auto adaptor = dynamic_cast<VisualAdaptor*>(b_ptr.get());
+            if (adaptor) b_ptr = adaptor->get();
+        }
+        else
+        {
+            // assuming def.b_name is refering to a property of this
+            if (def.b_name != "this")
+            {
+                if (def.b_prop != "")
+                    def.b_prop = def.b_name + "." + def.b_prop;
+                else
+                    def.b_prop = def.b_name;
+            }
+            b_ptr = a_ptr;
+            def.b_name = a->to_string();
+        }
         
         LOG(INFO) << "Creating binding to " << a->to_string() << "." 
             << def.a_prop << " from " << def.b_name << "." << def.b_prop;
+        if (converter_obj)
+        {
+            converter_ptr = elements[converter_obj];
+            auto adaptor = dynamic_cast<VisualAdaptor*>(converter_ptr.get());
+            if (adaptor) converter_ptr = adaptor->get();
+        }
             
         if (def.b_prop == "")
         {
@@ -212,14 +314,16 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
             
             std::unique_ptr<Binding> binding(new OwningBinding(_factory, 
                                              a_ptr, def.a_prop, 
-                                             owner, "object", owner));
+                                             owner, "object", owner,
+                                             std::dynamic_pointer_cast<ITypeConverter>(converter_ptr)));
                         
             if (a) a->add_binding(std::move(binding));
         }
         else
         {
             auto binding = create_multilevel_binding(
-                        _factory, a_ptr, b_ptr, def.a_prop, def.b_prop);
+                        _factory, a_ptr, b_ptr, def.a_prop, def.b_prop,
+                        std::dynamic_pointer_cast<ITypeConverter>(converter_ptr));
             if (a) a->add_binding(std::move(binding));
         }
     }
@@ -295,6 +399,7 @@ void parse_binding(const std::string& prop_text,
     auto element_id = p.get_id();
     
     std::string prop_name = "";
+    std::string converter_name = "|";
     
     if (p.peek() == '.')
     {
@@ -306,6 +411,20 @@ void parse_binding(const std::string& prop_text,
             prop_name += "." + p.get_id();
         }
     }
+
+    if (p.peek() == ',')
+    {
+        p.req(',');
+        while (p.peek() == ' ') p.req(' ');
+        auto id = p.get_id();
+        if (id == "converter")
+        {
+            p.req('=');
+            auto id = p.get_id();
+            //LOG(INFO) << "will use converter " << id;
+            converter_name = id;
+        }
+    }
     
     p.req('}');
     p.req_eof();
@@ -315,7 +434,8 @@ void parse_binding(const std::string& prop_text,
             ptr,
             p_def->get_name(), 
             element_id,
-            prop_name
+            prop_name,
+            converter_name
         };
     bindings.push_back(binding);
 }
@@ -410,6 +530,35 @@ shared_ptr<INotifyPropertyChanged> Serializer::deserialize(
         parse_container(panel, node, name, bag, bindings, elements);
         
         if (grid) grid->commit_line();
+    }
+
+    auto dict = dynamic_cast<FloatDictionary*>(res.get());
+    if (dict)
+    {
+        auto sub_node = node->first_node();
+        while (sub_node)
+        {
+            if (std::string(sub_node->name()) != "kvp")
+                throw std::runtime_error("Only key-value-pairs (kvp) are allowed inside a dictionary!");
+
+            auto key_attr = sub_node->first_attribute("key");
+            auto value_attr = sub_node->first_attribute("value");
+            if (!key_attr || !value_attr)
+                throw std::runtime_error("kvp must have key and value attributes!");
+
+            auto key_str = key_attr->value();
+            auto value_str = value_attr->value();
+
+            MinimalParser key_parser(key_str);
+            auto key = key_parser.get_float();
+
+            MinimalParser value_parser(value_str);
+            auto value = value_parser.get_float();
+
+            dict->add_key_value(key, value);
+
+            sub_node = sub_node->next_sibling();
+        }
     }
     
     auto control = dynamic_cast<ControlBase*>(res.get());

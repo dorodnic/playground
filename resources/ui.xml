@@ -3,6 +3,7 @@
     <Font src="v.fnt" name="font" />
     <Font src="vb.fnt" name="font_bold" />
     
+    
     <PageView size="*" selected="7" name="page">
         <StackPanel size="*" orientation="vertical" name="0">
             <TextBlock text_color="white" text="this demo is testing that after text width is changed, parent containers layout gets recalculated" />
@@ -135,9 +136,19 @@
         </StackPanel>
         
         <StackPanel size="*" orientation="vertical" name="7">
-            <TextBlock text="it is possible to bind to non-visual elements, defined in markup:" margin="5" name="6_title" />
+            <TextBlock text="Signed-Distance-Feilds Font Rendering provide soft edges you can control:" margin="5" name="6_title" />
+                               
+            <FloatDictionary name="edge_converter">
+                <kvp key="0" value="1" />
+                <kvp key="50" value="0" />
+            </FloatDictionary>
+            
             <Grid orientation="vertical" >
-                <TextBlock size="*,200" text_align="center" text="The quick brown fox jumps over the lazy dog" name="text_8" color="yellow" />
+                
+                <TextBlock size="*,200" text_align="center"
+                           text="The quick brown fox jumps over the lazy dog" name="text_8" color="yellow" 
+                           sdf_edge="{bind text_size, converter=edge_converter}" 
+                           />
                 <Break/>
                 <TextBlock text="Text Size:" />
                 <Slider min="1" max="100" step="1" value="{bind text_8.text_size}" />

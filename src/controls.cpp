@@ -305,6 +305,7 @@ void draw_diamond(Flat2dRenderer* renderer,
 {
     Flat2dRect r({{x - size - 1, y - size - 1},
                   {2 * size + 1, 2 * size + 1}}, c);
+    r.set_rounding(size+1);
     renderer->render(r);
 }
 
