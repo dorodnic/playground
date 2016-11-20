@@ -841,6 +841,13 @@ private:
     std::string _name;
 };
 
+enum class BindingMode
+{
+    OneWay,
+    TwoWay,
+    OneTime,
+};
+
 class Binding
 {
 public:
@@ -850,6 +857,7 @@ public:
     Binding(std::shared_ptr<TypeFactory> factory,
             std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
             std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
+            BindingMode mode,
             std::shared_ptr<ITypeConverter> converter = nullptr);
             
     virtual ~Binding();
@@ -870,7 +878,7 @@ private:
     std::string _b_prop;
     bool _skip_a = false;
     bool _skip_b = false;
-    
+
     std::shared_ptr<ITypeConverter> _converter;
     std::unique_ptr<IMultitype> _converter_state;
     bool _converter_direction;

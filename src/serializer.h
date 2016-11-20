@@ -10,14 +10,7 @@
 #include "types.h"
 
 class INotifyPropertyChanged;
-struct BindingDef
-{
-    INotifyPropertyChanged* a;
-    std::string a_prop;
-    std::string b_name;
-    std::string b_prop;
-    std::string converter_name;
-};
+struct BindingDef;
 typedef std::vector<rapidxml::xml_attribute<>*> AttrBag;
 typedef std::vector<BindingDef> BindingBag;
 typedef std::map<INotifyPropertyChanged*, 

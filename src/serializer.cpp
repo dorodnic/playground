@@ -12,6 +12,16 @@
 using namespace std;
 using namespace rapidxml;
 
+struct BindingDef
+{
+    INotifyPropertyChanged* a;
+    string a_prop;
+    string b_name;
+    string b_prop;
+    string converter_name;
+    BindingMode mode;
+};
+
 template<class T, class S>
 class Dictionary : public TypeConverterBase<T, S>,
                    public BindableObjectBase
@@ -180,8 +190,9 @@ public:
         std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
         std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
         std::shared_ptr<ITypeConverter> converter,
+        BindingMode mode,
         std::shared_ptr<BindingBridge> bridge)
-        : Binding(factory, a, a_prop, b, b_prop, std::move(converter)),
+        : Binding(factory, a, a_prop, b, b_prop, mode, converter),
           _bridge(bridge)
     {
     }
@@ -197,8 +208,9 @@ public:
         std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
         std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
         std::shared_ptr<BindingOwner> owner,
+        BindingMode mode,
         std::shared_ptr<ITypeConverter> converter)
-        : Binding(factory, a, a_prop, b, b_prop, converter),
+        : Binding(factory, a, a_prop, b, b_prop, mode, converter),
           _owner(owner)
     {
     }
@@ -213,6 +225,7 @@ std::unique_ptr<Binding> create_multilevel_binding(
     std::shared_ptr<INotifyPropertyChanged> b_ptr,
     const std::string& a_prop,
     const std::string& b_prop,
+    BindingMode mode,
     std::shared_ptr<ITypeConverter> converter
     )
 {
@@ -228,14 +241,15 @@ std::unique_ptr<Binding> create_multilevel_binding(
         std::shared_ptr<BindingBridge> bridge(new BindingBridge());
         std::weak_ptr<BindingBridge> weak(bridge);
        
-        auto on_create = [factory, weak, a_ptr,
+        auto on_create = [factory, weak, a_ptr, mode,
                           a_prop, prop_rest, converter](auto x)
         {
             auto b = weak.lock();
             if (b)
             {
                 b->binding = create_multilevel_binding(
-                    factory, a_ptr, x, a_prop, prop_rest, converter);
+                    factory, a_ptr, x, a_prop,
+                    prop_rest, mode, converter);
             }
         };
         auto on_delete = [weak](){
@@ -251,15 +265,12 @@ std::unique_ptr<Binding> create_multilevel_binding(
         
         binding.reset(new ExtendedBinding(
             factory, bridge, "object_exists", b_ptr, prop_name, 
-            std::move(converter), bridge));
+            std::move(converter), BindingMode::OneWay, bridge));
     }
     else
     {
-        if (converter)
-        {
-            LOG(INFO) << "stuff";
-        }
-        binding.reset(new Binding(factory, a_ptr, a_prop, b_ptr, b_prop, converter));
+        binding.reset(new Binding(factory, a_ptr, a_prop,
+                                  b_ptr, b_prop, mode, converter));
     }
     return binding;
 }
@@ -341,7 +352,7 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
             
             std::unique_ptr<Binding> binding(new OwningBinding(_factory, 
                                              a_ptr, def.a_prop, 
-                                             owner, "object", owner,
+                                             owner, "object", owner, def.mode,
                                              std::dynamic_pointer_cast<ITypeConverter>(converter_ptr)));
                         
             if (a) a->add_binding(std::move(binding));
@@ -349,7 +360,7 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
         else
         {
             auto binding = create_multilevel_binding(
-                        _factory, a_ptr, b_ptr, def.a_prop, def.b_prop,
+                        _factory, a_ptr, b_ptr, def.a_prop, def.b_prop, def.mode,
                         std::dynamic_pointer_cast<ITypeConverter>(converter_ptr));
             if (a) a->add_binding(std::move(binding));
         }
@@ -427,6 +438,7 @@ void parse_binding(const std::string& prop_text,
     
     std::string prop_name = "";
     std::string converter_name = "|";
+    auto mode = BindingMode::TwoWay;
     
     if (p.peek() == '.')
     {
@@ -439,7 +451,7 @@ void parse_binding(const std::string& prop_text,
         }
     }
 
-    if (p.peek() == ',')
+    while (p.peek() == ',')
     {
         p.req(',');
         while (p.peek() == ' ') p.req(' ');
@@ -448,8 +460,22 @@ void parse_binding(const std::string& prop_text,
         {
             p.req('=');
             auto id = p.get_id();
-            //LOG(INFO) << "will use converter " << id;
+            if (converter_name != "|")
+            {
+                throw std::runtime_error("Can't specify more then one converter!");
+            }
             converter_name = id;
+        }
+        else if (id == "mode")
+        {
+            p.req('=');
+            auto mode_str = to_lower(p.get_id());
+            if (mode_str == "oneway") mode = BindingMode::OneWay;
+            else if (mode_str == "twoway") mode = BindingMode::TwoWay;
+            else if (mode_str == "onetime") mode = BindingMode::OneTime;
+            else throw std::runtime_error(
+                        str() << "Not supported binding mode " << mode_str);
+
         }
     }
     
@@ -462,7 +488,8 @@ void parse_binding(const std::string& prop_text,
             p_def->get_name(), 
             element_id,
             prop_name,
-            converter_name
+            converter_name,
+            mode
         };
     bindings.push_back(binding);
 }

@@ -85,6 +85,7 @@ void Binding::b_to_a()
 Binding::Binding(std::shared_ptr<TypeFactory> factory,
                  std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
                  std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
+                 BindingMode mode,
                  std::shared_ptr<ITypeConverter> converter)
     : _factory(factory)
 {
@@ -150,7 +151,7 @@ Binding::Binding(std::shared_ptr<TypeFactory> factory,
         _converter_direction = _a_prop_def->get_type() != _converter->get_to();
     }
     
-    if (_b_prop_def->is_writable())
+    if (_b_prop_def->is_writable() && mode == BindingMode::TwoWay)
     {
         _a_prop_ptr->subscribe_on_change(this, [=](IProperty* sender)
         {
@@ -163,7 +164,9 @@ Binding::Binding(std::shared_ptr<TypeFactory> factory,
         });
     }
     
-    if (_a_prop_def->is_writable())
+    if (_a_prop_def->is_writable() &&
+            (mode == BindingMode::TwoWay ||
+             mode == BindingMode::OneWay))
     {
         _b_prop_ptr->subscribe_on_change(this, [=](IProperty* sender)
         {
@@ -182,7 +185,7 @@ Binding::Binding(std::shared_ptr<TypeFactory> factory,
         b_to_a();
         _skip_a = false;
     }
-    else if (_b_prop_def->is_writable())
+    else if (_b_prop_def->is_writable() && mode == BindingMode::TwoWay)
     {
         _skip_b = true;
         a_to_b();

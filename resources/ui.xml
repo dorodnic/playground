@@ -147,7 +147,6 @@
                 <kvp key="50" value="0.5" />
                 <kvp key="100" value="0.6" />
             </FloatDictionary>
-            
             <FloatDictionary name="width_converter">
                 <kvp key="0" value="0.2" />
                 <kvp key="8" value="0.4" />
@@ -162,8 +161,8 @@
                 
                 <TextBlock size="*,200" text_align="center"
                            text="The quick brown fox jumps over the lazy dog" name="text_8" color="yellow"
-                           sdf_width="{bind text_size, converter=width_converter}" 
-                           sdf_edge="{bind text_size, converter=edge_converter}" 
+                           sdf_width="{bind text_size, converter=width_converter, mode=oneway}" 
+                           sdf_edge="{bind text_size, converter=edge_converter, mode=oneway}" 
                            />
                 <Break/>
                 <TextBlock text="Text Size:" />
