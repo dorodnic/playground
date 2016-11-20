@@ -58,8 +58,8 @@ private:
     std::unique_ptr<TextMesh> _text_mesh;
     bool _refresh = false;
     float _text_size = 16;
-    float _sdf_width = 0.3f;
-    float _sdf_edge = 0.1f;
+    float _sdf_width = 0.2f;
+    float _sdf_edge = 0.4f;
 };
 
 class Button : public ControlBase

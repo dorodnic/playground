@@ -140,15 +140,30 @@
                                
             <FloatDictionary name="edge_converter">
                 <kvp key="0" value="0.2" />
-                <kvp key="50" value="0" />
+                <kvp key="8" value="0.5" />
+                <kvp key="16" value="0.4" />
+                <kvp key="20" value="0.6" />
+                <kvp key="30" value="0.6" />
+                <kvp key="50" value="0.5" />
+                <kvp key="100" value="0.6" />
+            </FloatDictionary>
+            
+            <FloatDictionary name="width_converter">
+                <kvp key="0" value="0.2" />
+                <kvp key="8" value="0.4" />
+                <kvp key="16" value="0.2" />
+                <kvp key="20" value="0.2" />
+                <kvp key="30" value="0.01" />
+                <kvp key="50" value="0.1" />
+                <kvp key="100" value="0" />
             </FloatDictionary>
             
             <Grid orientation="vertical" >
                 
                 <TextBlock size="*,200" text_align="center"
-                           text="The quick brown fox jumps over the lazy dog" name="text_8" color="yellow" 
+                           text="The quick brown fox jumps over the lazy dog" name="text_8" color="yellow"
+                           sdf_width="{bind text_size, converter=width_converter}" 
                            sdf_edge="{bind text_size, converter=edge_converter}" 
-                           sdf_width="{bind text_size, converter=edge_converter}" 
                            />
                 <Break/>
                 <TextBlock text="Text Size:" />
