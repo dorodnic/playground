@@ -35,14 +35,28 @@ public:
         return _reverse.find(val)->second;
     }
 
-    T next(T key) const
+    S next_s(S key) const
     {
-        auto it = _map.lower_bound(key);
-        if (it == _map.end()) return _map.begin()->first;
+        auto it = _reverse.lower_bound(key);
+        if (it == _reverse.end()) return std::prev(_reverse.end())->first;
         return it->first;
     }
 
-    T prev(T key) const
+    S prev_s(S key) const
+    {
+        auto it = _reverse.lower_bound(key);
+        if (it == _reverse.begin()) return _reverse.begin()->first;
+        return std::prev(it)->first;
+    }
+
+    T next_t(T key) const
+    {
+        auto it = _map.lower_bound(key);
+        if (it == _map.end()) return std::prev(_map.end())->first;
+        return it->first;
+    }
+
+    T prev_t(T key) const
     {
         auto it = _map.lower_bound(key);
         if (it == _map.begin()) return _map.begin()->first;
@@ -59,12 +73,25 @@ class FloatDictionary : public Dictionary<float, float>
 public:
     float convert_to(float key) const override
     {
-        auto p = prev(key);
-        auto n = next(key);
-        auto t = (n != p) ? (key - p) / (n - p) : key;
+        auto p = prev_t(key);
+        auto n = next_t(key);
+        auto t = (n != p) ? (key - p) / (n - p) : 0;
         auto pv = Dictionary<float, float>::convert_to(p);
         auto nv = Dictionary<float, float>::convert_to(n);
         auto v = pv + (nv - pv) * t;
+        LOG(INFO) << "[" << p << " " << key << " " << n << "] = " << v;
+        return v;
+    }
+
+    float convert_from(float val) const override
+    {
+        auto p = prev_s(val);
+        auto n = next_s(val);
+        auto t = (n != p) ? (val - p) / (n - p) : val;
+        auto pv = Dictionary<float, float>::convert_from(p);
+        auto nv = Dictionary<float, float>::convert_from(n);
+        auto v = pv + (nv - pv) * t;
+        LOG(INFO) << "[" << p << " " << val << " " << n << "] = " << v;
         return v;
     }
 

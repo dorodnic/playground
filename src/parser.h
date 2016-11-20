@@ -139,6 +139,25 @@ public:
         }
         return num;
     }
+
+    float get_fraction()
+    {
+        auto d = get();
+        if (!is_digit(d)) {
+            std::stringstream ss;
+            ss << "Expected a digit! " << to_string();
+            throw std::runtime_error(ss.str());
+        }
+        float num = 0.1 * (d - '0');
+        float p = 0.01;
+        while (is_digit(peek()))
+        {
+            d = get();
+            num = num + p * (d - '0');
+            p = p * 0.1;
+        }
+        return num;
+    }
     
     int get_int()
     {
@@ -152,7 +171,14 @@ public:
     
     float get_float() 
     {
-        return get_int(); // TODO: fix!
+        auto int_part = get_int();
+        if (peek() == '.')
+        {
+            req('.');
+            auto float_part = get_fraction();
+            return int_part + float_part;
+        }
+        return int_part;
     }
     
     template<typename T>

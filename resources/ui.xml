@@ -139,7 +139,7 @@
             <TextBlock text="Signed-Distance-Feilds Font Rendering provide soft edges you can control:" margin="5" name="6_title" />
                                
             <FloatDictionary name="edge_converter">
-                <kvp key="0" value="1" />
+                <kvp key="0" value="0.2" />
                 <kvp key="50" value="0" />
             </FloatDictionary>
             
@@ -148,6 +148,7 @@
                 <TextBlock size="*,200" text_align="center"
                            text="The quick brown fox jumps over the lazy dog" name="text_8" color="yellow" 
                            sdf_edge="{bind text_size, converter=edge_converter}" 
+                           sdf_width="{bind text_size, converter=edge_converter}" 
                            />
                 <Break/>
                 <TextBlock text="Text Size:" />
