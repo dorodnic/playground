@@ -148,30 +148,29 @@ struct TypeDefinition<BindingOwner>
     }
 };
 
-class BridgeConverter : public TypeConverterBase<
-        std::shared_ptr<INotifyPropertyChanged>, bool>
+class BridgeConverter : public TypeConverterBase<INotifyPropertyChanged*, bool>
 {
 public:
-    BridgeConverter(std::function<void(std::shared_ptr<INotifyPropertyChanged> x)> created,
+    BridgeConverter(std::function<void(INotifyPropertyChanged* x)> created,
                     std::function<void()> destroyed)
         : _created(created), _destroyed(destroyed)
     {
     }
 
-    bool convert_to(std::shared_ptr<INotifyPropertyChanged> x) const override
+    bool convert_to(INotifyPropertyChanged* x) const override
     {
-        bool is_null = !x.get();
+        bool is_null = !x;
         
-        if (x.get() != last)
+        if (x != last)
         {
             if (last) _destroyed();
-            if (x.get()) _created(x);
-            last = x.get();
+            if (x) _created(x);
+            last = x;
         }
     
-        return x.get();
+        return x;
     }
-    std::shared_ptr<INotifyPropertyChanged> convert_from(bool x) const override
+    INotifyPropertyChanged* convert_from(bool x) const override
     {
         return nullptr;
     }
@@ -179,7 +178,7 @@ public:
 private:
     mutable bool _was_null = true;
     mutable INotifyPropertyChanged* last = nullptr;
-    std::function<void(std::shared_ptr<INotifyPropertyChanged> x)> _created;
+    std::function<void(INotifyPropertyChanged* x)> _created;
     std::function<void()> _destroyed;
 };
 
@@ -187,8 +186,8 @@ class ExtendedBinding : public Binding
 {
 public:
     ExtendedBinding(std::shared_ptr<TypeFactory> factory,
-        std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
-        std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
+        INotifyPropertyChanged* a, std::string a_prop,
+        INotifyPropertyChanged* b, std::string b_prop,
         std::shared_ptr<ITypeConverter> converter,
         BindingMode mode,
         std::shared_ptr<BindingBridge> bridge)
@@ -205,8 +204,8 @@ class OwningBinding : public Binding
 {
 public:
     OwningBinding(std::shared_ptr<TypeFactory> factory,
-        std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
-        std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
+        INotifyPropertyChanged* a, std::string a_prop,
+        INotifyPropertyChanged* b, std::string b_prop,
         std::shared_ptr<BindingOwner> owner,
         BindingMode mode,
         std::shared_ptr<ITypeConverter> converter)
@@ -221,8 +220,8 @@ private:
 
 std::unique_ptr<Binding> create_multilevel_binding(
     std::shared_ptr<TypeFactory> factory,
-    std::shared_ptr<INotifyPropertyChanged> a_ptr,
-    std::shared_ptr<INotifyPropertyChanged> b_ptr,
+    INotifyPropertyChanged* a_ptr,
+    INotifyPropertyChanged* b_ptr,
     const std::string& a_prop,
     const std::string& b_prop,
     BindingMode mode,
@@ -264,7 +263,7 @@ std::unique_ptr<Binding> create_multilevel_binding(
             new BridgeConverter(on_create, on_delete));
         
         binding.reset(new ExtendedBinding(
-            factory, bridge, "object_exists", b_ptr, prop_name, 
+            factory, bridge.get(), "object_exists", b_ptr, prop_name,
             std::move(converter), BindingMode::OneWay, bridge));
     }
     else
@@ -351,8 +350,8 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
             owner->object = b_ptr;
             
             std::unique_ptr<Binding> binding(new OwningBinding(_factory, 
-                                             a_ptr, def.a_prop, 
-                                             owner, "object", owner, def.mode,
+                                             a_ptr.get(), def.a_prop,
+                                             owner.get(), "object", owner, def.mode,
                                              std::dynamic_pointer_cast<ITypeConverter>(converter_ptr)));
                         
             if (a) a->add_binding(std::move(binding));
@@ -360,7 +359,7 @@ std::shared_ptr<INotifyPropertyChanged> Serializer::deserialize()
         else
         {
             auto binding = create_multilevel_binding(
-                        _factory, a_ptr, b_ptr, def.a_prop, def.b_prop, def.mode,
+                        _factory, a_ptr.get(), b_ptr.get(), def.a_prop, def.b_prop, def.mode,
                         std::dynamic_pointer_cast<ITypeConverter>(converter_ptr));
             if (a) a->add_binding(std::move(binding));
         }
@@ -565,7 +564,7 @@ shared_ptr<INotifyPropertyChanged> Serializer::deserialize(
             }
             else
             {
-                auto prop = p_def->create(res);
+                auto prop = p_def->create(res.get());
                 prop->set_value(prop_text);
             }
         }

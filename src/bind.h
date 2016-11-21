@@ -43,7 +43,7 @@ class IPropertyDefinition : public IVirtualBase
 {
 public:
     virtual std::unique_ptr<IProperty> create
-        (std::weak_ptr<INotifyPropertyChanged> owner) const = 0;
+        (INotifyPropertyChanged* owner) const = 0;
     
     virtual const std::string& get_type() const = 0;
     virtual const std::string& get_name() const = 0;
@@ -78,6 +78,7 @@ public:
     }
     
     virtual void update() {}
+
 };
 
 template<class T>
@@ -190,14 +191,12 @@ class PropertyBase : public IProperty, public ICopyable
 {
 public:
 
-    PropertyBase(std::weak_ptr<INotifyPropertyChanged> owner, 
+    PropertyBase(INotifyPropertyChanged* owner,
                  const std::string& name) 
         : _owner(owner), _on_change()
     {
-        auto s = owner.lock();
-        if (s)
-        {
-            s->subscribe_on_change(this,[this, name](const char* field){
+        owner->subscribe_on_change(this,
+            [this, name](const char* field){
                 if (field == name)
                 {
                     for(auto& evnt : _on_change)
@@ -206,13 +205,11 @@ public:
                     }
                 }
             });
-        }
     }
     
     ~PropertyBase()
     {
-        auto s = _owner.lock();
-        if (s) s->unsubscribe_on_change(this);
+        _owner->unsubscribe_on_change(this);
     }
     
     void copy_to(ICopyable* to) override
@@ -255,10 +252,10 @@ public:
     
 private:
     std::map<void*,OnPropertyChangeCallback> _on_change;
-    std::weak_ptr<INotifyPropertyChanged> _owner;
+    INotifyPropertyChanged* _owner;
 };
 
-typedef std::function<IProperty*(std::weak_ptr<INotifyPropertyChanged>, const std::string&)> 
+typedef std::function<IProperty*(INotifyPropertyChanged*, const std::string&)>
         PropertyCreator;
 
 template<class S>
@@ -284,7 +281,7 @@ public:
     }
    
     std::unique_ptr<IProperty> create(
-        std::weak_ptr<INotifyPropertyChanged> owner) const override
+        INotifyPropertyChanged* owner) const override
     {
         return std::unique_ptr<IProperty>(_creator(owner, get_name()));
     }
@@ -324,7 +321,7 @@ class InlineVariable : public PropertyBase<T>
 {
 public:
     InlineVariable() 
-        : PropertyBase<T>(std::shared_ptr<INotifyPropertyChanged>(nullptr), ""), 
+        : PropertyBase<T>((INotifyPropertyChanged*)(nullptr), ""),
           _val()
     {}
     
@@ -447,12 +444,11 @@ template<class T, class S>
 class FieldProperty : public PropertyBase<S>
 {
 public:
-    FieldProperty(std::weak_ptr<INotifyPropertyChanged> owner, 
+    FieldProperty(INotifyPropertyChanged* owner,
                   std::string name, S T::* field) 
         : PropertyBase<S>(owner, name), _field(field)
     {
-        auto s = owner.lock();
-        _t = static_cast<T*>(s.get());
+        _t = static_cast<T*>(owner);
     }
     
     void set(S val) override
@@ -476,12 +472,11 @@ class ReadOnlyProperty : public PropertyBase<S>
 public:
     typedef S (T::*TGetter)() const;
 
-    ReadOnlyProperty(std::weak_ptr<INotifyPropertyChanged> owner, 
+    ReadOnlyProperty(INotifyPropertyChanged* owner,
                      std::string name, TGetter getter) 
         : PropertyBase<S>(owner, name), _getter(getter)
     {
-        auto s = owner.lock();
-        _t = static_cast<T*>(s.get());
+        _t = static_cast<T*>(owner);
     }
     
     void set(S val) override
@@ -506,12 +501,11 @@ public:
     typedef S (T::*TGetter)() const;
     typedef void (T::*TSetter)(S);
 
-    ReadWriteProperty(std::weak_ptr<INotifyPropertyChanged> owner, 
+    ReadWriteProperty(INotifyPropertyChanged* owner,
                       std::string name, TGetter getter, TSetter setter) 
         : PropertyBase<S>(owner, name), _getter(getter), _setter(setter)
     {
-        auto s = owner.lock();
-        _t = static_cast<T*>(s.get());
+        _t = static_cast<T*>(owner);
     }
     
     void set(S val) override
@@ -534,10 +528,10 @@ template<class T, class S>
 class ReadWritePropertyLambda : public PropertyBase<S>
 {
 public:
-    typedef std::function<S(std::weak_ptr<INotifyPropertyChanged>)> TGetter;
-    typedef std::function<void(std::weak_ptr<INotifyPropertyChanged>,S)> TSetter;
+    typedef std::function<S(INotifyPropertyChanged*)> TGetter;
+    typedef std::function<void(INotifyPropertyChanged*,S)> TSetter;
 
-    ReadWritePropertyLambda(std::weak_ptr<INotifyPropertyChanged> owner, 
+    ReadWritePropertyLambda(INotifyPropertyChanged* owner,
                             std::string name, TGetter getter, TSetter setter) 
         : PropertyBase<S>(owner, name), _owner(owner),
           _getter(getter), _setter(setter)
@@ -557,7 +551,7 @@ public:
 private:
     TGetter _getter;
     TSetter _setter;
-    std::weak_ptr<INotifyPropertyChanged> _owner;
+    INotifyPropertyChanged* _owner;
 };
 
 
@@ -699,13 +693,11 @@ public:
         result->_property_names.push_back(name_str);
         
         auto rf = [r](auto owner) -> S {
-            auto strong = owner.lock();
-            auto t = static_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(owner);
             return ((*t).*r)();
         };
         auto wf = [w](auto owner, S s) {
-            auto strong = owner.lock();
-            auto t = static_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(owner);
             ((*t).*w)(s);
         };
         
@@ -734,13 +726,11 @@ public:
         result->_property_names.push_back(name_str);
         
         auto rf = [r](auto owner) -> S {
-            auto strong = owner.lock();
-            auto t = static_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(owner);
             return ((*t).*r)();
         };
         auto wf = [w](auto owner, S s) {
-            auto strong = owner.lock();
-            auto t = static_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(owner);
             ((*t).*w)(s);
         };
         
@@ -769,13 +759,11 @@ public:
         result->_property_names.push_back(name_str);
         
         auto rf = [r](auto owner) -> S {
-            auto strong = owner.lock();
-            auto t = static_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(owner);
             return ((*t).*r)();
         };
         auto wf = [w](auto owner, S s) {
-            auto strong = owner.lock();
-            auto t = static_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(owner);
             ((*t).*w)(s);
         };
         
@@ -796,8 +784,7 @@ public:
         result->_property_names.push_back(name_str);
         
         auto rf = [f](auto owner) -> S {
-            auto strong = owner.lock();
-            auto t = static_cast<T*>(strong.get()); 
+            auto t = static_cast<T*>(owner);
             return ((*t).*f)();
         };
         auto wf = [name_str](auto owner, S s) {
@@ -855,8 +842,8 @@ public:
     void b_to_a();
     
     Binding(std::shared_ptr<TypeFactory> factory,
-            std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
-            std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
+            INotifyPropertyChanged* a, std::string a_prop,
+            INotifyPropertyChanged* b, std::string b_prop,
             BindingMode mode,
             std::shared_ptr<ITypeConverter> converter = nullptr);
             
@@ -872,8 +859,8 @@ private:
     IPropertyDefinition* _b_prop_def;
     ICopyable* _direct_a;
     ICopyable* _direct_b;
-    std::weak_ptr<INotifyPropertyChanged> _a;
-    std::weak_ptr<INotifyPropertyChanged> _b;
+    INotifyPropertyChanged* _a;
+    INotifyPropertyChanged* _b;
     std::string _a_prop;
     std::string _b_prop;
     bool _skip_a = false;

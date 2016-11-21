@@ -83,25 +83,22 @@ void Binding::b_to_a()
 }
 
 Binding::Binding(std::shared_ptr<TypeFactory> factory,
-                 std::weak_ptr<INotifyPropertyChanged> a, std::string a_prop,
-                 std::weak_ptr<INotifyPropertyChanged> b, std::string b_prop,
+                 INotifyPropertyChanged* a, std::string a_prop,
+                 INotifyPropertyChanged* b, std::string b_prop,
                  BindingMode mode,
                  std::shared_ptr<ITypeConverter> converter)
     : _factory(factory)
 {
-    auto strong_a = a.lock();
-    auto strong_b = b.lock();
-    
-    _a_dc = strong_a->make_type_definition();
-    if (!_a_dc) _a_dc = _factory->get_type_of(strong_a.get());
-    _b_dc = strong_b->make_type_definition();
-    if (!_b_dc) _b_dc = _factory->get_type_of(strong_b.get());
+    _a_dc = a->make_type_definition();
+    if (!_a_dc) _a_dc = _factory->get_type_of(a);
+    _b_dc = b->make_type_definition();
+    if (!_b_dc) _b_dc = _factory->get_type_of(b);
     _a = a; _b = b;
     _a_prop = a_prop;
     _b_prop = b_prop;
     
-    _id = str() << "binding from object of type " << typeid(*strong_a).name() 
-              << ", property " << a_prop << " to object of type " << typeid(*strong_b).name() 
+    _id = str() << "binding from object of type " << typeid(*a).name()
+              << ", property " << a_prop << " to object of type " << typeid(*b).name()
               << ", property " << b_prop;
     LOG(INFO) << "Created " << _id;
     
