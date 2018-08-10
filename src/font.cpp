@@ -1,3 +1,10 @@
+#define NOMINMAX
+
+#ifdef WIN32
+#define USEGLEW
+#include <GL/glew.h>
+#endif
+
 #include "font.h"
 
 #include <chrono>
@@ -8,14 +15,7 @@
 
 #include "../easyloggingpp/easylogging++.h"
 
-#ifdef WIN32
-    #define USEGLEW
-    #include <GL/glew.h>
-#endif
-
 #define GLFW_INCLUDE_GLU
-#define GLFW_INCLUDE_GLEXT
-#define GL_GLEXT_PROTOTYPES
 #include <GLFW/glfw3.h>
 
 #define STB_IMAGE_IMPLEMENTATION

@@ -7,6 +7,29 @@ set(CMAKE_BUILD_TYPE Debug)
 
 find_package(OpenGL REQUIRED)
 
+if (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
+    set(RESOURCES resources/ui.xml 
+                  resources/shaders/flat2d_fragment.c
+                  resources/shaders/flat2d_vertex.c
+                  resources/shaders/font_fragment.c
+                  resources/shaders/font_vertex.c
+                  
+                  resources/fonts/v.fnt
+                  resources/fonts/vb.fnt
+                  resources/fonts/v.png
+                  resources/fonts/vb.png
+                  )
+
+    foreach(item IN LISTS RESOURCES)
+        add_custom_command(
+            OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${item}"
+            COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${item}" "${CMAKE_CURRENT_BINARY_DIR}/${item}"
+            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${item}"
+        )
+    endforeach()
+endif()
+add_custom_target(resources-target ALL DEPENDS ${RESOURCES})
+
 add_executable(main src/main.cpp 
                src/ui.cpp src/ui.h 
                src/parser.cpp src/parser.h
@@ -19,10 +42,14 @@ add_executable(main src/main.cpp
                src/flat2d.h src/flat2d.cpp
                src/render.h
                )
+add_dependencies(main resources-target)
 
 if(WIN32)
     add_subdirectory(glfw)
-	target_link_libraries(main glfw3 ${OPENGL_gl_LIBRARY} glew32 glu32)
+    add_subdirectory(glew/build/cmake)
+
+    include_directories(glfw/include glex/include glew/include)
+    target_link_libraries(main glfw3 glew_s ${OPENGL_gl_LIBRARY})
 else()
     # Find glfw header
 	find_path(GLFW_INCLUDE_DIR NAMES GLFW/glfw3.h
@@ -44,6 +71,6 @@ else()
 				  /usr/local/lib/${CMAKE_LIBRARY_ARCHITECTURE}
 				  /usr/X11R6/lib
 	)
-	include_directories(${GLFW_INCLUDE_DIR})
-	target_link_libraries(main ${GLFW_LIBRARIES} ${OPENGL_gl_LIBRARY})
+    include_directories(${GLFW_INCLUDE_DIR})
+    target_link_libraries(main ${GLFW_LIBRARIES} ${OPENGL_gl_LIBRARY})
 endif()

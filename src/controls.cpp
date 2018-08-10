@@ -303,8 +303,8 @@ void draw_diamond(Flat2dRenderer* renderer,
                   float x, float y,
                   float size, const Color3& c)
 {
-    Flat2dRect r({{x - size - 1, y - size - 1},
-                  {2 * size + 1, 2 * size + 1}}, c);
+    Flat2dRect r({{int(x - size - 1), int(y - size - 1)},
+                  {int(2 * size + 1), int(2 * size + 1)}}, c);
     r.set_rounding(size+1);
     renderer->render(r);
 }

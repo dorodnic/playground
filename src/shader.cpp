@@ -3,13 +3,11 @@
 #include "types.h"
 
 #ifdef WIN32
-    #define USEGLEW
-    #include <GL/glew.h>
+#define USEGLEW
+#include <GL/glew.h>
 #endif
 
 #define GLFW_INCLUDE_GLU
-#define GLFW_INCLUDE_GLEXT
-#define GL_GLEXT_PROTOTYPES
 #include <GLFW/glfw3.h>
 
 #include "../easyloggingpp/easylogging++.h"

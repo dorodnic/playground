@@ -10,13 +10,11 @@
 #include "flat2d.h"
 
 #ifdef WIN32
-    #define USEGLEW
-    #include <GL/glew.h>
+#define USEGLEW
+#include <GL/glew.h>
 #endif
 
 #define GLFW_INCLUDE_GLU
-#define GLFW_INCLUDE_GLEXT
-#define GL_GLEXT_PROTOTYPES
 #include <GLFW/glfw3.h>
 
 INITIALIZE_EASYLOGGINGPP
@@ -271,14 +269,14 @@ int main(int argc, char * argv[]) try
     glfwInit();
     GLFWwindow * win = glfwCreateWindow(800, 600, "main", 0, 0);
     glfwMakeContextCurrent(win);
-    
-    #ifdef WIN32
-        // Initialize GLEW
-        glewExperimental=TRUE;
-        GLenum err = glewInit();
-        if (err != GLEW_OK)
-            LOG(ERROR) << "Could not initialize GLEW!";
-    #endif
+
+#ifdef WIN32
+    // Initialize GLEW
+    glewExperimental = TRUE;
+    GLenum err = glewInit();
+    if (err != GLEW_OK)
+        LOG(ERROR) << "Could not initialize GLEW!";
+#endif
 
     // create root-level container for the GUI
     Panel c(".",{0,0},{1.0f, 1.0f},Alignment::left); 

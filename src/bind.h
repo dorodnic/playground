@@ -195,21 +195,22 @@ public:
                  const std::string& name) 
         : _owner(owner), _on_change()
     {
-        owner->subscribe_on_change(this,
-            [this, name](const char* field){
-                if (field == name)
-                {
-                    for(auto& evnt : _on_change)
+        if (owner)
+            owner->subscribe_on_change(this,
+                [this, name](const char* field){
+                    if (field == name)
                     {
-                        evnt.second(this);
+                        for(auto& evnt : _on_change)
+                        {
+                            evnt.second(this);
+                        }
                     }
-                }
-            });
+                });
     }
     
     ~PropertyBase()
     {
-        _owner->unsubscribe_on_change(this);
+        if (_owner) _owner->unsubscribe_on_change(this);
     }
     
     void copy_to(ICopyable* to) override
@@ -622,7 +623,9 @@ public:
     }
     IPropertyDefinition* get_property(const std::string& name)
     {
-        return _properties[name].get();
+        auto it = _properties.find(name);
+        if (it == _properties.end()) return nullptr;
+        return it->second.get();
     }
     const std::vector<std::string> get_property_names() const
     {

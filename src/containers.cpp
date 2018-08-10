@@ -318,6 +318,7 @@ Size2 PageView::get_intrinsic_size() const
 {
     if (get_focused_child())
         return get_focused_child()->get_intrinsic_size();
+    throw;
 }
 
 void Grid::commit_line()

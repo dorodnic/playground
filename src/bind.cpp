@@ -124,19 +124,22 @@ Binding::Binding(std::shared_ptr<TypeFactory> factory,
     
     if (_converter)
     {
-        if ((_b_prop_def->get_type() != _converter->get_from()) &&
-            (_a_prop_def->get_type() != _converter->get_from()))
+        auto _b_type = _b_prop_def->get_type();
+        auto _a_type = _a_prop_def->get_type();
+
+        if ((_b_type != _converter->get_from()) &&
+            (_a_type != _converter->get_from()))
         {
             throw std::runtime_error(str() << "Binding converter must be from either "
-                                     << _b_prop_def->get_type() << " or "
-                                     << _a_prop_def->get_type());
+                                     << _b_type << " or "
+                                     << _a_type);
         }
-        if ((_a_prop_def->get_type() != _converter->get_to()) &&
-            (_b_prop_def->get_type() != _converter->get_to()))
+        if ((_a_type != _converter->get_to()) &&
+            (_b_type != _converter->get_to()))
         {
             throw std::runtime_error(str() << "Binding converter must be to either "
-                                     << _b_prop_def->get_type() << " or "
-                                     << _a_prop_def->get_type());
+                                     << _b_type << " or "
+                                     << _a_type);
         }
         /*if (_is_direct)
         {

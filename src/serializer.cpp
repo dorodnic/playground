@@ -122,7 +122,7 @@ struct BindingBridge : public BindableObjectBase
 {
     bool object_exists = false;
     
-    std::shared_ptr<Binding> binding;
+    std::shared_ptr<Binding> binding = nullptr;
 };
 
 template<>
@@ -148,16 +148,16 @@ struct TypeDefinition<BindingOwner>
     }
 };
 
-class BridgeConverter : public TypeConverterBase<INotifyPropertyChanged*, bool>
+class BridgeConverter : public TypeConverterBase<std::shared_ptr<INotifyPropertyChanged>, bool>
 {
 public:
-    BridgeConverter(std::function<void(INotifyPropertyChanged* x)> created,
+    BridgeConverter(std::function<void(std::shared_ptr<INotifyPropertyChanged> x)> created,
                     std::function<void()> destroyed)
         : _created(created), _destroyed(destroyed)
     {
     }
 
-    bool convert_to(INotifyPropertyChanged* x) const override
+    bool convert_to(std::shared_ptr<INotifyPropertyChanged> x) const override
     {
         bool is_null = !x;
         
@@ -168,17 +168,17 @@ public:
             last = x;
         }
     
-        return x;
+        return x.get();
     }
-    INotifyPropertyChanged* convert_from(bool x) const override
+    std::shared_ptr<INotifyPropertyChanged> convert_from(bool x) const override
     {
         return nullptr;
     }
     
 private:
     mutable bool _was_null = true;
-    mutable INotifyPropertyChanged* last = nullptr;
-    std::function<void(INotifyPropertyChanged* x)> _created;
+    mutable std::shared_ptr<INotifyPropertyChanged> last = nullptr;
+    std::function<void(std::shared_ptr<INotifyPropertyChanged> x)> _created;
     std::function<void()> _destroyed;
 };
 
@@ -247,7 +247,7 @@ std::unique_ptr<Binding> create_multilevel_binding(
             if (b)
             {
                 b->binding = create_multilevel_binding(
-                    factory, a_ptr, x, a_prop,
+                    factory, a_ptr, x.get(), a_prop,
                     prop_rest, mode, converter);
             }
         };
