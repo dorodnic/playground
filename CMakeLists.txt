@@ -71,6 +71,8 @@ else()
 				  /usr/local/lib/${CMAKE_LIBRARY_ARCHITECTURE}
 				  /usr/X11R6/lib
 	)
-    include_directories(${GLFW_INCLUDE_DIR})
-    target_link_libraries(main ${GLFW_LIBRARIES} ${OPENGL_gl_LIBRARY})
+
+    add_subdirectory(glew/build/cmake)
+    include_directories(${GLFW_INCLUDE_DIR} glex/include glew/include)
+    target_link_libraries(main glew_s ${GLFW_LIBRARIES} ${OPENGL_gl_LIBRARY})
 endif()
